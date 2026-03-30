@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/AppLayout";
+import Index from "@/pages/Index";
 import SentimentOverview from "@/pages/SentimentOverview";
 import SentimentDetail from "@/pages/SentimentDetail";
 import IndustryOverview from "@/pages/IndustryOverview";
@@ -23,7 +24,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
-            <Route path="/" element={<SentimentOverview />} />
+            <Route path="/" element={<Index />} />
+            <Route path="/sentiment/overview" element={<SentimentOverview />} />
             <Route path="/sentiment/detail" element={<SentimentDetail />} />
             <Route path="/sentiment/reports" element={<PlaceholderPage title="报告列表" />} />
             <Route path="/sentiment/subscriptions" element={<PlaceholderPage title="订阅管理" />} />

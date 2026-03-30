@@ -31,7 +31,7 @@ const themes: NavItem[] = [
     label: "舆情监控",
     icon: <Shield className="w-4 h-4" />,
     children: [
-      { label: "舆情概览", path: "/" },
+      { label: "舆情概览", path: "/sentiment/overview" },
       { label: "舆情详情", path: "/sentiment/detail" },
       { label: "报告列表", path: "/sentiment/reports" },
       { label: "订阅管理", path: "/sentiment/subscriptions" },
