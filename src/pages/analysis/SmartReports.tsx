@@ -1,0 +1,131 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, FileText, Download, Clock, Search, Eye, Sparkles, Calendar } from "lucide-react";
+
+interface Report {
+  id: string;
+  title: string;
+  type: string;
+  theme: string;
+  status: "completed" | "generating" | "scheduled";
+  createdAt: string;
+  pages: number;
+  author: string;
+}
+
+const reports: Report[] = [
+  { id: "RPT001", title: "2026年Q1舆情态势分析报告", type: "季度报告", theme: "舆情主题", status: "completed", createdAt: "2026-03-28", pages: 24, author: "系统自动生成" },
+  { id: "RPT002", title: "3月行业竞品监测周报", type: "周报", theme: "行业咨询主题", status: "completed", createdAt: "2026-03-29", pages: 12, author: "张经理" },
+  { id: "RPT003", title: "热点事件专项分析", type: "专项报告", theme: "热点洞察主题", status: "generating", createdAt: "2026-03-30", pages: 0, author: "AI生成中" },
+  { id: "RPT004", title: "产品体验月度报告", type: "月报", theme: "产品体验主题", status: "completed", createdAt: "2026-03-25", pages: 18, author: "系统自动生成" },
+  { id: "RPT005", title: "品牌口碑年度总结", type: "年报", theme: "综合", status: "completed", createdAt: "2026-03-20", pages: 42, author: "李总监" },
+  { id: "RPT006", title: "下周竞品动态预测", type: "预测报告", theme: "行业咨询主题", status: "scheduled", createdAt: "2026-03-31", pages: 0, author: "定时生成" },
+];
+
+const statusConfig: Record<Report["status"], { label: string; variant: "default" | "secondary" | "outline" }> = {
+  completed: { label: "已完成", variant: "default" },
+  generating: { label: "生成中", variant: "secondary" },
+  scheduled: { label: "已排期", variant: "outline" },
+};
+
+const templates = [
+  { name: "舆情日报模板", desc: "自动汇总每日舆情数据与风险预警", icon: FileText },
+  { name: "竞品对比模板", desc: "横向对比多品牌各维度表现", icon: Sparkles },
+  { name: "热点追踪模板", desc: "追踪热点事件的传播路径与影响", icon: Clock },
+  { name: "体验洞察模板", desc: "用户反馈NPS分析与问题归因", icon: Calendar },
+];
+
+export default function SmartReports() {
+  const [filter, setFilter] = useState("all");
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">智能报告</h1>
+          <p className="text-sm text-muted-foreground mt-1">AI驱动的智能报告生成，支持自动化与自定义模板</p>
+        </div>
+        <Button className="gap-2"><Plus className="w-4 h-4" /> 生成报告</Button>
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">报告总数</p><p className="text-2xl font-bold text-foreground mt-1">6</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">本月生成</p><p className="text-2xl font-bold text-primary mt-1">4</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">模板数</p><p className="text-2xl font-bold text-foreground mt-1">4</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">排期中</p><p className="text-2xl font-bold text-amber-500 mt-1">1</p></CardContent></Card>
+      </div>
+
+      <div>
+        <h2 className="text-base font-semibold text-foreground mb-3">报告模板</h2>
+        <div className="grid grid-cols-4 gap-3">
+          {templates.map((t) => {
+            const Icon = t.icon;
+            return (
+              <Card key={t.name} className="cursor-pointer hover:border-primary/30 transition-colors">
+                <CardContent className="p-4">
+                  <Icon className="w-5 h-5 text-primary mb-2" />
+                  <p className="text-sm font-medium text-foreground">{t.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t.desc}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">报告列表</CardTitle>
+            <Select value={filter} onValueChange={setFilter}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部</SelectItem>
+                <SelectItem value="completed">已完成</SelectItem>
+                <SelectItem value="generating">生成中</SelectItem>
+                <SelectItem value="scheduled">已排期</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {reports.filter((r) => filter === "all" || r.status === filter).map((r) => (
+              <div key={r.id} className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/30 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">{r.title}</p>
+                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                      <span>{r.type}</span>
+                      <span>·</span>
+                      <span>{r.theme}</span>
+                      <span>·</span>
+                      <span>{r.createdAt}</span>
+                      {r.pages > 0 && <><span>·</span><span>{r.pages}页</span></>}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant={statusConfig[r.status].variant}>{statusConfig[r.status].label}</Badge>
+                  {r.status === "completed" && (
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="w-4 h-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8"><Download className="w-4 h-4" /></Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
