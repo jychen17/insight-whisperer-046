@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield, Globe, Zap, Lightbulb, BarChart3, Settings, ArrowRight, Star, TrendingUp, Eye } from "lucide-react";
+import { Shield, Globe, Zap, Lightbulb, ArrowRight, TrendingUp, Eye, Database, BarChart3, Settings } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,10 +9,10 @@ const themeModules = [
   {
     key: "sentiment",
     icon: Shield,
-    title: "舆情监控",
+    title: "舆情主题",
     desc: "实时监控全网舆情动态，自动识别风险事件，提供智能预警与趋势分析",
-    path: "/",
-    tags: ["风险预警", "情感分析", "趋势追踪"],
+    path: "/sentiment/overview",
+    tags: ["舆情大盘", "舆情预警", "舆情报告"],
     stats: { today: 1284, risk: 3 },
     gradient: "from-rose-500/20 to-orange-500/20",
     iconColor: "text-rose-500",
@@ -21,10 +21,10 @@ const themeModules = [
   {
     key: "industry",
     icon: Globe,
-    title: "行业咨询",
+    title: "行业咨询主题",
     desc: "洞察行业全局，追踪竞品动态，掌握市场趋势与品牌份额变化",
     path: "/industry/overview",
-    tags: ["竞品监测", "市场动态", "SOV分析"],
+    tags: ["行业大盘", "竞品监测", "趋势分析"],
     stats: { today: 856, risk: 0 },
     gradient: "from-blue-500/20 to-cyan-500/20",
     iconColor: "text-blue-500",
@@ -33,10 +33,10 @@ const themeModules = [
   {
     key: "hotspot",
     icon: Zap,
-    title: "热点洞察",
+    title: "热点洞察主题",
     desc: "捕捉全网热点话题，分析传播路径与关键词趋势，助力内容决策",
     path: "/hotspot/discover",
-    tags: ["热点发现", "话题分析", "关键词"],
+    tags: ["热点发现", "话题分析", "内容洞察"],
     stats: { today: 2150, risk: 1 },
     gradient: "from-amber-500/20 to-yellow-500/20",
     iconColor: "text-amber-500",
@@ -45,50 +45,55 @@ const themeModules = [
   {
     key: "experience",
     icon: Lightbulb,
-    title: "产品体验",
+    title: "产品体验主题",
     desc: "聚合用户反馈与评价数据，量化满意度与NPS，定位核心体验问题",
     path: "/experience/overview",
-    tags: ["用户反馈", "NPS监测", "问题追踪"],
+    tags: ["体验概览", "用户反馈", "优化建议"],
     stats: { today: 673, risk: 2 },
     gradient: "from-emerald-500/20 to-teal-500/20",
     iconColor: "text-emerald-500",
     borderColor: "border-emerald-500/30",
   },
   {
-    key: "brand",
-    icon: BarChart3,
-    title: "品牌声量",
-    desc: "监测品牌在各平台的声量表现，分析品牌热度与口碑趋势",
-    path: "/brand/hotlist",
-    tags: ["声量排行", "口碑分析", "平台对比"],
-    stats: { today: 492, risk: 0 },
+    key: "datacenter",
+    icon: Database,
+    title: "数据中心",
+    desc: "管理数据采集任务、标签体系与主题配置，保障数据质量与规范",
+    path: "/datacenter/tasks",
+    tags: ["数据采集", "标签管理", "主题配置"],
+    stats: { today: 0, risk: 0 },
     gradient: "from-violet-500/20 to-purple-500/20",
     iconColor: "text-violet-500",
     borderColor: "border-violet-500/30",
+    isUtil: true,
   },
   {
-    key: "settings",
-    icon: Settings,
-    title: "系统设置",
-    desc: "配置监测规则、管理爬虫任务、自定义主题与关键词策略",
-    path: "/settings/themes",
-    tags: ["主题配置", "规则管理", "爬虫任务"],
+    key: "analysis",
+    icon: BarChart3,
+    title: "分析工具",
+    desc: "智能报告生成、数据导出与自定义分析，灵活满足多样化分析需求",
+    path: "/analysis/reports",
+    tags: ["智能报告", "数据导出", "自定义分析"],
     stats: { today: 0, risk: 0 },
-    gradient: "from-gray-500/20 to-slate-500/20",
-    iconColor: "text-muted-foreground",
-    borderColor: "border-border",
+    gradient: "from-sky-500/20 to-indigo-500/20",
+    iconColor: "text-sky-500",
+    borderColor: "border-sky-500/30",
+    isUtil: true,
   },
 ];
 
 const quickStats = [
-  { label: "今日数据总量", value: "5,455", icon: TrendingUp, change: "+12.3%" },
-  { label: "活跃主题", value: "5", icon: Star, change: "" },
+  { label: "今日数据总量", value: "4,963", icon: TrendingUp, change: "+12.3%" },
+  { label: "活跃洞察主题", value: "4", icon: Eye, change: "" },
   { label: "待处理预警", value: "6", icon: Shield, change: "-2" },
 ];
 
 export default function Index() {
   const navigate = useNavigate();
   const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+
+  const insightModules = themeModules.filter((m) => !m.isUtil);
+  const utilModules = themeModules.filter((m) => m.isUtil);
 
   return (
     <div className="space-y-8">
@@ -119,59 +124,79 @@ export default function Index() {
         </div>
       </div>
 
-      {/* Module Cards */}
+      {/* Insight Theme Cards */}
       <div>
         <h2 className="text-lg font-semibold text-foreground mb-4">选择洞察主题</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {themeModules.map((m) => {
-            const Icon = m.icon;
-            const isHovered = hoveredKey === m.key;
-            return (
-              <Card
-                key={m.key}
-                className={`cursor-pointer transition-all duration-200 border ${
-                  isHovered ? m.borderColor + " shadow-lg -translate-y-1" : "border-border"
-                }`}
-                onMouseEnter={() => setHoveredKey(m.key)}
-                onMouseLeave={() => setHoveredKey(null)}
-                onClick={() => navigate(m.path)}
-              >
-                <CardContent className="p-6">
-                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${m.gradient} flex items-center justify-center mb-4`}>
-                    <Icon className={`w-5 h-5 ${m.iconColor}`} />
-                  </div>
-                  <h3 className="text-base font-semibold text-foreground mb-1.5">{m.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-4">{m.desc}</p>
-                  <div className="flex flex-wrap gap-1.5 mb-4">
-                    {m.tags.map((tag) => (
-                      <Badge key={tag} variant="secondary" className="text-xs font-normal">
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between pt-3 border-t border-border">
-                    {m.key !== "settings" ? (
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>今日 <strong className="text-foreground">{m.stats.today.toLocaleString()}</strong> 条</span>
-                        {m.stats.risk > 0 && (
-                          <span className="text-destructive">
-                            {m.stats.risk} 条预警
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">管理与配置</span>
-                    )}
-                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
-                      进入 <ArrowRight className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {insightModules.map((m) => (
+            <ModuleCard key={m.key} module={m} isHovered={hoveredKey === m.key} onHover={setHoveredKey} onNavigate={navigate} />
+          ))}
+        </div>
+      </div>
+
+      {/* Utility Cards */}
+      <div>
+        <h2 className="text-lg font-semibold text-foreground mb-4">工具与管理</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {utilModules.map((m) => (
+            <ModuleCard key={m.key} module={m} isHovered={hoveredKey === m.key} onHover={setHoveredKey} onNavigate={navigate} />
+          ))}
         </div>
       </div>
     </div>
+  );
+}
+
+function ModuleCard({
+  module: m,
+  isHovered,
+  onHover,
+  onNavigate,
+}: {
+  module: (typeof themeModules)[number];
+  isHovered: boolean;
+  onHover: (key: string | null) => void;
+  onNavigate: (path: string) => void;
+}) {
+  const Icon = m.icon;
+  return (
+    <Card
+      className={`cursor-pointer transition-all duration-200 border ${
+        isHovered ? m.borderColor + " shadow-lg -translate-y-1" : "border-border"
+      }`}
+      onMouseEnter={() => onHover(m.key)}
+      onMouseLeave={() => onHover(null)}
+      onClick={() => onNavigate(m.path)}
+    >
+      <CardContent className="p-6">
+        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${m.gradient} flex items-center justify-center mb-4`}>
+          <Icon className={`w-5 h-5 ${m.iconColor}`} />
+        </div>
+        <h3 className="text-base font-semibold text-foreground mb-1.5">{m.title}</h3>
+        <p className="text-sm text-muted-foreground leading-relaxed mb-4">{m.desc}</p>
+        <div className="flex flex-wrap gap-1.5 mb-4">
+          {m.tags.map((tag) => (
+            <Badge key={tag} variant="secondary" className="text-xs font-normal">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+        <div className="flex items-center justify-between pt-3 border-t border-border">
+          {m.stats.today > 0 ? (
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
+              <span>今日 <strong className="text-foreground">{m.stats.today.toLocaleString()}</strong> 条</span>
+              {m.stats.risk > 0 && (
+                <span className="text-destructive">{m.stats.risk} 条预警</span>
+              )}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">管理与配置</span>
+          )}
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
+            进入 <ArrowRight className="w-3 h-3" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
