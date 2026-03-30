@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "@/components/AppLayout";
 import Index from "@/pages/Index";
+import Login from "@/pages/Login";
 import SentimentOverview from "@/pages/SentimentOverview";
 import SentimentDetail from "@/pages/SentimentDetail";
 import IndustryOverview from "@/pages/IndustryOverview";
