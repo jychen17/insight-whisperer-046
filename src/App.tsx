@@ -41,7 +41,7 @@ const App = () => (
             <Route path="/settings/rules" element={<PlaceholderPage title="规则配置" />} />
             <Route path="/settings/crawlers" element={<PlaceholderPage title="爬虫任务" />} />
             <Route path="/settings/keywords" element={<PlaceholderPage title="关键词管理" />} />
-            <Route path="/settings/themes" element={<PlaceholderPage title="主题配置" />} />
+            <Route path="/settings/themes" element={<ThemeSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
