@@ -24,7 +24,8 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
-            <Route path="/" element={<SentimentOverview />} />
+            <Route path="/" element={<Index />} />
+            <Route path="/sentiment/overview" element={<SentimentOverview />} />
             <Route path="/sentiment/detail" element={<SentimentDetail />} />
             <Route path="/sentiment/reports" element={<PlaceholderPage title="报告列表" />} />
             <Route path="/sentiment/subscriptions" element={<PlaceholderPage title="订阅管理" />} />
