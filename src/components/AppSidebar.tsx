@@ -9,7 +9,7 @@ import {
   Zap,
   Lightbulb,
   Database,
-  Spider as SquareCode,
+  
   Tags,
   Palette,
   BarChart3,
