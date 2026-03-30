@@ -13,6 +13,19 @@ import ExperienceOverview from "@/pages/ExperienceOverview";
 import PlaceholderPage from "@/components/PlaceholderPage";
 import ThemeSettings from "@/pages/ThemeSettings";
 import NotFound from "./pages/NotFound.tsx";
+// 数据中心
+import CollectionTasks from "@/pages/datacenter/CollectionTasks";
+import DataSourceConfig from "@/pages/datacenter/DataSourceConfig";
+import CollectionQuality from "@/pages/datacenter/CollectionQuality";
+import TagSystem from "@/pages/datacenter/TagSystem";
+import TagRules from "@/pages/datacenter/TagRules";
+import TagQuality from "@/pages/datacenter/TagQuality";
+import ThemeRules from "@/pages/datacenter/ThemeRules";
+import DashboardConfig from "@/pages/datacenter/DashboardConfig";
+// 分析工具
+import SmartReports from "@/pages/analysis/SmartReports";
+import DataExport from "@/pages/analysis/DataExport";
+import CustomAnalysis from "@/pages/analysis/CustomAnalysis";
 
 const queryClient = new QueryClient();
 
@@ -46,19 +59,19 @@ const App = () => (
             <Route path="/experience/feedback" element={<PlaceholderPage title="用户反馈" />} />
             <Route path="/experience/suggestions" element={<PlaceholderPage title="优化建议" />} />
             {/* 数据中心 */}
-            <Route path="/datacenter/tasks" element={<PlaceholderPage title="采集任务管理" />} />
-            <Route path="/datacenter/sources" element={<PlaceholderPage title="数据源配置" />} />
-            <Route path="/datacenter/quality" element={<PlaceholderPage title="采集质量监控" />} />
-            <Route path="/datacenter/tags/system" element={<PlaceholderPage title="标签体系" />} />
-            <Route path="/datacenter/tags/rules" element={<PlaceholderPage title="标签规则" />} />
-            <Route path="/datacenter/tags/quality" element={<PlaceholderPage title="标签质量" />} />
+            <Route path="/datacenter/tasks" element={<CollectionTasks />} />
+            <Route path="/datacenter/sources" element={<DataSourceConfig />} />
+            <Route path="/datacenter/quality" element={<CollectionQuality />} />
+            <Route path="/datacenter/tags/system" element={<TagSystem />} />
+            <Route path="/datacenter/tags/rules" element={<TagRules />} />
+            <Route path="/datacenter/tags/quality" element={<TagQuality />} />
             <Route path="/datacenter/themes/manage" element={<ThemeSettings />} />
-            <Route path="/datacenter/themes/rules" element={<PlaceholderPage title="规则配置" />} />
-            <Route path="/datacenter/themes/dashboard" element={<PlaceholderPage title="看板配置" />} />
+            <Route path="/datacenter/themes/rules" element={<ThemeRules />} />
+            <Route path="/datacenter/themes/dashboard" element={<DashboardConfig />} />
             {/* 分析工具 */}
-            <Route path="/analysis/reports" element={<PlaceholderPage title="智能报告" />} />
-            <Route path="/analysis/export" element={<PlaceholderPage title="数据导出" />} />
-            <Route path="/analysis/custom" element={<PlaceholderPage title="自定义分析" />} />
+            <Route path="/analysis/reports" element={<SmartReports />} />
+            <Route path="/analysis/export" element={<DataExport />} />
+            <Route path="/analysis/custom" element={<CustomAnalysis />} />
             {/* 系统设置 */}
             <Route path="/settings/users" element={<PlaceholderPage title="用户管理" />} />
             <Route path="/settings/permissions" element={<PlaceholderPage title="权限管理" />} />
