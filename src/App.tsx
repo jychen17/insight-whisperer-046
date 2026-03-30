@@ -10,6 +10,7 @@ import IndustryOverview from "@/pages/IndustryOverview";
 import HotspotDiscover from "@/pages/HotspotDiscover";
 import ExperienceOverview from "@/pages/ExperienceOverview";
 import PlaceholderPage from "@/components/PlaceholderPage";
+import ThemeSettings from "@/pages/ThemeSettings";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
