@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Trash2, Edit2, Copy, ToggleLeft, ToggleRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ThemeConfigDialog from "@/components/ThemeConfigDialog";
+import ThemeFlowCanvas from "@/components/ThemeFlowCanvas";
 
 export interface ThemeConfig {
   id: string;
