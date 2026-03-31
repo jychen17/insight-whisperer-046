@@ -110,7 +110,7 @@ const navGroups: NavGroup[] = [
         icon: <Palette className="w-4 h-4" />,
         children: [
           { label: "主题管理", path: "/datacenter/themes/manage" },
-          { label: "规则配置", path: "/datacenter/themes/rules" },
+          { label: "预警配置", path: "/datacenter/themes/rules" },
           { label: "看板配置", path: "/datacenter/themes/dashboard" },
         ],
       },
