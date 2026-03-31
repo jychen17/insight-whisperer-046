@@ -498,7 +498,7 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
           <TabsContent value="posts">
             {/* Filter bar demo */}
             <div className="flex flex-wrap gap-2 mb-3 mt-1">
-              {theme.fieldConfigs.filter(fc => fc.isFilter).map(fc => (
+              {(theme.fieldConfigs || []).filter(fc => fc.isFilter).map(fc => (
                 <div key={fc.key}>
                   {fc.filterType === "enum" ? (
                     <select className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
