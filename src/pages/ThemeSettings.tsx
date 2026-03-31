@@ -414,7 +414,7 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
             </thead>
             <tbody>
               {[...theme.baseFields, ...theme.calcFields].map((f) => {
-                const fc = theme.fieldConfigs.find(c => c.key === f);
+                const fc = (theme.fieldConfigs || []).find(c => c.key === f);
                 const isCalc = theme.calcFields.includes(f);
                 return (
                   <tr key={f} className="border-t border-border">
