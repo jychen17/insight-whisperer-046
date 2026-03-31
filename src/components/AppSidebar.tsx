@@ -9,7 +9,6 @@ import {
   Zap,
   Lightbulb,
   Database,
-  
   Tags,
   Palette,
   BarChart3,
@@ -19,6 +18,7 @@ import {
   Bell,
   FileText,
   Search,
+  Key,
 } from "lucide-react";
 
 interface NavChild {
@@ -92,6 +92,7 @@ const navGroups: NavGroup[] = [
         children: [
           { label: "采集任务管理", path: "/datacenter/tasks" },
           { label: "数据源配置", path: "/datacenter/sources" },
+          { label: "关键词管理", path: "/datacenter/keywords" },
           { label: "采集质量监控", path: "/datacenter/quality" },
         ],
       },
@@ -100,7 +101,7 @@ const navGroups: NavGroup[] = [
         icon: <Tags className="w-4 h-4" />,
         children: [
           { label: "标签体系", path: "/datacenter/tags/system" },
-          { label: "标签规则", path: "/datacenter/tags/rules" },
+          { label: "标签规则(分流)", path: "/datacenter/tags/rules" },
           { label: "标签质量", path: "/datacenter/tags/quality" },
         ],
       },
@@ -123,6 +124,7 @@ const navGroups: NavGroup[] = [
         icon: <BarChart3 className="w-4 h-4" />,
         children: [
           { label: "智能报告", path: "/analysis/reports" },
+          { label: "报告配置", path: "/analysis/report-config" },
           { label: "数据导出", path: "/analysis/export" },
           { label: "自定义分析", path: "/analysis/custom" },
         ],

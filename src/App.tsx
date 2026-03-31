@@ -14,10 +14,12 @@ import ExperienceOverview from "@/pages/ExperienceOverview";
 import PlaceholderPage from "@/components/PlaceholderPage";
 import ThemeSettings from "@/pages/ThemeSettings";
 import NotFound from "./pages/NotFound.tsx";
+import AIChatBot from "@/components/AIChatBot";
 // 数据中心
 import CollectionTasks from "@/pages/datacenter/CollectionTasks";
 import DataSourceConfig from "@/pages/datacenter/DataSourceConfig";
 import CollectionQuality from "@/pages/datacenter/CollectionQuality";
+import KeywordManage from "@/pages/datacenter/KeywordManage";
 import TagSystem from "@/pages/datacenter/TagSystem";
 import TagRules from "@/pages/datacenter/TagRules";
 import TagQuality from "@/pages/datacenter/TagQuality";
@@ -25,6 +27,7 @@ import ThemeRules from "@/pages/datacenter/ThemeRules";
 import DashboardConfig from "@/pages/datacenter/DashboardConfig";
 // 分析工具
 import SmartReports from "@/pages/analysis/SmartReports";
+import ReportConfig from "@/pages/analysis/ReportConfig";
 import DataExport from "@/pages/analysis/DataExport";
 import CustomAnalysis from "@/pages/analysis/CustomAnalysis";
 
@@ -64,6 +67,7 @@ const App = () => (
             <Route path="/datacenter/tasks" element={<CollectionTasks />} />
             <Route path="/datacenter/sources" element={<DataSourceConfig />} />
             <Route path="/datacenter/quality" element={<CollectionQuality />} />
+            <Route path="/datacenter/keywords" element={<KeywordManage />} />
             <Route path="/datacenter/tags/system" element={<TagSystem />} />
             <Route path="/datacenter/tags/rules" element={<TagRules />} />
             <Route path="/datacenter/tags/quality" element={<TagQuality />} />
@@ -72,6 +76,7 @@ const App = () => (
             <Route path="/datacenter/themes/dashboard" element={<DashboardConfig />} />
             {/* 分析工具 */}
             <Route path="/analysis/reports" element={<SmartReports />} />
+            <Route path="/analysis/report-config" element={<ReportConfig />} />
             <Route path="/analysis/export" element={<DataExport />} />
             <Route path="/analysis/custom" element={<CustomAnalysis />} />
             {/* 系统设置 */}
@@ -82,6 +87,7 @@ const App = () => (
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <AIChatBot />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
