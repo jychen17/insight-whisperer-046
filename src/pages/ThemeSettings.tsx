@@ -458,7 +458,7 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
           <span className="w-1 h-4 rounded-full gradient-primary inline-block" /> 事件合并配置
         </h3>
         <div className="bg-muted/30 rounded-lg p-4 border border-border">
-          {theme.mergeConfig.enabled ? (
+          {theme.mergeConfig?.enabled ? (
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-primary" />
