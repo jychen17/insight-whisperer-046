@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, Eye, GripVertical, Layers } from "lucide-react";
+import { X, Plus, Trash2, Eye, GripVertical, GitMerge, ArrowUp, ArrowDown } from "lucide-react";
 import type {
   ThemeConfig,
   DataSourceConfig,
   TagRule,
   DashboardWidget,
   FieldConfig,
-  MergeConfig,
+  MergeNode,
 } from "@/pages/ThemeSettings";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -60,6 +60,13 @@ const WIDGET_TYPES = [
   { value: "table", label: "数据表格", icon: "📋" },
 ];
 
+const MERGE_TYPES = [
+  { value: "text_similarity", label: "文本相似度", desc: "根据内容文本的语义相似度进行合并" },
+  { value: "field_group", label: "字段分组", desc: "按指定字段值相同进行合并分组" },
+  { value: "time_window", label: "时间窗口", desc: "在指定时间范围内的数据合并" },
+  { value: "custom", label: "自定义规则", desc: "自定义合并逻辑表达式" },
+];
+
 const ICONS = ["🛡️", "🌐", "⚡", "💡", "🔥", "📡", "🎯", "🧭", "📊", "💬", "🔍", "🏷️"];
 
 const emptyTheme: ThemeConfig = {
@@ -75,7 +82,7 @@ const emptyTheme: ThemeConfig = {
   baseFields: [],
   calcFields: [],
   fieldConfigs: [],
-  mergeConfig: { enabled: false, similarityThreshold: 80, timeWindowHours: 24 },
+  mergeNodes: [],
   dashboardWidgets: [],
   createdAt: "",
   updatedAt: "",
@@ -88,7 +95,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const [previewMode, setPreviewMode] = useState(false);
 
   const isEdit = !!theme;
-  const steps = ["基本信息", "数据源", "标签规则与字段", "事件合并", "看板配置"];
+  const steps = ["基本信息", "数据源", "标签规则与字段", "合并管线", "看板配置"];
 
   useEffect(() => {
     if (open) {
@@ -97,7 +104,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
       setPreviewMode(false);
       setForm(
         theme
-          ? { ...theme }
+          ? { ...theme, mergeNodes: theme.mergeNodes || [] }
           : {
               ...emptyTheme,
               id: `custom_${Date.now()}`,
@@ -135,21 +142,13 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const toggleTask = (task: typeof MOCK_TASKS[0]) => {
     setForm((f) => {
       const exists = f.dataSources.find((ds) => ds.taskId === task.id);
-      if (exists) {
-        return { ...f, dataSources: f.dataSources.filter((ds) => ds.taskId !== task.id) };
-      }
-      return {
-        ...f,
-        dataSources: [...f.dataSources, { taskId: task.id, taskName: task.name, platforms: task.platforms, timeRange: "近7天", enabled: true }],
-      };
+      if (exists) return { ...f, dataSources: f.dataSources.filter((ds) => ds.taskId !== task.id) };
+      return { ...f, dataSources: [...f.dataSources, { taskId: task.id, taskName: task.name, platforms: task.platforms, timeRange: "近7天", enabled: true }] };
     });
   };
 
   const addTagRule = () => {
-    setForm((f) => ({
-      ...f,
-      tagRules: [...f.tagRules, { id: `r_${Date.now()}`, type: "required", tagName: "", tagValue: "" }],
-    }));
+    setForm((f) => ({ ...f, tagRules: [...f.tagRules, { id: `r_${Date.now()}`, type: "required", tagName: "", tagValue: "" }] }));
   };
   const updateTagRule = (index: number, update: Partial<TagRule>) => {
     setForm((f) => ({ ...f, tagRules: f.tagRules.map((r, i) => (i === index ? { ...r, ...update } : r)) }));
@@ -158,7 +157,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     setForm((f) => ({ ...f, tagRules: f.tagRules.filter((_, i) => i !== index) }));
   };
 
-  // Field toggles - also manage fieldConfigs
   const toggleBaseField = (key: string) => {
     setForm((f) => {
       const included = f.baseFields.includes(key);
@@ -170,27 +168,54 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     });
   };
   const toggleCalcField = (key: string) => {
-    setForm((f) => ({
-      ...f,
-      calcFields: f.calcFields.includes(key) ? f.calcFields.filter((k) => k !== key) : [...f.calcFields, key],
-    }));
+    setForm((f) => ({ ...f, calcFields: f.calcFields.includes(key) ? f.calcFields.filter((k) => k !== key) : [...f.calcFields, key] }));
+  };
+  const updateFieldConfig = (key: string, update: Partial<FieldConfig>) => {
+    setForm((f) => ({ ...f, fieldConfigs: f.fieldConfigs.map(fc => fc.key === key ? { ...fc, ...update } : fc) }));
   };
 
-  // Field config helpers
-  const updateFieldConfig = (key: string, update: Partial<FieldConfig>) => {
-    setForm((f) => ({
+  // Merge node helpers
+  const addMergeNode = () => {
+    const maxOrder = form.mergeNodes.length > 0 ? Math.max(...form.mergeNodes.map(n => n.order)) : 0;
+    setForm(f => ({
       ...f,
-      fieldConfigs: f.fieldConfigs.map(fc => fc.key === key ? { ...fc, ...update } : fc),
+      mergeNodes: [...f.mergeNodes, {
+        id: `mn_${Date.now()}`,
+        name: `合并节点${f.mergeNodes.length + 1}`,
+        enabled: true,
+        type: "text_similarity",
+        similarityThreshold: 80,
+        timeWindowHours: 24,
+        order: maxOrder + 1,
+      }],
     }));
+  };
+  const updateMergeNode = (id: string, update: Partial<MergeNode>) => {
+    setForm(f => ({ ...f, mergeNodes: f.mergeNodes.map(n => n.id === id ? { ...n, ...update } : n) }));
+  };
+  const removeMergeNode = (id: string) => {
+    setForm(f => {
+      const filtered = f.mergeNodes.filter(n => n.id !== id);
+      return { ...f, mergeNodes: filtered.map((n, i) => ({ ...n, order: i + 1 })) };
+    });
+  };
+  const moveMergeNode = (id: string, direction: "up" | "down") => {
+    setForm(f => {
+      const sorted = [...f.mergeNodes].sort((a, b) => a.order - b.order);
+      const idx = sorted.findIndex(n => n.id === id);
+      if ((direction === "up" && idx <= 0) || (direction === "down" && idx >= sorted.length - 1)) return f;
+      const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+      const temp = sorted[idx].order;
+      sorted[idx] = { ...sorted[idx], order: sorted[swapIdx].order };
+      sorted[swapIdx] = { ...sorted[swapIdx], order: temp };
+      return { ...f, mergeNodes: sorted };
+    });
   };
 
   const addWidget = () => {
     setForm((f) => ({
       ...f,
-      dashboardWidgets: [
-        ...f.dashboardWidgets,
-        { id: `w_${Date.now()}`, type: "statCard", title: "", metric: "", position: f.dashboardWidgets.length + 1 },
-      ],
+      dashboardWidgets: [...f.dashboardWidgets, { id: `w_${Date.now()}`, type: "statCard", title: "", metric: "", position: f.dashboardWidgets.length + 1 }],
     }));
   };
   const updateWidget = (index: number, update: Partial<DashboardWidget>) => {
@@ -202,10 +227,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
 
   if (!open) return null;
 
-  const allSelectedFields = [...form.baseFields.map(k => {
-    const bf = BASE_FIELDS.find(f => f.key === k);
-    return bf ? { key: bf.key, label: bf.label } : { key: k, label: k };
-  })];
+  const sortedMergeNodes = [...form.mergeNodes].sort((a, b) => a.order - b.order);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30">
@@ -219,15 +241,13 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
         {/* Steps */}
         <div className="flex items-center gap-1 px-5 py-3 border-b border-border shrink-0 overflow-x-auto">
           {steps.map((s, i) => (
-            <button
-              key={s}
+            <button key={s}
               onClick={() => { if (i < step || validateStep(step)) setStep(i); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${
                 i === step ? "gradient-primary text-primary-foreground font-medium"
                 : i < step ? "bg-primary/10 text-primary"
                 : "bg-muted text-muted-foreground"
-              }`}
-            >
+              }`}>
               <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
                 i === step ? "bg-primary-foreground/20" : i < step ? "bg-primary/20" : "bg-muted-foreground/20"
               }`}>{i + 1}</span>
@@ -288,8 +308,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 {MOCK_TASKS.map((task) => {
                   const selected = form.dataSources.some((ds) => ds.taskId === task.id);
                   return (
-                    <div key={task.id}
-                      onClick={() => toggleTask(task)}
+                    <div key={task.id} onClick={() => toggleTask(task)}
                       className={`border rounded-lg p-3.5 cursor-pointer transition-all ${
                         selected ? "border-primary bg-primary/5" : "border-border hover:border-primary/30 hover:bg-muted/30"
                       }`}>
@@ -320,10 +339,9 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
             </div>
           )}
 
-          {/* Step 3: Tag Rules + Fields with filter config */}
+          {/* Step 3: Tag Rules + Fields */}
           {step === 2 && (
             <div className="space-y-5">
-              {/* Entry conditions */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-medium text-foreground">数据入主题条件</label>
@@ -361,7 +379,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 )}
               </div>
 
-              {/* Base fields with filter config */}
               <div>
                 <label className="text-xs font-medium text-foreground">展示字段选择与筛选配置</label>
                 <p className="text-[11px] text-muted-foreground mt-0.5 mb-3">选择要展示的字段，并配置是否作为筛选条件</p>
@@ -385,18 +402,11 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                             <div className="flex items-center gap-3">
                               <div className="flex items-center gap-1.5">
                                 <span className="text-[10px] text-muted-foreground">筛选条件</span>
-                                <Switch
-                                  checked={fc.isFilter}
-                                  onCheckedChange={(checked) => updateFieldConfig(f.key, { isFilter: checked })}
-                                  className="scale-75"
-                                />
+                                <Switch checked={fc.isFilter} onCheckedChange={(checked) => updateFieldConfig(f.key, { isFilter: checked })} className="scale-75" />
                               </div>
                               {fc.isFilter && (
-                                <select
-                                  value={fc.filterType}
-                                  onChange={(e) => updateFieldConfig(f.key, { filterType: e.target.value as "enum" | "text" })}
-                                  className="px-2 py-1 text-[10px] border border-border rounded bg-card text-foreground"
-                                >
+                                <select value={fc.filterType} onChange={(e) => updateFieldConfig(f.key, { filterType: e.target.value as "enum" | "text" })}
+                                  className="px-2 py-1 text-[10px] border border-border rounded bg-card text-foreground">
                                   <option value="text">模糊搜索</option>
                                   <option value="enum">下拉选择</option>
                                 </select>
@@ -404,24 +414,17 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                             </div>
                           )}
                         </div>
-                        {/* Enum values editor */}
                         {selected && fc?.isFilter && fc.filterType === "enum" && (
                           <div className="mt-2 ml-7">
-                            <div className="flex items-center gap-2">
-                              <input
-                                className="flex-1 px-2 py-1 text-[10px] border border-border rounded bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
-                                placeholder="输入枚举值，按回车添加"
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
-                                    const val = (e.target as HTMLInputElement).value.trim();
-                                    if (!fc.enumValues.includes(val)) {
-                                      updateFieldConfig(f.key, { enumValues: [...fc.enumValues, val] });
-                                    }
-                                    (e.target as HTMLInputElement).value = "";
-                                  }
-                                }}
-                              />
-                            </div>
+                            <input className="w-full px-2 py-1 text-[10px] border border-border rounded bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
+                              placeholder="输入枚举值，按回车添加"
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                                  const val = (e.target as HTMLInputElement).value.trim();
+                                  if (!fc.enumValues.includes(val)) updateFieldConfig(f.key, { enumValues: [...fc.enumValues, val] });
+                                  (e.target as HTMLInputElement).value = "";
+                                }
+                              }} />
                             <div className="flex flex-wrap gap-1 mt-1.5">
                               {fc.enumValues.map((v, vi) => (
                                 <Badge key={vi} variant="outline" className="text-[10px] px-1.5 py-0 gap-1">
@@ -440,7 +443,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 </div>
               </div>
 
-              {/* Calculated fields */}
               <div>
                 <label className="text-xs font-medium text-foreground">计算字段展示</label>
                 <p className="text-[11px] text-muted-foreground mt-0.5 mb-2">选择在该主题中展示的计算指标</p>
@@ -448,9 +450,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                   {CALC_FIELDS.map((f) => (
                     <div key={f.key} onClick={() => toggleCalcField(f.key)}
                       className={`flex items-center justify-between px-3 py-2 rounded-md border cursor-pointer transition-colors ${
-                        form.calcFields.includes(f.key)
-                          ? "bg-primary/5 border-primary/30"
-                          : "border-border hover:bg-muted/30"
+                        form.calcFields.includes(f.key) ? "bg-primary/5 border-primary/30" : "border-border hover:bg-muted/30"
                       }`}>
                       <div className="flex items-center gap-2">
                         <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${
@@ -468,99 +468,168 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
             </div>
           )}
 
-          {/* Step 4: Event Merge Config */}
+          {/* Step 4: Merge Pipeline */}
           {step === 3 && (
             <div className="space-y-5">
               <div>
-                <label className="text-xs font-medium text-foreground flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-primary" /> 事件合并配置
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-foreground flex items-center gap-2">
+                    <GitMerge className="w-4 h-4 text-primary" /> 合并管线配置
+                  </label>
+                  <button onClick={addMergeNode} className="flex items-center gap-1 text-xs text-primary hover:underline">
+                    <Plus className="w-3 h-3" /> 添加合并节点
+                  </button>
+                </div>
                 <p className="text-[11px] text-muted-foreground mt-1 mb-4">
-                  开启后，系统将根据文本相似度自动合并相似帖子为同一事件，方便快速定位和分析热点事件
+                  配置多级合并管线，数据将按顺序依次通过每个合并节点。每个节点基于上一级的结果进行再合并，形成「总→分」层级展示。
                 </p>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border border-border">
-                <div>
-                  <span className="text-sm font-medium text-foreground">启用事件合并</span>
-                  <p className="text-[11px] text-muted-foreground mt-0.5">开启后主题详情将出现「合并事件」Tab</p>
+              {sortedMergeNodes.length === 0 ? (
+                <div className="text-center py-8 border-2 border-dashed border-border rounded-lg">
+                  <GitMerge className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground mb-1">暂未配置合并节点</p>
+                  <p className="text-[10px] text-muted-foreground">不配置合并节点时，主题仅展示原始入库帖子</p>
+                  <button onClick={addMergeNode} className="mt-3 px-4 py-1.5 text-xs text-primary border border-primary/30 rounded-md hover:bg-primary/5">
+                    添加第一个合并节点
+                  </button>
                 </div>
-                <Switch
-                  checked={form.mergeConfig.enabled}
-                  onCheckedChange={(checked) => setForm(f => ({ ...f, mergeConfig: { ...f.mergeConfig, enabled: checked } }))}
-                />
-              </div>
+              ) : (
+                <div className="space-y-3">
+                  {sortedMergeNodes.map((node, i) => (
+                    <div key={node.id} className={`border rounded-lg overflow-hidden transition-colors ${node.enabled ? "border-primary/30 bg-primary/5" : "border-border bg-muted/20"}`}>
+                      {/* Node header */}
+                      <div className="flex items-center justify-between p-3 border-b border-border/50">
+                        <div className="flex items-center gap-2">
+                          <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">第{i + 1}级</Badge>
+                          <input value={node.name}
+                            onChange={(e) => updateMergeNode(node.id, { name: e.target.value })}
+                            className="text-xs font-medium text-foreground bg-transparent border-none outline-none w-32"
+                            placeholder="节点名称" />
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => moveMergeNode(node.id, "up")} disabled={i === 0}
+                            className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"><ArrowUp className="w-3 h-3" /></button>
+                          <button onClick={() => moveMergeNode(node.id, "down")} disabled={i === sortedMergeNodes.length - 1}
+                            className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"><ArrowDown className="w-3 h-3" /></button>
+                          <Switch checked={node.enabled} onCheckedChange={(checked) => updateMergeNode(node.id, { enabled: checked })} className="scale-75 mx-1" />
+                          <button onClick={() => removeMergeNode(node.id)} className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
 
-              {form.mergeConfig.enabled && (
-                <div className="space-y-4 p-4 border border-border rounded-lg">
-                  <div>
-                    <label className="text-xs font-medium text-foreground">文本相似度阈值</label>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 mb-2">
-                      相似度达到此值的帖子将被合并为同一事件
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="range"
-                        min="50"
-                        max="99"
-                        value={form.mergeConfig.similarityThreshold}
-                        onChange={(e) => setForm(f => ({ ...f, mergeConfig: { ...f.mergeConfig, similarityThreshold: Number(e.target.value) } }))}
-                        className="flex-1 accent-primary"
-                      />
-                      <span className="text-sm font-bold text-primary min-w-[3rem] text-right">{form.mergeConfig.similarityThreshold}%</span>
-                    </div>
-                    <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                      <span>50% (宽松)</span>
-                      <span>99% (严格)</span>
-                    </div>
-                  </div>
+                      {/* Node config */}
+                      {node.enabled && (
+                        <div className="p-3 space-y-3">
+                          <div>
+                            <label className="text-[10px] text-muted-foreground mb-1 block">合并类型</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              {MERGE_TYPES.map(mt => (
+                                <button key={mt.value} onClick={() => updateMergeNode(node.id, { type: mt.value as MergeNode["type"] })}
+                                  className={`text-left p-2.5 rounded-md border text-xs transition-colors ${
+                                    node.type === mt.value ? "border-primary bg-primary/10" : "border-border hover:bg-muted/30"
+                                  }`}>
+                                  <div className="font-medium text-foreground">{mt.label}</div>
+                                  <div className="text-[10px] text-muted-foreground mt-0.5">{mt.desc}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
 
-                  <div>
-                    <label className="text-xs font-medium text-foreground">时间窗口</label>
-                    <p className="text-[11px] text-muted-foreground mt-0.5 mb-2">
-                      仅在此时间范围内的帖子会参与相似度比较
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="number"
-                        min="1"
-                        max="168"
-                        value={form.mergeConfig.timeWindowHours}
-                        onChange={(e) => setForm(f => ({ ...f, mergeConfig: { ...f.mergeConfig, timeWindowHours: Number(e.target.value) } }))}
-                        className="w-24 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
-                      />
-                      <span className="text-xs text-muted-foreground">小时</span>
+                          {/* Type-specific config */}
+                          {node.type === "text_similarity" && (
+                            <div className="space-y-3 p-3 bg-card rounded-md border border-border">
+                              <div>
+                                <label className="text-[10px] text-muted-foreground">相似度阈值</label>
+                                <div className="flex items-center gap-3 mt-1">
+                                  <input type="range" min="50" max="99" value={node.similarityThreshold || 80}
+                                    onChange={(e) => updateMergeNode(node.id, { similarityThreshold: Number(e.target.value) })}
+                                    className="flex-1 accent-primary" />
+                                  <span className="text-sm font-bold text-primary min-w-[3rem] text-right">{node.similarityThreshold || 80}%</span>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-muted-foreground">时间窗口</label>
+                                <div className="flex items-center gap-2 mt-1">
+                                  <input type="number" min="1" max="168" value={node.timeWindowHours || 24}
+                                    onChange={(e) => updateMergeNode(node.id, { timeWindowHours: Number(e.target.value) })}
+                                    className="w-20 px-2 py-1 text-xs border border-border rounded bg-card text-foreground focus:ring-1 focus:ring-primary outline-none" />
+                                  <span className="text-[10px] text-muted-foreground">小时</span>
+                                  <div className="flex gap-1 ml-2">
+                                    {[6, 12, 24, 48].map(h => (
+                                      <button key={h} onClick={() => updateMergeNode(node.id, { timeWindowHours: h })}
+                                        className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${
+                                          (node.timeWindowHours || 24) === h ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"
+                                        }`}>{h}h</button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {node.type === "field_group" && (
+                            <div className="p-3 bg-card rounded-md border border-border">
+                              <label className="text-[10px] text-muted-foreground">按字段分组</label>
+                              <select value={node.groupByField || ""} onChange={(e) => updateMergeNode(node.id, { groupByField: e.target.value })}
+                                className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded bg-card text-foreground">
+                                <option value="">选择分组字段</option>
+                                {BASE_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+                              </select>
+                            </div>
+                          )}
+
+                          {node.type === "time_window" && (
+                            <div className="p-3 bg-card rounded-md border border-border">
+                              <label className="text-[10px] text-muted-foreground">时间窗口（小时）</label>
+                              <div className="flex items-center gap-2 mt-1">
+                                <input type="number" min="1" max="168" value={node.timeWindowHours || 24}
+                                  onChange={(e) => updateMergeNode(node.id, { timeWindowHours: Number(e.target.value) })}
+                                  className="w-20 px-2 py-1 text-xs border border-border rounded bg-card text-foreground focus:ring-1 focus:ring-primary outline-none" />
+                                <span className="text-[10px] text-muted-foreground">小时内的数据合并为一组</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {node.type === "custom" && (
+                            <div className="p-3 bg-card rounded-md border border-border">
+                              <label className="text-[10px] text-muted-foreground">自定义合并规则表达式</label>
+                              <textarea value={node.customRule || ""} onChange={(e) => updateMergeNode(node.id, { customRule: e.target.value })}
+                                className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded bg-card text-foreground focus:ring-1 focus:ring-primary outline-none resize-none"
+                                rows={3} placeholder="例如：IF(similarity > 0.8 AND same_topic) THEN merge" />
+                            </div>
+                          )}
+
+                          {i > 0 && (
+                            <div className="bg-muted/30 rounded p-2">
+                              <p className="text-[10px] text-muted-foreground">💡 此节点将基于第{i}级「{sortedMergeNodes[i - 1]?.name}」的合并结果进行再合并</p>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
-                    <div className="flex gap-2 mt-2">
-                      {[6, 12, 24, 48, 72].map(h => (
-                        <button
-                          key={h}
-                          onClick={() => setForm(f => ({ ...f, mergeConfig: { ...f.mergeConfig, timeWindowHours: h } }))}
-                          className={`px-2.5 py-1 text-[10px] rounded-md border transition-colors ${
-                            form.mergeConfig.timeWindowHours === h
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border text-muted-foreground hover:bg-muted"
-                          }`}
-                        >
-                          {h}小时
-                        </button>
+                  ))}
+
+                  {/* Pipeline preview */}
+                  <div className="bg-muted/30 rounded-lg p-3 border border-dashed border-border mt-4">
+                    <p className="text-[11px] text-muted-foreground mb-1.5">📋 管线预览：数据展示Tab结构</p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <Badge className="text-[10px] px-2 py-0.5 bg-muted text-foreground border-0">全部帖子</Badge>
+                      {sortedMergeNodes.filter(n => n.enabled).map((n, i) => (
+                        <div key={n.id} className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground text-[10px]">→</span>
+                          <Badge className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border-0">第{i + 1}级：{n.name}</Badge>
+                        </div>
                       ))}
                     </div>
-                  </div>
-
-                  {/* Preview */}
-                  <div className="bg-muted/30 rounded-lg p-3 border border-dashed border-border">
-                    <p className="text-[11px] text-foreground">
-                      📋 合并规则预览：在 <span className="font-bold text-primary">{form.mergeConfig.timeWindowHours}小时</span> 内，
-                      文本相似度 ≥ <span className="font-bold text-primary">{form.mergeConfig.similarityThreshold}%</span> 的帖子将自动合并为同一事件
-                    </p>
                   </div>
                 </div>
               )}
             </div>
           )}
 
-          {/* Step 5: Dashboard Config & Preview */}
+          {/* Step 5: Dashboard Config */}
           {step === 4 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -601,9 +670,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                             <span className="text-xs font-medium text-foreground">{widget.title || "未命名"}</span>
                           </div>
                           <div className="h-20 bg-muted/30 rounded-md flex items-center justify-center">
-                            <span className="text-xs text-muted-foreground">{
-                              WIDGET_TYPES.find((t) => t.value === widget.type)?.label
-                            } 预览区</span>
+                            <span className="text-xs text-muted-foreground">{WIDGET_TYPES.find((t) => t.value === widget.type)?.label} 预览区</span>
                           </div>
                         </div>
                       ))}
@@ -615,8 +682,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                   {form.dashboardWidgets.map((widget, i) => (
                     <div key={widget.id} className="border border-border rounded-lg p-3 flex items-center gap-3">
                       <GripVertical className="w-3.5 h-3.5 text-muted-foreground shrink-0 cursor-grab" />
-                      <select value={widget.type}
-                        onChange={(e) => updateWidget(i, { type: e.target.value as DashboardWidget["type"] })}
+                      <select value={widget.type} onChange={(e) => updateWidget(i, { type: e.target.value as DashboardWidget["type"] })}
                         className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
                         {WIDGET_TYPES.map((t) => <option key={t.value} value={t.value}>{t.icon} {t.label}</option>)}
                       </select>

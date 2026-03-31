@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Edit2, Copy, ToggleLeft, ToggleRight, Search, Filter, Layers } from "lucide-react";
+import { Plus, Trash2, Edit2, Copy, ToggleLeft, ToggleRight, Search, Filter, Layers, ChevronRight, GitMerge } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ThemeConfigDialog from "@/components/ThemeConfigDialog";
@@ -8,14 +8,23 @@ import ThemeFlowCanvas from "@/components/ThemeFlowCanvas";
 export interface FieldConfig {
   key: string;
   isFilter: boolean;
-  filterType: "enum" | "text"; // enum = dropdown, text = fuzzy input
-  enumValues: string[]; // only used when filterType = "enum"
+  filterType: "enum" | "text";
+  enumValues: string[];
 }
 
-export interface MergeConfig {
+export interface MergeNode {
+  id: string;
+  name: string;
   enabled: boolean;
-  similarityThreshold: number; // e.g. 80 means 80%
-  timeWindowHours: number; // e.g. 24 means within 24 hours
+  type: "text_similarity" | "field_group" | "time_window" | "custom";
+  // text_similarity params
+  similarityThreshold?: number;
+  timeWindowHours?: number;
+  // field_group params
+  groupByField?: string;
+  // custom params
+  customRule?: string;
+  order: number;
 }
 
 export interface ThemeConfig {
@@ -31,7 +40,7 @@ export interface ThemeConfig {
   baseFields: string[];
   calcFields: string[];
   fieldConfigs: FieldConfig[];
-  mergeConfig: MergeConfig;
+  mergeNodes: MergeNode[];
   dashboardWidgets: DashboardWidget[];
   createdAt: string;
   updatedAt: string;
@@ -61,10 +70,11 @@ export interface DashboardWidget {
   position: number;
 }
 
-const defaultMergeConfig: MergeConfig = {
-  enabled: false,
-  similarityThreshold: 80,
-  timeWindowHours: 24,
+const MERGE_TYPE_LABELS: Record<string, string> = {
+  text_similarity: "文本相似度合并",
+  field_group: "字段分组合并",
+  time_window: "时间窗口合并",
+  custom: "自定义规则合并",
 };
 
 const defaultThemes: ThemeConfig[] = [
@@ -94,7 +104,10 @@ const defaultThemes: ThemeConfig[] = [
       { key: "likes", isFilter: false, filterType: "text", enumValues: [] },
       { key: "comments", isFilter: false, filterType: "text", enumValues: [] },
     ],
-    mergeConfig: { enabled: true, similarityThreshold: 80, timeWindowHours: 24 },
+    mergeNodes: [
+      { id: "mn1", name: "事件合并", enabled: true, type: "text_similarity", similarityThreshold: 80, timeWindowHours: 24, order: 1 },
+      { id: "mn2", name: "业务类型合并", enabled: true, type: "field_group", groupByField: "topic", order: 2 },
+    ],
     dashboardWidgets: [
       { id: "w1", type: "statCard", title: "重大舆情", metric: "重大舆情数", position: 1 },
       { id: "w2", type: "lineChart", title: "舆情趋势", metric: "时间", position: 2 },
@@ -126,7 +139,7 @@ const defaultThemes: ThemeConfig[] = [
       { key: "author", isFilter: true, filterType: "text", enumValues: [] },
       { key: "content", isFilter: false, filterType: "text", enumValues: [] },
     ],
-    mergeConfig: { enabled: false, similarityThreshold: 80, timeWindowHours: 48 },
+    mergeNodes: [],
     dashboardWidgets: [
       { id: "w5", type: "lineChart", title: "品牌声量趋势", metric: "时间", position: 1 },
       { id: "w6", type: "pieChart", title: "SOV份额", metric: "品牌", position: 2 },
@@ -154,7 +167,9 @@ const defaultThemes: ThemeConfig[] = [
       { key: "platform", isFilter: true, filterType: "enum", enumValues: ["微博", "抖音", "小红书", "百度", "快手"] },
       { key: "likes", isFilter: false, filterType: "text", enumValues: [] },
     ],
-    mergeConfig: { enabled: true, similarityThreshold: 85, timeWindowHours: 12 },
+    mergeNodes: [
+      { id: "mn3", name: "热点事件聚合", enabled: true, type: "text_similarity", similarityThreshold: 85, timeWindowHours: 12, order: 1 },
+    ],
     dashboardWidgets: [
       { id: "w7", type: "table", title: "实时热点榜", metric: "热度", position: 1 },
       { id: "w8", type: "lineChart", title: "热度趋势", metric: "时间", position: 2 },
@@ -182,7 +197,7 @@ const defaultThemes: ThemeConfig[] = [
       { key: "sentiment", isFilter: true, filterType: "enum", enumValues: ["正面", "负面", "中性"] },
       { key: "platform", isFilter: true, filterType: "enum", enumValues: ["小红书", "黑猫投诉", "微博"] },
     ],
-    mergeConfig: { enabled: false, similarityThreshold: 80, timeWindowHours: 24 },
+    mergeNodes: [],
     dashboardWidgets: [
       { id: "w9", type: "statCard", title: "反馈总量", metric: "反馈数", position: 1 },
       { id: "w10", type: "pieChart", title: "问题分类", metric: "问题类型", position: 2 },
@@ -192,19 +207,30 @@ const defaultThemes: ThemeConfig[] = [
   },
 ];
 
-// Mock post data for demo
+// Mock data
 const MOCK_POSTS = [
-  { id: "p1", title: "万达酒店服务太差了，前台态度恶劣", platform: "微博", sentiment: "负面", author: "用户A", time: "2026-03-30 14:22", likes: 342, comments: 89 },
-  { id: "p2", title: "同程金服贷款利率不透明，感觉被坑了", platform: "黑猫投诉", sentiment: "负面", author: "用户B", time: "2026-03-30 12:10", likes: 56, comments: 23 },
-  { id: "p3", title: "入住万达还行吧，中规中矩", platform: "小红书", sentiment: "中性", author: "用户C", time: "2026-03-30 10:05", likes: 128, comments: 15 },
-  { id: "p4", title: "同程旅行APP闪退严重，客服找不到人", platform: "抖音", sentiment: "负面", author: "用户D", time: "2026-03-29 22:30", likes: 890, comments: 234 },
-  { id: "p5", title: "万达乐园亲子游体验不错，推荐", platform: "小红书", sentiment: "正面", author: "用户E", time: "2026-03-29 18:15", likes: 1205, comments: 67 },
+  { id: "p1", title: "万达酒店服务太差了，前台态度恶劣", platform: "微博", sentiment: "负面", author: "用户A", time: "2026-03-30 14:22", likes: 342, comments: 89, topic: "服务质量" },
+  { id: "p2", title: "同程金服贷款利率不透明，感觉被坑了", platform: "黑猫投诉", sentiment: "负面", author: "用户B", time: "2026-03-30 12:10", likes: 56, comments: 23, topic: "金融服务" },
+  { id: "p3", title: "入住万达还行吧，中规中矩", platform: "小红书", sentiment: "中性", author: "用户C", time: "2026-03-30 10:05", likes: 128, comments: 15, topic: "服务质量" },
+  { id: "p4", title: "同程旅行APP闪退严重，客服找不到人", platform: "抖音", sentiment: "负面", author: "用户D", time: "2026-03-29 22:30", likes: 890, comments: 234, topic: "产品问题" },
+  { id: "p5", title: "万达乐园亲子游体验不错，推荐", platform: "小红书", sentiment: "正面", author: "用户E", time: "2026-03-29 18:15", likes: 1205, comments: 67, topic: "服务质量" },
+  { id: "p6", title: "万达酒店隔音差，被隔壁吵了一晚上", platform: "微博", sentiment: "负面", author: "用户F", time: "2026-03-30 09:00", likes: 210, comments: 45, topic: "服务质量" },
+  { id: "p7", title: "同程金服提前还款手续费太高", platform: "黑猫投诉", sentiment: "负面", author: "用户G", time: "2026-03-29 16:00", likes: 78, comments: 34, topic: "金融服务" },
 ];
 
-const MOCK_EVENTS = [
-  { id: "e1", title: "万达酒店服务质量问题", postCount: 12, platforms: ["微博", "小红书", "抖音"], sentiment: "负面", firstTime: "2026-03-28 09:00", lastTime: "2026-03-30 14:22", totalLikes: 2340, totalComments: 456 },
-  { id: "e2", title: "同程金服贷款利率争议", postCount: 8, platforms: ["黑猫投诉", "微博"], sentiment: "负面", firstTime: "2026-03-29 06:30", lastTime: "2026-03-30 12:10", totalLikes: 890, totalComments: 167 },
-  { id: "e3", title: "万达乐园亲子游好评", postCount: 5, platforms: ["小红书", "抖音"], sentiment: "正面", firstTime: "2026-03-27 10:00", lastTime: "2026-03-29 18:15", totalLikes: 3450, totalComments: 234 },
+// Node 1 mock: text similarity merged events
+const MOCK_NODE1_EVENTS = [
+  { id: "e1", title: "万达酒店服务质量问题", postCount: 3, posts: ["p1", "p3", "p6"], platforms: ["微博", "小红书"], sentiment: "负面", firstTime: "2026-03-30 09:00", lastTime: "2026-03-30 14:22", totalLikes: 680, totalComments: 149 },
+  { id: "e2", title: "同程金服贷款争议", postCount: 2, posts: ["p2", "p7"], platforms: ["黑猫投诉"], sentiment: "负面", firstTime: "2026-03-29 16:00", lastTime: "2026-03-30 12:10", totalLikes: 134, totalComments: 57 },
+  { id: "e3", title: "万达乐园亲子游好评", postCount: 1, posts: ["p5"], platforms: ["小红书"], sentiment: "正面", firstTime: "2026-03-29 18:15", lastTime: "2026-03-29 18:15", totalLikes: 1205, totalComments: 67 },
+  { id: "e4", title: "同程旅行APP技术问题", postCount: 1, posts: ["p4"], platforms: ["抖音"], sentiment: "负面", firstTime: "2026-03-29 22:30", lastTime: "2026-03-29 22:30", totalLikes: 890, totalComments: 234 },
+];
+
+// Node 2 mock: field_group by topic (on top of node 1 results)
+const MOCK_NODE2_GROUPS = [
+  { id: "g1", title: "服务质量", eventCount: 2, postCount: 4, events: ["e1", "e3"], platforms: ["微博", "小红书"], mainSentiment: "负面", totalLikes: 1885, totalComments: 216 },
+  { id: "g2", title: "金融服务", eventCount: 1, postCount: 2, events: ["e2"], platforms: ["黑猫投诉"], mainSentiment: "负面", totalLikes: 134, totalComments: 57 },
+  { id: "g3", title: "产品问题", eventCount: 1, postCount: 1, events: ["e4"], platforms: ["抖音"], mainSentiment: "负面", totalLikes: 890, totalComments: 234 },
 ];
 
 export default function ThemeSettings() {
@@ -238,6 +264,8 @@ export default function ThemeSettings() {
     setThemes((prev) => [...prev, newTheme]);
   };
 
+  const enabledNodes = (selectedTheme?.mergeNodes || []).filter(n => n.enabled).sort((a, b) => a.order - b.order);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -252,74 +280,77 @@ export default function ThemeSettings() {
       </div>
 
       <div className="grid grid-cols-2 gap-4">
-        {themes.map((theme) => (
-          <div key={theme.id}
-            className={`bg-card rounded-lg border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
-              selectedTheme?.id === theme.id ? "border-primary shadow-sm" : "border-border"
-            }`}
-            onClick={() => setSelectedTheme(theme)}>
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">{theme.icon}</span>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-semibold text-foreground">{theme.name}</h3>
-                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
-                      theme.type === "builtin" ? "text-primary border-primary/30" : "text-amber-500 border-amber-500/30"
-                    }`}>{theme.type === "builtin" ? "内置" : "自定义"}</Badge>
-                    {theme.mergeConfig?.enabled && (
-                      <Badge className="text-[10px] px-1.5 py-0 bg-accent text-accent-foreground border-0">
-                        <Layers className="w-2.5 h-2.5 mr-0.5" />事件合并
-                      </Badge>
-                    )}
+        {themes.map((theme) => {
+          const activeNodes = (theme.mergeNodes || []).filter(n => n.enabled);
+          return (
+            <div key={theme.id}
+              className={`bg-card rounded-lg border-2 p-5 cursor-pointer transition-all hover:shadow-md ${
+                selectedTheme?.id === theme.id ? "border-primary shadow-sm" : "border-border"
+              }`}
+              onClick={() => setSelectedTheme(theme)}>
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{theme.icon}</span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-foreground">{theme.name}</h3>
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
+                        theme.type === "builtin" ? "text-primary border-primary/30" : "text-amber-500 border-amber-500/30"
+                      }`}>{theme.type === "builtin" ? "内置" : "自定义"}</Badge>
+                      {activeNodes.length > 0 && (
+                        <Badge className="text-[10px] px-1.5 py-0 bg-accent text-accent-foreground border-0">
+                          <GitMerge className="w-2.5 h-2.5 mr-0.5" />{activeNodes.length}级合并
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{theme.description}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">负责人：{theme.owner}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{theme.description}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">负责人：{theme.owner}</p>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); handleToggleStatus(theme.id); }} className="shrink-0">
+                  {theme.status === "active"
+                    ? <ToggleRight className="w-6 h-6 text-primary" />
+                    : <ToggleLeft className="w-6 h-6 text-muted-foreground" />}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="bg-muted/50 rounded-md p-2.5 text-center">
+                  <div className="text-lg font-bold text-foreground">{theme.dataSources.length}</div>
+                  <div className="text-[10px] text-muted-foreground">数据源</div>
+                </div>
+                <div className="bg-muted/50 rounded-md p-2.5 text-center">
+                  <div className="text-lg font-bold text-foreground">{theme.tagRules.length}</div>
+                  <div className="text-[10px] text-muted-foreground">入主题条件</div>
+                </div>
+                <div className="bg-muted/50 rounded-md p-2.5 text-center">
+                  <div className="text-lg font-bold text-foreground">{activeNodes.length}</div>
+                  <div className="text-[10px] text-muted-foreground">合并节点</div>
                 </div>
               </div>
-              <button onClick={(e) => { e.stopPropagation(); handleToggleStatus(theme.id); }} className="shrink-0">
-                {theme.status === "active"
-                  ? <ToggleRight className="w-6 h-6 text-primary" />
-                  : <ToggleLeft className="w-6 h-6 text-muted-foreground" />}
-              </button>
-            </div>
 
-            <div className="grid grid-cols-3 gap-3 mb-3">
-              <div className="bg-muted/50 rounded-md p-2.5 text-center">
-                <div className="text-lg font-bold text-foreground">{theme.dataSources.length}</div>
-                <div className="text-[10px] text-muted-foreground">数据源</div>
-              </div>
-              <div className="bg-muted/50 rounded-md p-2.5 text-center">
-                <div className="text-lg font-bold text-foreground">{theme.tagRules.length}</div>
-                <div className="text-[10px] text-muted-foreground">入主题条件</div>
-              </div>
-              <div className="bg-muted/50 rounded-md p-2.5 text-center">
-                <div className="text-lg font-bold text-foreground">{(theme.fieldConfigs || []).filter(f => f.isFilter).length}</div>
-                <div className="text-[10px] text-muted-foreground">筛选条件</div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-muted-foreground">更新于 {theme.updatedAt}</span>
-              <div className="flex items-center gap-1">
-                <button onClick={(e) => { e.stopPropagation(); handleEditTheme(theme); }}
-                  className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="编辑">
-                  <Edit2 className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); handleDuplicate(theme); }}
-                  className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="复制">
-                  <Copy className="w-3.5 h-3.5" />
-                </button>
-                {theme.type === "custom" && (
-                  <button onClick={(e) => { e.stopPropagation(); handleDeleteTheme(theme.id); }}
-                    className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="删除">
-                    <Trash2 className="w-3.5 h-3.5" />
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground">更新于 {theme.updatedAt}</span>
+                <div className="flex items-center gap-1">
+                  <button onClick={(e) => { e.stopPropagation(); handleEditTheme(theme); }}
+                    className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="编辑">
+                    <Edit2 className="w-3.5 h-3.5" />
                   </button>
-                )}
+                  <button onClick={(e) => { e.stopPropagation(); handleDuplicate(theme); }}
+                    className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="复制">
+                    <Copy className="w-3.5 h-3.5" />
+                  </button>
+                  {theme.type === "custom" && (
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteTheme(theme.id); }}
+                      className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="删除">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {selectedTheme && (
@@ -343,6 +374,7 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () => void }) {
+  const enabledNodes = (theme.mergeNodes || []).filter(n => n.enabled).sort((a, b) => a.order - b.order);
   const [activeTab, setActiveTab] = useState("posts");
 
   return (
@@ -452,51 +484,66 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
         </div>
       </div>
 
-      {/* Merge Config */}
+      {/* Merge Pipeline */}
       <div>
         <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-          <span className="w-1 h-4 rounded-full gradient-primary inline-block" /> 事件合并配置
+          <span className="w-1 h-4 rounded-full gradient-primary inline-block" /> 合并管线
         </h3>
-        <div className="bg-muted/30 rounded-lg p-4 border border-border">
-          {theme.mergeConfig?.enabled ? (
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-primary" />
-                <span className="text-xs font-medium text-foreground">已启用</span>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                相似度阈值：<span className="text-foreground font-medium">{theme.mergeConfig.similarityThreshold}%</span>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                时间窗口：<span className="text-foreground font-medium">{theme.mergeConfig.timeWindowHours} 小时</span>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                在 <span className="text-foreground font-medium">{theme.mergeConfig.timeWindowHours}小时</span> 内，文本相似度达到
-                <span className="text-foreground font-medium"> {theme.mergeConfig.similarityThreshold}%</span> 的帖子将合并为同一事件
-              </div>
+        {enabledNodes.length > 0 ? (
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="bg-muted/50 rounded-md px-3 py-2 border border-border text-xs font-medium text-foreground">
+              全部帖子
             </div>
-          ) : (
+            {enabledNodes.map((node, i) => (
+              <div key={node.id} className="flex items-center gap-2">
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                <div className="bg-primary/5 rounded-md px-3 py-2 border border-primary/20">
+                  <div className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                    <GitMerge className="w-3 h-3 text-primary" />
+                    <span>第{i + 1}级：{node.name}</span>
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    {MERGE_TYPE_LABELS[node.type] || node.type}
+                    {node.type === "text_similarity" && ` · 阈值${node.similarityThreshold}% · ${node.timeWindowHours}h窗口`}
+                    {node.type === "field_group" && ` · 按${FIELD_LABELS[node.groupByField || ""] || node.groupByField}分组`}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-muted/30 rounded-lg p-4 border border-border">
             <div className="flex items-center gap-2">
-              <Layers className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs text-muted-foreground">未启用事件合并</span>
+              <GitMerge className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">未配置合并节点，仅展示原始入库帖子</span>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Posts / Events Tabs */}
+      {/* Posts / Merge Node Tabs */}
       <div>
         <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
           <span className="w-1 h-4 rounded-full gradient-primary inline-block" /> 数据展示
         </h3>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="posts">全部帖子</TabsTrigger>
-            {theme.mergeConfig?.enabled && <TabsTrigger value="events">合并事件</TabsTrigger>}
+            <TabsTrigger value="posts">
+              全部帖子
+              <Badge className="ml-1.5 text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-0">{MOCK_POSTS.length}</Badge>
+            </TabsTrigger>
+            {enabledNodes.map((node, i) => (
+              <TabsTrigger key={node.id} value={`node_${node.id}`}>
+                第{i + 1}级：{node.name}
+                <Badge className="ml-1.5 text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">
+                  {i === 0 ? MOCK_NODE1_EVENTS.length : MOCK_NODE2_GROUPS.length}
+                </Badge>
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value="posts">
-            {/* Filter bar demo */}
+            {/* Filter bar */}
             <div className="flex flex-wrap gap-2 mb-3 mt-1">
               {(theme.fieldConfigs || []).filter(fc => fc.isFilter).map(fc => (
                 <div key={fc.key}>
@@ -514,7 +561,6 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
                 </div>
               ))}
             </div>
-            {/* Posts table */}
             <div className="border border-border rounded-lg overflow-hidden">
               <table className="w-full text-xs">
                 <thead>
@@ -548,57 +594,117 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
             </div>
           </TabsContent>
 
-          {theme.mergeConfig?.enabled && (
-            <TabsContent value="events">
-              <div className="border border-border rounded-lg overflow-hidden mt-1">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="bg-muted/50">
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">事件名称</th>
-                      <th className="text-center px-3 py-2 font-medium text-muted-foreground">合并帖子数</th>
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">涉及平台</th>
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">情感</th>
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">时间范围</th>
-                      <th className="text-right px-3 py-2 font-medium text-muted-foreground">总互动</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {MOCK_EVENTS.map(e => (
-                      <tr key={e.id} className="border-t border-border hover:bg-muted/20">
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-1.5">
-                            <Layers className="w-3.5 h-3.5 text-primary shrink-0" />
-                            <span className="text-foreground font-medium">{e.title}</span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5 text-center">
-                          <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{e.postCount} 篇</Badge>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <div className="flex gap-1">
-                            {e.platforms.map(p => (
-                              <Badge key={p} className="text-[10px] px-1 py-0 bg-muted text-muted-foreground border-0">{p}</Badge>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Badge className={`text-[10px] px-1.5 py-0 border-0 ${
-                            e.sentiment === "负面" ? "bg-destructive/10 text-destructive" :
-                            e.sentiment === "正面" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                          }`}>{e.sentiment}</Badge>
-                        </td>
-                        <td className="px-3 py-2.5 text-muted-foreground">{e.firstTime.slice(5)} ~ {e.lastTime.slice(5)}</td>
-                        <td className="px-3 py-2.5 text-right text-muted-foreground">👍 {e.totalLikes} · 💬 {e.totalComments}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {/* Render a tab for each enabled merge node */}
+          {enabledNodes.map((node, nodeIndex) => (
+            <TabsContent key={node.id} value={`node_${node.id}`}>
+              <div className="bg-muted/20 rounded-lg p-3 mb-3 border border-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <GitMerge className="w-4 h-4 text-primary" />
+                  <span className="text-xs font-medium text-foreground">{node.name}</span>
+                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">
+                    {MERGE_TYPE_LABELS[node.type]}
+                  </Badge>
+                </div>
+                <span className="text-[10px] text-muted-foreground">
+                  {node.type === "text_similarity" && `相似度 ≥ ${node.similarityThreshold}% · ${node.timeWindowHours}h窗口`}
+                  {node.type === "field_group" && `按「${FIELD_LABELS[node.groupByField || ""] || node.groupByField}」字段分组`}
+                  {nodeIndex > 0 && " · 基于上一级合并结果"}
+                </span>
               </div>
-              <p className="text-[10px] text-muted-foreground mt-2">
-                合并规则：{theme.mergeConfig.timeWindowHours}小时内，文本相似度 ≥ {theme.mergeConfig.similarityThreshold}% 的帖子归为同一事件
-              </p>
+
+              {nodeIndex === 0 ? (
+                /* Node 1: text similarity events */
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">事件名称</th>
+                        <th className="text-center px-3 py-2 font-medium text-muted-foreground">合并帖子数</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">涉及平台</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">情感</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">时间范围</th>
+                        <th className="text-right px-3 py-2 font-medium text-muted-foreground">总互动</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {MOCK_NODE1_EVENTS.map(e => (
+                        <tr key={e.id} className="border-t border-border hover:bg-muted/20">
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <Layers className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <span className="text-foreground font-medium">{e.title}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{e.postCount} 篇</Badge>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex gap-1">{e.platforms.map(p => (
+                              <Badge key={p} className="text-[10px] px-1 py-0 bg-muted text-muted-foreground border-0">{p}</Badge>
+                            ))}</div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <Badge className={`text-[10px] px-1.5 py-0 border-0 ${
+                              e.sentiment === "负面" ? "bg-destructive/10 text-destructive" :
+                              e.sentiment === "正面" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                            }`}>{e.sentiment}</Badge>
+                          </td>
+                          <td className="px-3 py-2.5 text-muted-foreground">{e.firstTime.slice(5)} ~ {e.lastTime.slice(5)}</td>
+                          <td className="px-3 py-2.5 text-right text-muted-foreground">👍 {e.totalLikes} · 💬 {e.totalComments}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                /* Node 2+: grouped results */
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/50">
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">分组名称</th>
+                        <th className="text-center px-3 py-2 font-medium text-muted-foreground">包含事件</th>
+                        <th className="text-center px-3 py-2 font-medium text-muted-foreground">原始帖子</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">涉及平台</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">主要情感</th>
+                        <th className="text-right px-3 py-2 font-medium text-muted-foreground">总互动</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {MOCK_NODE2_GROUPS.map(g => (
+                        <tr key={g.id} className="border-t border-border hover:bg-muted/20">
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-1.5">
+                              <GitMerge className="w-3.5 h-3.5 text-primary shrink-0" />
+                              <span className="text-foreground font-medium">{g.title}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <Badge className="text-[10px] px-1.5 py-0 bg-accent text-accent-foreground border-0">{g.eventCount} 个</Badge>
+                          </td>
+                          <td className="px-3 py-2.5 text-center">
+                            <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{g.postCount} 篇</Badge>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex gap-1">{g.platforms.map(p => (
+                              <Badge key={p} className="text-[10px] px-1 py-0 bg-muted text-muted-foreground border-0">{p}</Badge>
+                            ))}</div>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <Badge className={`text-[10px] px-1.5 py-0 border-0 ${
+                              g.mainSentiment === "负面" ? "bg-destructive/10 text-destructive" :
+                              g.mainSentiment === "正面" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                            }`}>{g.mainSentiment}</Badge>
+                          </td>
+                          <td className="px-3 py-2.5 text-right text-muted-foreground">👍 {g.totalLikes} · 💬 {g.totalComments}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </TabsContent>
-          )}
+          ))}
         </Tabs>
       </div>
 
