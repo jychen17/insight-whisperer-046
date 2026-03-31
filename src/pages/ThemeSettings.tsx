@@ -492,7 +492,7 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="posts">全部帖子</TabsTrigger>
-            {theme.mergeConfig.enabled && <TabsTrigger value="events">合并事件</TabsTrigger>}
+            {theme.mergeConfig?.enabled && <TabsTrigger value="events">合并事件</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="posts">
