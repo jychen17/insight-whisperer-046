@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Settings2 } from "lucide-react";
 import { toast } from "sonner";
-import DecisionFlowCanvas from "@/components/DecisionFlowCanvas";
+
 
 interface RuleCondition {
   field: string;
