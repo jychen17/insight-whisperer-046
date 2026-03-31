@@ -294,7 +294,7 @@ export default function ThemeSettings() {
                 <div className="text-[10px] text-muted-foreground">入主题条件</div>
               </div>
               <div className="bg-muted/50 rounded-md p-2.5 text-center">
-                <div className="text-lg font-bold text-foreground">{theme.fieldConfigs.filter(f => f.isFilter).length}</div>
+                <div className="text-lg font-bold text-foreground">{(theme.fieldConfigs || []).filter(f => f.isFilter).length}</div>
                 <div className="text-[10px] text-muted-foreground">筛选条件</div>
               </div>
             </div>
