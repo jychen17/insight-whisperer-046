@@ -548,7 +548,7 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
             </div>
           </TabsContent>
 
-          {theme.mergeConfig.enabled && (
+          {theme.mergeConfig?.enabled && (
             <TabsContent value="events">
               <div className="border border-border rounded-lg overflow-hidden mt-1">
                 <table className="w-full text-xs">
