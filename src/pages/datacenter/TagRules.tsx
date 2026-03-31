@@ -110,36 +110,8 @@ export default function TagRules() {
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">规则总数</p><p className="text-2xl font-bold text-foreground mt-1">{rules.length}</p></CardContent></Card>
       </div>
 
-      {/* Decision Flow Visual */}
-      <Card>
-        <CardHeader><CardTitle className="text-base flex items-center gap-2"><GitBranch className="w-4 h-4 text-primary" /> 分流决策流</CardTitle></CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-3 overflow-x-auto pb-2">
-            <div className="shrink-0 px-4 py-3 rounded-lg bg-muted border border-border text-center">
-              <p className="text-xs text-muted-foreground">采集数据</p>
-              <p className="text-sm font-medium text-foreground">原始数据池</p>
-            </div>
-            <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0" />
-            <div className="shrink-0 px-4 py-3 rounded-lg bg-primary/5 border border-primary/20 text-center">
-              <p className="text-xs text-muted-foreground">AI标签</p>
-              <p className="text-sm font-medium text-foreground">特征提取</p>
-            </div>
-            <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0" />
-            <div className="shrink-0 px-4 py-3 rounded-lg bg-amber-500/5 border border-amber-500/20 text-center">
-              <p className="text-xs text-muted-foreground">标签规则</p>
-              <p className="text-sm font-medium text-foreground">表达式匹配</p>
-            </div>
-            <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0" />
-            <div className="flex gap-2 shrink-0">
-              {themes.map(t => (
-                <div key={t} className={`px-3 py-2 rounded-lg border text-center ${themeColors[t]}`}>
-                  <p className="text-xs font-medium">{t}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Interactive Decision Flow Canvas */}
+      <DecisionFlowCanvas rules={rules} themes={themes} themeColors={themeColors} />
 
       <Card>
         <CardHeader><CardTitle className="text-base">分流规则列表</CardTitle></CardHeader>
