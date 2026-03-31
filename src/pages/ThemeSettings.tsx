@@ -267,7 +267,7 @@ export default function ThemeSettings() {
                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
                       theme.type === "builtin" ? "text-primary border-primary/30" : "text-amber-500 border-amber-500/30"
                     }`}>{theme.type === "builtin" ? "内置" : "自定义"}</Badge>
-                    {theme.mergeConfig.enabled && (
+                    {theme.mergeConfig?.enabled && (
                       <Badge className="text-[10px] px-1.5 py-0 bg-accent text-accent-foreground border-0">
                         <Layers className="w-2.5 h-2.5 mr-0.5" />事件合并
                       </Badge>
@@ -294,7 +294,7 @@ export default function ThemeSettings() {
                 <div className="text-[10px] text-muted-foreground">入主题条件</div>
               </div>
               <div className="bg-muted/50 rounded-md p-2.5 text-center">
-                <div className="text-lg font-bold text-foreground">{theme.fieldConfigs.filter(f => f.isFilter).length}</div>
+                <div className="text-lg font-bold text-foreground">{(theme.fieldConfigs || []).filter(f => f.isFilter).length}</div>
                 <div className="text-[10px] text-muted-foreground">筛选条件</div>
               </div>
             </div>
@@ -414,7 +414,7 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
             </thead>
             <tbody>
               {[...theme.baseFields, ...theme.calcFields].map((f) => {
-                const fc = theme.fieldConfigs.find(c => c.key === f);
+                const fc = (theme.fieldConfigs || []).find(c => c.key === f);
                 const isCalc = theme.calcFields.includes(f);
                 return (
                   <tr key={f} className="border-t border-border">
@@ -458,7 +458,7 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
           <span className="w-1 h-4 rounded-full gradient-primary inline-block" /> 事件合并配置
         </h3>
         <div className="bg-muted/30 rounded-lg p-4 border border-border">
-          {theme.mergeConfig.enabled ? (
+          {theme.mergeConfig?.enabled ? (
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-primary" />
@@ -492,13 +492,13 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="posts">全部帖子</TabsTrigger>
-            {theme.mergeConfig.enabled && <TabsTrigger value="events">合并事件</TabsTrigger>}
+            {theme.mergeConfig?.enabled && <TabsTrigger value="events">合并事件</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="posts">
             {/* Filter bar demo */}
             <div className="flex flex-wrap gap-2 mb-3 mt-1">
-              {theme.fieldConfigs.filter(fc => fc.isFilter).map(fc => (
+              {(theme.fieldConfigs || []).filter(fc => fc.isFilter).map(fc => (
                 <div key={fc.key}>
                   {fc.filterType === "enum" ? (
                     <select className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
@@ -548,7 +548,7 @@ function ThemeDetailPanel({ theme, onEdit }: { theme: ThemeConfig; onEdit: () =>
             </div>
           </TabsContent>
 
-          {theme.mergeConfig.enabled && (
+          {theme.mergeConfig?.enabled && (
             <TabsContent value="events">
               <div className="border border-border rounded-lg overflow-hidden mt-1">
                 <table className="w-full text-xs">
