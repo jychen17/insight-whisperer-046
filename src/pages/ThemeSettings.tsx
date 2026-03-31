@@ -267,7 +267,7 @@ export default function ThemeSettings() {
                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${
                       theme.type === "builtin" ? "text-primary border-primary/30" : "text-amber-500 border-amber-500/30"
                     }`}>{theme.type === "builtin" ? "内置" : "自定义"}</Badge>
-                    {theme.mergeConfig.enabled && (
+                    {theme.mergeConfig?.enabled && (
                       <Badge className="text-[10px] px-1.5 py-0 bg-accent text-accent-foreground border-0">
                         <Layers className="w-2.5 h-2.5 mr-0.5" />事件合并
                       </Badge>
