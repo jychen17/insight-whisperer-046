@@ -1,58 +1,125 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Tag, FolderTree, ChevronRight } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Brain, FileText, Calculator, Tag, Settings2, ChevronRight } from "lucide-react";
 
-interface TagCategory {
+interface TagItem {
+  id: string;
   name: string;
-  count: number;
-  color: string;
-  children: { name: string; count: number }[];
+  description: string;
+  dataType: string;
+  source: string;
+  status: boolean;
+  coverage: number;
+  taggedCount: number;
 }
 
-const tagCategories: TagCategory[] = [
-  {
-    name: "情感标签", count: 3, color: "bg-rose-500/10 text-rose-500",
-    children: [{ name: "正面", count: 45200 }, { name: "负面", count: 12800 }, { name: "中性", count: 67400 }],
-  },
-  {
-    name: "行业标签", count: 8, color: "bg-blue-500/10 text-blue-500",
-    children: [{ name: "科技", count: 23400 }, { name: "金融", count: 18900 }, { name: "医疗", count: 15600 }, { name: "教育", count: 12300 }],
-  },
-  {
-    name: "平台标签", count: 6, color: "bg-amber-500/10 text-amber-500",
-    children: [{ name: "微博", count: 128450 }, { name: "抖音", count: 85620 }, { name: "小红书", count: 42300 }, { name: "知乎", count: 36780 }],
-  },
-  {
-    name: "主题标签", count: 12, color: "bg-emerald-500/10 text-emerald-500",
-    children: [{ name: "品牌口碑", count: 34500 }, { name: "产品体验", count: 28900 }, { name: "竞品对比", count: 19200 }, { name: "市场趋势", count: 15800 }],
-  },
-  {
-    name: "风险标签", count: 4, color: "bg-destructive/10 text-destructive",
-    children: [{ name: "高风险", count: 890 }, { name: "中风险", count: 2340 }, { name: "低风险", count: 5670 }, { name: "安全", count: 116500 }],
-  },
-  {
-    name: "自定义标签", count: 15, color: "bg-violet-500/10 text-violet-500",
-    children: [{ name: "重点关注", count: 8900 }, { name: "待处理", count: 3200 }, { name: "已归档", count: 45600 }],
-  },
+const aiTags: TagItem[] = [
+  { id: "AI01", name: "业务类型", description: "AI识别内容所属业务线（酒店/机票/度假等）", dataType: "枚举", source: "舆情模型", status: true, coverage: 96.2, taggedCount: 245800 },
+  { id: "AI02", name: "情感类型", description: "NLP模型识别文本正面/负面/中性情感", dataType: "枚举", source: "情感模型", status: true, coverage: 98.5, taggedCount: 312400 },
+  { id: "AI03", name: "内容主题", description: "AI聚类识别内容主题标签", dataType: "多值", source: "主题模型", status: true, coverage: 88.3, taggedCount: 198500 },
+  { id: "AI04", name: "是否负面舆情", description: "综合判断是否构成负面舆情", dataType: "布尔", source: "舆情模型", status: true, coverage: 97.8, taggedCount: 305200 },
+  { id: "AI05", name: "舆情问题类型", description: "识别投诉/曝光/维权等问题类型", dataType: "枚举", source: "舆情模型", status: true, coverage: 91.4, taggedCount: 156800 },
+  { id: "AI06", name: "舆情判断依据", description: "AI输出的舆情判定关键依据文本", dataType: "文本", source: "舆情模型", status: true, coverage: 89.6, taggedCount: 142300 },
+  { id: "AI07", name: "风险等级", description: "AI风控模型识别内容风险级别", dataType: "枚举", source: "风控模型", status: true, coverage: 95.1, taggedCount: 287600 },
+  { id: "AI08", name: "风险判断依据", description: "风控模型输出的判断依据", dataType: "文本", source: "风控模型", status: true, coverage: 93.2, taggedCount: 265400 },
+  { id: "AI09", name: "OTA品牌", description: "识别提及的OTA品牌名称", dataType: "枚举", source: "NER模型", status: true, coverage: 94.6, taggedCount: 234500 },
+  { id: "AI10", name: "所属BG", description: "识别内容对应的业务BG", dataType: "枚举", source: "风控模型", status: false, coverage: 72.3, taggedCount: 89200 },
 ];
 
+const rawTags: TagItem[] = [
+  { id: "RAW01", name: "标题", description: "原始内容标题", dataType: "文本", source: "采集字段", status: true, coverage: 99.9, taggedCount: 674350 },
+  { id: "RAW02", name: "正文内容", description: "原始正文/帖子内容", dataType: "长文本", source: "采集字段", status: true, coverage: 99.8, taggedCount: 674350 },
+  { id: "RAW03", name: "发布人昵称", description: "内容发布者昵称", dataType: "文本", source: "采集字段", status: true, coverage: 98.2, taggedCount: 662100 },
+  { id: "RAW04", name: "发布人粉丝数", description: "发布者粉丝/关注者数量", dataType: "数值", source: "采集字段", status: true, coverage: 85.6, taggedCount: 577200 },
+  { id: "RAW05", name: "发布时间", description: "内容原始发布时间", dataType: "时间", source: "采集字段", status: true, coverage: 99.9, taggedCount: 674350 },
+  { id: "RAW06", name: "点赞量", description: "内容获得的点赞数", dataType: "数值", source: "采集字段", status: true, coverage: 96.4, taggedCount: 650200 },
+  { id: "RAW07", name: "评论量", description: "内容获得的评论数", dataType: "数值", source: "采集字段", status: true, coverage: 95.8, taggedCount: 645800 },
+  { id: "RAW08", name: "收藏量", description: "内容获得的收藏/保存数", dataType: "数值", source: "采集字段", status: true, coverage: 78.3, taggedCount: 528100 },
+  { id: "RAW09", name: "分享量", description: "内容被分享/转发次数", dataType: "数值", source: "采集字段", status: true, coverage: 82.1, taggedCount: 553600 },
+  { id: "RAW10", name: "平台来源", description: "数据采集来源平台", dataType: "枚举", source: "采集字段", status: true, coverage: 100, taggedCount: 674350 },
+];
+
+const calcTags: TagItem[] = [
+  { id: "CALC01", name: "发酵等级", description: "低(评论<10)、中(10-50)、快(>50)", dataType: "枚举", source: "评论量", status: true, coverage: 95.8, taggedCount: 645800 },
+  { id: "CALC02", name: "风险分数", description: "(评论+点赞+收藏+分享+阅读)×0.5 + 风险等级×0.5", dataType: "数值", source: "加权计算", status: true, coverage: 94.2, taggedCount: 635200 },
+  { id: "CALC03", name: "互动热度", description: "点赞+评论+收藏+分享的加权综合分", dataType: "数值", source: "加权计算", status: true, coverage: 93.5, taggedCount: 630800 },
+  { id: "CALC04", name: "传播速度", description: "单位时间内互动增量", dataType: "数值", source: "时序计算", status: true, coverage: 88.1, taggedCount: 594200 },
+  { id: "CALC05", name: "影响力指数", description: "发布人粉丝数×互动率的综合评分", dataType: "数值", source: "加权计算", status: false, coverage: 76.4, taggedCount: 515200 },
+];
+
+const typeIcons: Record<string, typeof Brain> = {
+  "AI标签": Brain,
+  "原始标签": FileText,
+  "计算标签": Calculator,
+};
+
 const stats = [
-  { label: "标签分类", value: "6" },
-  { label: "标签总数", value: "48" },
-  { label: "已标注数据", value: "674,350" },
+  { label: "AI标签", value: aiTags.length.toString(), desc: "模型自动识别" },
+  { label: "原始标签", value: rawTags.length.toString(), desc: "采集原始字段" },
+  { label: "计算标签", value: calcTags.length.toString(), desc: "加权/规则计算" },
   { label: "标注覆盖率", value: "94.2%" },
 ];
+
+function TagTable({ tags, category }: { tags: TagItem[]; category: string }) {
+  const Icon = typeIcons[category] || Tag;
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>标签名称</TableHead>
+          <TableHead>数据类型</TableHead>
+          <TableHead>来源</TableHead>
+          <TableHead>覆盖率</TableHead>
+          <TableHead className="text-right">已标注数</TableHead>
+          <TableHead>状态</TableHead>
+          <TableHead className="text-right">操作</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {tags.map((t) => (
+          <TableRow key={t.id}>
+            <TableCell>
+              <div className="flex items-center gap-2">
+                <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-sm">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.description}</p>
+                </div>
+              </div>
+            </TableCell>
+            <TableCell><Badge variant="outline" className="text-xs">{t.dataType}</Badge></TableCell>
+            <TableCell className="text-sm text-muted-foreground">{t.source}</TableCell>
+            <TableCell>
+              <span className={t.coverage >= 95 ? "text-emerald-500" : t.coverage >= 85 ? "text-amber-500" : "text-destructive"}>
+                {t.coverage}%
+              </span>
+            </TableCell>
+            <TableCell className="text-right text-sm">{t.taggedCount.toLocaleString()}</TableCell>
+            <TableCell><Switch checked={t.status} /></TableCell>
+            <TableCell className="text-right">
+              <Button variant="ghost" size="icon" className="h-8 w-8"><Settings2 className="w-4 h-4" /></Button>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
 
 export default function TagSystem() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">标签体系</h1>
-          <p className="text-sm text-muted-foreground mt-1">管理和维护数据标签分类与层级结构</p>
+          <h1 className="text-2xl font-bold text-foreground">标签管理</h1>
+          <p className="text-sm text-muted-foreground mt-1">管理AI标签、原始标签与计算标签，构建完整特征体系</p>
         </div>
-        <Button className="gap-2"><Plus className="w-4 h-4" /> 新建分类</Button>
+        <Button className="gap-2"><Plus className="w-4 h-4" /> 新建标签</Button>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -61,44 +128,58 @@ export default function TagSystem() {
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">{s.label}</p>
               <p className="text-2xl font-bold text-foreground mt-1">{s.value}</p>
+              {s.desc && <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>}
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tagCategories.map((cat) => (
-          <Card key={cat.name}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className={`w-8 h-8 rounded-lg ${cat.color} flex items-center justify-center`}>
-                    <FolderTree className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <CardTitle className="text-sm">{cat.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{cat.count} 个标签</p>
-                  </div>
-                </div>
-                <Button variant="ghost" size="icon" className="h-7 w-7"><ChevronRight className="w-4 h-4" /></Button>
-              </div>
+      <Tabs defaultValue="ai" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="ai" className="gap-1.5"><Brain className="w-3.5 h-3.5" /> AI标签</TabsTrigger>
+          <TabsTrigger value="raw" className="gap-1.5"><FileText className="w-3.5 h-3.5" /> 原始标签</TabsTrigger>
+          <TabsTrigger value="calc" className="gap-1.5"><Calculator className="w-3.5 h-3.5" /> 计算标签</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ai">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Brain className="w-4 h-4 text-primary" />
+                AI模型标签
+                <Badge variant="secondary" className="ml-2">{aiTags.length} 个</Badge>
+              </CardTitle>
             </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-2">
-                {cat.children.map((child) => (
-                  <div key={child.name} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <Tag className="w-3 h-3 text-muted-foreground" />
-                      <span className="text-sm text-foreground">{child.name}</span>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">{child.count.toLocaleString()}</Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
+            <CardContent><TagTable tags={aiTags} category="AI标签" /></CardContent>
           </Card>
-        ))}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="raw">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary" />
+                原始采集标签
+                <Badge variant="secondary" className="ml-2">{rawTags.length} 个</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent><TagTable tags={rawTags} category="原始标签" /></CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="calc">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calculator className="w-4 h-4 text-primary" />
+                计算标签
+                <Badge variant="secondary" className="ml-2">{calcTags.length} 个</Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent><TagTable tags={calcTags} category="计算标签" /></CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
