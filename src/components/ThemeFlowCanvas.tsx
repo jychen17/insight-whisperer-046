@@ -1,0 +1,280 @@
+import { useState, useRef, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { GitBranch, ZoomIn, ZoomOut, Maximize2, Database, Filter, Tag, BarChart3 } from "lucide-react";
+import type { ThemeConfig } from "@/pages/ThemeSettings";
+
+interface FlowNode {
+  id: string;
+  type: "source" | "rule" | "baseField" | "calcField";
+  label: string;
+  sublabel?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface FlowEdge {
+  from: string;
+  to: string;
+}
+
+const FIELD_LABELS: Record<string, string> = {
+  sentiment: "情感倾向", risk_level: "风险等级", topic: "话题分类", intent: "用户意图",
+  platform: "平台", publish_time: "发布时间", author: "作者", content: "内容正文",
+  likes: "点赞数", comments: "评论数", shares: "分享数", reads: "阅读数",
+  heat_score: "热度指数", risk_score: "风险分数", ferment_level: "发酵等级",
+  sov: "SOV份额", nps: "NPS评分", growth_rate: "增长率",
+};
+
+export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+
+  // Layout columns
+  const colX = [40, 280, 520, 760];
+  const nodeW = 170;
+  const nodeH = 52;
+
+  // Build nodes from theme data
+  const sourceNodes: FlowNode[] = theme.dataSources.map((ds, i) => ({
+    id: `src_${ds.taskId}`,
+    type: "source",
+    label: ds.taskName,
+    sublabel: ds.platforms.join("、"),
+    x: colX[0], y: 100 + i * 76,
+    width: nodeW, height: nodeH,
+  }));
+
+  const ruleNodes: FlowNode[] = theme.tagRules.map((r, i) => ({
+    id: `rule_${r.id}`,
+    type: "rule",
+    label: `${FIELD_LABELS[r.tagName] || r.tagName} ${r.type === "required" ? "=" : r.type === "filter" ? "≠" : "∈"} ${r.tagValue}`,
+    sublabel: r.type === "required" ? "必须满足" : r.type === "filter" ? "过滤排除" : "权重匹配",
+    x: colX[1], y: 100 + i * 76,
+    width: nodeW + 20, height: nodeH,
+  }));
+
+  const baseFieldNodes: FlowNode[] = theme.baseFields.map((f, i) => ({
+    id: `bf_${f}`,
+    type: "baseField",
+    label: FIELD_LABELS[f] || f,
+    x: colX[2], y: 80 + i * 52,
+    width: 140, height: 40,
+  }));
+
+  const calcFieldNodes: FlowNode[] = theme.calcFields.map((f, i) => ({
+    id: `cf_${f}`,
+    type: "calcField",
+    label: FIELD_LABELS[f] || f,
+    sublabel: "计算指标",
+    x: colX[3], y: 80 + i * 52,
+    width: 140, height: 40,
+  }));
+
+  const allNodes = [...sourceNodes, ...ruleNodes, ...baseFieldNodes, ...calcFieldNodes];
+
+  // Build edges
+  const edges: FlowEdge[] = [];
+  // sources → rules
+  sourceNodes.forEach(s => ruleNodes.forEach(r => edges.push({ from: s.id, to: r.id })));
+  // rules → base fields
+  ruleNodes.forEach(r => baseFieldNodes.forEach(bf => edges.push({ from: r.id, to: bf.id })));
+  // base fields → calc fields
+  baseFieldNodes.forEach(bf => calcFieldNodes.forEach(cf => edges.push({ from: bf.id, to: cf.id })));
+
+  // Highlight connected
+  const getConnectedIds = (nodeId: string) => {
+    const connected = new Set<string>([nodeId]);
+    const traverse = (id: string, dir: "f" | "b") => {
+      edges.forEach(e => {
+        if (dir === "f" && e.from === id && !connected.has(e.to)) { connected.add(e.to); traverse(e.to, "f"); }
+        if (dir === "b" && e.to === id && !connected.has(e.from)) { connected.add(e.from); traverse(e.from, "b"); }
+      });
+    };
+    traverse(nodeId, "f");
+    traverse(nodeId, "b");
+    return connected;
+  };
+  const highlightedIds = hoveredNode ? getConnectedIds(hoveredNode) : null;
+
+  const getEdgePath = (from: FlowNode, to: FlowNode) => {
+    const x1 = from.x + from.width;
+    const y1 = from.y + from.height / 2;
+    const x2 = to.x;
+    const y2 = to.y + to.height / 2;
+    const cx = (x1 + x2) / 2;
+    return `M${x1},${y1} C${cx},${y1} ${cx},${y2} ${x2},${y2}`;
+  };
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    setScale(s => Math.max(0.4, Math.min(2, s + (e.deltaY > 0 ? -0.08 : 0.08))));
+  }, []);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const tag = (e.target as HTMLElement).tagName;
+    if (tag === "svg" || ((e.target as HTMLElement).getAttribute("data-bg") === "true")) {
+      setDragging(true);
+      setDragStart({ x: e.clientX - offset.x, y: e.clientY - offset.y });
+    }
+  };
+  const handleMouseMove = (e: React.MouseEvent) => { if (dragging) setOffset({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }); };
+  const handleMouseUp = () => setDragging(false);
+  const resetView = () => { setScale(1); setOffset({ x: 0, y: 0 }); };
+
+  // Calculate canvas size
+  const maxY = Math.max(...allNodes.map(n => n.y + n.height), 300);
+  const canvasW = 980;
+  const canvasH = maxY + 60;
+
+  const columnHeaders = [
+    { x: colX[0], w: nodeW, label: "数据源", icon: <Database className="w-3 h-3" /> },
+    { x: colX[1], w: nodeW + 20, label: "入主题规则", icon: <Filter className="w-3 h-3" /> },
+    { x: colX[2], w: 140, label: "基础字段", icon: <Tag className="w-3 h-3" /> },
+    { x: colX[3], w: 140, label: "计算字段", icon: <BarChart3 className="w-3 h-3" /> },
+  ];
+
+  const typeStyles: Record<string, { bg: string; border: string; dot: string }> = {
+    source: { bg: "hsl(var(--muted))", border: "hsl(var(--border))", dot: "hsl(var(--muted-foreground))" },
+    rule: { bg: "hsl(40 95% 55% / 0.08)", border: "hsl(40 95% 55% / 0.3)", dot: "hsl(40 95% 55%)" },
+    baseField: { bg: "hsl(var(--primary) / 0.06)", border: "hsl(var(--primary) / 0.25)", dot: "hsl(var(--primary))" },
+    calcField: { bg: "hsl(142 71% 45% / 0.08)", border: "hsl(142 71% 45% / 0.3)", dot: "hsl(142 71% 45%)" },
+  };
+
+  return (
+    <Card className={`transition-all ${expanded ? "fixed inset-4 z-50 m-0" : ""}`}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <GitBranch className="w-4 h-4 text-primary" />
+            {theme.icon} {theme.name} · 数据分流决策流
+          </CardTitle>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale(s => Math.min(2, s + 0.15))}><ZoomIn className="w-3.5 h-3.5" /></Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setScale(s => Math.max(0.4, s - 0.15))}><ZoomOut className="w-3.5 h-3.5" /></Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={resetView}><Maximize2 className="w-3.5 h-3.5" /></Button>
+            <Button variant="outline" size="sm" className="h-7 text-xs ml-1" onClick={() => setExpanded(!expanded)}>
+              {expanded ? "退出全屏" : "全屏"}
+            </Button>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">数据源 → 入主题规则 → 基础字段 → 计算字段 · 悬停高亮链路 · 缩放 {Math.round(scale * 100)}%</p>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div
+          ref={containerRef}
+          className="relative overflow-hidden border-t border-border bg-muted/20"
+          style={{ height: expanded ? "calc(100vh - 140px)" : Math.min(canvasH * 0.85, 420), cursor: dragging ? "grabbing" : "grab" }}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onWheel={handleWheel}
+        >
+          {/* Grid */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-30">
+            <defs>
+              <pattern id="themeGrid" width="24" height="24" patternUnits="userSpaceOnUse">
+                <path d="M 24 0 L 0 0 0 24" fill="none" stroke="hsl(var(--border))" strokeWidth="0.5" />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#themeGrid)" />
+          </svg>
+
+          <svg
+            className="absolute inset-0 w-full h-full"
+            viewBox={`0 0 ${canvasW} ${canvasH}`}
+            style={{ transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`, transformOrigin: "center" }}
+          >
+            <defs>
+              <marker id="arr" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+                <polygon points="0 0, 7 2.5, 0 5" fill="hsl(var(--muted-foreground))" opacity="0.4" />
+              </marker>
+              <marker id="arr-active" markerWidth="7" markerHeight="5" refX="7" refY="2.5" orient="auto">
+                <polygon points="0 0, 7 2.5, 0 5" fill="hsl(var(--primary))" opacity="0.8" />
+              </marker>
+            </defs>
+
+            {/* Column headers */}
+            {columnHeaders.map((col, i) => (
+              <g key={i}>
+                <rect x={col.x - 6} y={40} width={col.w + 12} height={26} rx={13} fill="hsl(var(--muted))" />
+                <text x={col.x + col.w / 2} y={57} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize="11" fontWeight="500">{col.label}</text>
+              </g>
+            ))}
+
+            {/* Edges */}
+            {edges.map((edge, i) => {
+              const from = allNodes.find(n => n.id === edge.from);
+              const to = allNodes.find(n => n.id === edge.to);
+              if (!from || !to) return null;
+              const active = highlightedIds && highlightedIds.has(edge.from) && highlightedIds.has(edge.to);
+              const dimmed = highlightedIds && !active;
+              return (
+                <path
+                  key={i}
+                  d={getEdgePath(from, to)}
+                  fill="none"
+                  stroke={active ? "hsl(var(--primary))" : "hsl(var(--border))"}
+                  strokeWidth={active ? 2 : 1}
+                  opacity={dimmed ? 0.1 : active ? 1 : 0.4}
+                  markerEnd={active ? "url(#arr-active)" : "url(#arr)"}
+                  className="transition-all duration-200"
+                />
+              );
+            })}
+
+            {/* Nodes */}
+            {allNodes.map(node => {
+              const st = typeStyles[node.type] || typeStyles.source;
+              const dimmed = highlightedIds && !highlightedIds.has(node.id);
+              const active = highlightedIds?.has(node.id);
+              const hovered = hoveredNode === node.id;
+
+              return (
+                <g
+                  key={node.id}
+                  style={{ opacity: dimmed ? 0.15 : 1 }}
+                  className="cursor-pointer transition-opacity duration-200"
+                  onMouseEnter={() => setHoveredNode(node.id)}
+                  onMouseLeave={() => setHoveredNode(null)}
+                >
+                  <rect x={node.x + 1} y={node.y + 1} width={node.width} height={node.height} rx={8} fill="hsl(var(--foreground) / 0.04)" />
+                  <rect
+                    x={node.x} y={node.y} width={node.width} height={node.height} rx={8}
+                    fill={st.bg}
+                    stroke={active || hovered ? "hsl(var(--primary))" : st.border}
+                    strokeWidth={active || hovered ? 2 : 1}
+                  />
+                  <circle cx={node.x + 18} cy={node.y + node.height / 2} r={5} fill={st.dot} opacity={0.7} />
+                  <text
+                    x={node.x + 30} y={node.y + (node.sublabel ? node.height / 2 - 4 : node.height / 2 + 4)}
+                    fill="hsl(var(--foreground))" fontSize="11" fontWeight="600"
+                  >
+                    {node.label.length > 16 ? node.label.slice(0, 16) + "…" : node.label}
+                  </text>
+                  {node.sublabel && (
+                    <text x={node.x + 30} y={node.y + node.height / 2 + 11} fill="hsl(var(--muted-foreground))" fontSize="9">
+                      {node.sublabel.length > 20 ? node.sublabel.slice(0, 20) + "…" : node.sublabel}
+                    </text>
+                  )}
+                  {hovered && (
+                    <rect x={node.x - 2} y={node.y - 2} width={node.width + 4} height={node.height + 4} rx={10} fill="none" stroke="hsl(var(--primary))" strokeWidth={1} opacity={0.3} />
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

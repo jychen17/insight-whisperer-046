@@ -254,7 +254,12 @@ export default function ThemeSettings() {
         ))}
       </div>
 
-      {selectedTheme && <ThemeDetailPanel theme={selectedTheme} onEdit={() => handleEditTheme(selectedTheme)} />}
+      {selectedTheme && (
+        <>
+          <ThemeFlowCanvas theme={selectedTheme} />
+          <ThemeDetailPanel theme={selectedTheme} onEdit={() => handleEditTheme(selectedTheme)} />
+        </>
+      )}
 
       <ThemeConfigDialog open={dialogOpen} onOpenChange={setDialogOpen} theme={editingTheme} onSave={handleSaveTheme} />
     </div>

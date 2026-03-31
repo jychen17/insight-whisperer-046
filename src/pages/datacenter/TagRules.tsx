@@ -110,8 +110,6 @@ export default function TagRules() {
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">规则总数</p><p className="text-2xl font-bold text-foreground mt-1">{rules.length}</p></CardContent></Card>
       </div>
 
-      {/* Interactive Decision Flow Canvas */}
-      <DecisionFlowCanvas rules={rules} themes={themes} themeColors={themeColors} />
 
       <Card>
         <CardHeader><CardTitle className="text-base">分流规则列表</CardTitle></CardHeader>
