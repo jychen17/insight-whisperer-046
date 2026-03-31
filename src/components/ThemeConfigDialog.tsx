@@ -227,7 +227,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
 
   if (!open) return null;
 
-  const sortedMergeNodes = [...form.mergeNodes].sort((a, b) => a.order - b.order);
+  const sortedMergeNodes = [...(form.mergeNodes || [])].sort((a, b) => a.order - b.order);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30">
