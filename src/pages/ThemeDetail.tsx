@@ -67,13 +67,18 @@ export default function ThemeDetail() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <button onClick={() => navigate("/")} className="hover:text-foreground transition-colors">数据中心</button>
+        <ChevronRight className="w-3 h-3" />
+        <button onClick={() => navigate("/datacenter/themes/manage")} className="hover:text-foreground transition-colors">主题配置</button>
+        <ChevronRight className="w-3 h-3" />
+        <span className="text-foreground font-medium">{currentTheme.name}</span>
+      </nav>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate("/datacenter/themes/manage")}
-            className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-          </button>
           <span className="text-2xl">{currentTheme.icon}</span>
           <div>
             <h1 className="text-xl font-semibold text-foreground">{currentTheme.name}</h1>
