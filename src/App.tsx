@@ -13,6 +13,7 @@ import HotspotDiscover from "@/pages/HotspotDiscover";
 import ExperienceOverview from "@/pages/ExperienceOverview";
 import PlaceholderPage from "@/components/PlaceholderPage";
 import ThemeSettings from "@/pages/ThemeSettings";
+import ThemeDetail from "@/pages/ThemeDetail";
 import NotFound from "./pages/NotFound.tsx";
 import AIChatBot from "@/components/AIChatBot";
 // 数据中心
@@ -72,6 +73,7 @@ const App = () => (
             <Route path="/datacenter/tags/rules" element={<TagRules />} />
             <Route path="/datacenter/tags/quality" element={<TagQuality />} />
             <Route path="/datacenter/themes/manage" element={<ThemeSettings />} />
+            <Route path="/datacenter/themes/detail" element={<ThemeDetail />} />
             <Route path="/datacenter/themes/rules" element={<ThemeRules />} />
             <Route path="/datacenter/themes/dashboard" element={<DashboardConfig />} />
             {/* 分析工具 */}
