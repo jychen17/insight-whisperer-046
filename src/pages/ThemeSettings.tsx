@@ -260,6 +260,7 @@ function conditionToText(node: ConditionNode): string {
 // ── Main Component ──────────────────────────────────────────
 
 export default function ThemeSettings() {
+  const navigate = useNavigate();
   const [themes, setThemes] = useState<ThemeConfig[]>(defaultThemes);
   const [selectedTheme, setSelectedTheme] = useState<ThemeConfig | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);

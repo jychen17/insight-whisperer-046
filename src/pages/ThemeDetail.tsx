@@ -46,6 +46,8 @@ export default function ThemeDetail() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dashboardDialogTheme, setDashboardDialogTheme] = useState<ThemeConfig | null>(null);
   const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(theme || null);
+  const [activeTab, setActiveTab] = useState("posts");
+  const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
   if (!currentTheme) {
     return (
@@ -57,8 +59,6 @@ export default function ThemeDetail() {
   }
 
   const enabledNodes = (currentTheme.mergeNodes || []).filter(n => n.enabled).sort((a, b) => a.order - b.order);
-  const [activeTab, setActiveTab] = useState("posts");
-  const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
   const handleSaveTheme = (t: ThemeConfig) => {
     setCurrentTheme(t);
