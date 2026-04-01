@@ -489,8 +489,6 @@ function DashboardBuilderDialog({ theme, onClose, onSave }: { theme: ThemeConfig
   );
 }
 
-
-function ThemeDetailPanel({ theme, onEdit, onDashboard }: { theme: ThemeConfig; onEdit: () => void; onDashboard: () => void }) {
   const enabledNodes = (theme.mergeNodes || []).filter(n => n.enabled).sort((a, b) => a.order - b.order);
   const [activeTab, setActiveTab] = useState("posts");
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
