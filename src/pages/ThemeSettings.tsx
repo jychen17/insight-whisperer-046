@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Trash2, Edit2, Copy, ToggleLeft, ToggleRight, Search, Filter, Layers, ChevronRight, GitMerge, ChevronDown, ChevronUp, LayoutDashboard, X, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ThemeConfigDialog from "@/components/ThemeConfigDialog";
 import ThemeFlowCanvas from "@/components/ThemeFlowCanvas";
@@ -293,76 +294,85 @@ export default function ThemeSettings() {
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        {themes.map(theme => {
-          const activeNodes = (theme.mergeNodes || []).filter(n => n.enabled);
-          return (
-            <div key={theme.id}
-              className={`bg-card rounded-lg border-2 p-5 cursor-pointer transition-all hover:shadow-md ${selectedTheme?.id === theme.id ? "border-primary shadow-sm" : "border-border"}`}
-              onClick={() => setSelectedTheme(theme)}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <span className="text-2xl">{theme.icon}</span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-sm font-semibold text-foreground">{theme.name}</h3>
-                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${theme.type === "builtin" ? "text-primary border-primary/30" : "text-amber-500 border-amber-500/30"}`}>
-                        {theme.type === "builtin" ? "内置" : "自定义"}
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="w-[280px]">主题名称</TableHead>
+              <TableHead className="text-center w-[80px]">数据源</TableHead>
+              <TableHead className="text-center w-[80px]">展示字段</TableHead>
+              <TableHead className="text-center w-[80px]">合并节点</TableHead>
+              <TableHead className="w-[100px]">负责人</TableHead>
+              <TableHead className="w-[100px]">状态</TableHead>
+              <TableHead className="w-[110px]">更新时间</TableHead>
+              <TableHead className="text-right w-[140px]">操作</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {themes.map(theme => {
+              const activeNodes = (theme.mergeNodes || []).filter(n => n.enabled);
+              const isSelected = selectedTheme?.id === theme.id;
+              return (
+                <TableRow key={theme.id}
+                  className={`cursor-pointer transition-colors ${isSelected ? "bg-primary/5" : ""}`}
+                  onClick={() => setSelectedTheme(theme)}>
+                  <TableCell>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-lg">{theme.icon}</span>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-sm font-medium text-foreground">{theme.name}</span>
+                          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${theme.type === "builtin" ? "text-primary border-primary/30" : "text-amber-500 border-amber-500/30"}`}>
+                            {theme.type === "builtin" ? "内置" : "自定义"}
+                          </Badge>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{theme.description}</p>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center text-sm font-medium text-foreground">{theme.dataSources.length}</TableCell>
+                  <TableCell className="text-center text-sm font-medium text-foreground">{theme.fieldConfigs.length}</TableCell>
+                  <TableCell className="text-center">
+                    {activeNodes.length > 0 ? (
+                      <Badge className="text-[10px] px-1.5 py-0 bg-accent text-accent-foreground border-0">
+                        <GitMerge className="w-2.5 h-2.5 mr-0.5" />{activeNodes.length}
                       </Badge>
-                      {activeNodes.length > 0 && (
-                        <Badge className="text-[10px] px-1.5 py-0 bg-accent text-accent-foreground border-0">
-                          <GitMerge className="w-2.5 h-2.5 mr-0.5" />{activeNodes.length}级合并
-                        </Badge>
+                    ) : <span className="text-sm text-muted-foreground">0</span>}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{theme.owner}</TableCell>
+                  <TableCell>
+                    <button onClick={e => { e.stopPropagation(); handleToggleStatus(theme.id); }} className="shrink-0">
+                      {theme.status === "active" ? <ToggleRight className="w-5 h-5 text-primary" /> : <ToggleLeft className="w-5 h-5 text-muted-foreground" />}
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{theme.updatedAt}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-0.5">
+                      <button onClick={e => { e.stopPropagation(); handleEditTheme(theme); }}
+                        className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="编辑配置">
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); setDashboardDialogTheme(theme); }}
+                        className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="看板搭建">
+                        <LayoutDashboard className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={e => { e.stopPropagation(); handleDuplicate(theme); }}
+                        className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="复制">
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      {theme.type === "custom" && (
+                        <button onClick={e => { e.stopPropagation(); handleDeleteTheme(theme.id); }}
+                          className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="删除">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5">{theme.description}</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">负责人：{theme.owner}</p>
-                  </div>
-                </div>
-                <button onClick={e => { e.stopPropagation(); handleToggleStatus(theme.id); }} className="shrink-0">
-                  {theme.status === "active" ? <ToggleRight className="w-6 h-6 text-primary" /> : <ToggleLeft className="w-6 h-6 text-muted-foreground" />}
-                </button>
-              </div>
-              <div className="grid grid-cols-3 gap-3 mb-3">
-                <div className="bg-muted/50 rounded-md p-2.5 text-center">
-                  <div className="text-lg font-bold text-foreground">{theme.dataSources.length}</div>
-                  <div className="text-[10px] text-muted-foreground">数据源</div>
-                </div>
-                <div className="bg-muted/50 rounded-md p-2.5 text-center">
-                  <div className="text-lg font-bold text-foreground">{theme.fieldConfigs.length}</div>
-                  <div className="text-[10px] text-muted-foreground">展示字段</div>
-                </div>
-                <div className="bg-muted/50 rounded-md p-2.5 text-center">
-                  <div className="text-lg font-bold text-foreground">{activeNodes.length}</div>
-                  <div className="text-[10px] text-muted-foreground">合并节点</div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground">更新于 {theme.updatedAt}</span>
-                <div className="flex items-center gap-1">
-                  <button onClick={e => { e.stopPropagation(); handleEditTheme(theme); }}
-                    className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="编辑配置">
-                    <Edit2 className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={e => { e.stopPropagation(); setDashboardDialogTheme(theme); }}
-                    className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="看板搭建">
-                    <LayoutDashboard className="w-3.5 h-3.5" />
-                  </button>
-                  <button onClick={e => { e.stopPropagation(); handleDuplicate(theme); }}
-                    className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="复制">
-                    <Copy className="w-3.5 h-3.5" />
-                  </button>
-                  {theme.type === "custom" && (
-                    <button onClick={e => { e.stopPropagation(); handleDeleteTheme(theme.id); }}
-                      className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="删除">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </div>
 
       {selectedTheme && (
