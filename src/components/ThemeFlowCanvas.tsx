@@ -73,7 +73,7 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
     id: "theme_dest",
     type: "theme",
     label: theme.name,
-    sublabel: `${theme.baseFields.length + theme.calcFields.length} 个展示字段`,
+    sublabel: `${theme.fieldConfigs.length} 个展示字段`,
     x: colX[2],
     y: 100 + Math.max(0, (Math.max(sourceNodes.length, ruleNodes.length) - 1) * 76) / 2,
     width: nodeW, height: 64,
