@@ -2,7 +2,13 @@ import { useState, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GitBranch, ZoomIn, ZoomOut, Maximize2, Database, Filter } from "lucide-react";
-import type { ThemeConfig } from "@/pages/ThemeSettings";
+import type { ThemeConfig, ConditionNode } from "@/pages/ThemeSettings";
+
+function flattenConditions(node: ConditionNode | undefined): ConditionNode[] {
+  if (!node) return [];
+  if (node.type === "condition") return [node];
+  return (node.children || []).flatMap(c => flattenConditions(c));
+}
 
 interface FlowNode {
   id: string;
