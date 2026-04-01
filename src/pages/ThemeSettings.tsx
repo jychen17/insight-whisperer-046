@@ -350,6 +350,10 @@ export default function ThemeSettings() {
                   <TableCell className="text-xs text-muted-foreground">{theme.updatedAt}</TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-0.5">
+                      <button onClick={e => { e.stopPropagation(); navigate("/datacenter/themes/detail", { state: { theme } }); }}
+                        className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="查看详情">
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
                       <button onClick={e => { e.stopPropagation(); handleEditTheme(theme); }}
                         className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="编辑配置">
                         <Edit2 className="w-3.5 h-3.5" />
