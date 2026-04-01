@@ -13,6 +13,7 @@ import HotspotDiscover from "@/pages/HotspotDiscover";
 import ExperienceOverview from "@/pages/ExperienceOverview";
 import PlaceholderPage from "@/components/PlaceholderPage";
 import ThemeSettings from "@/pages/ThemeSettings";
+import ThemeDetail from "@/pages/ThemeDetail";
 import NotFound from "./pages/NotFound.tsx";
 import AIChatBot from "@/components/AIChatBot";
 // 数据中心
