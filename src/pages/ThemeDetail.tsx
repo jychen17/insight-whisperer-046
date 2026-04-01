@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Edit2, LayoutDashboard, GitMerge, Filter, Search, Layers, ChevronRight, ChevronDown, ChevronUp, Eye, ArrowLeft, X, Trash2 } from "lucide-react";
+import { Edit2, LayoutDashboard, GitMerge, Filter, Search, Layers, ChevronRight, ChevronDown, ChevronUp, Eye, ArrowLeft, X, Trash2, Home } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ThemeFlowCanvas from "@/components/ThemeFlowCanvas";
