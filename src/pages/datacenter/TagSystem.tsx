@@ -5,6 +5,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Plus, Brain, FileText, Calculator, Tag, Settings2, ChevronRight } from "lucide-react";
 
 interface TagItem {
@@ -111,7 +116,49 @@ function TagTable({ tags, category }: { tags: TagItem[]; category: string }) {
   );
 }
 
+const dataTypeOptions: Record<string, string[]> = {
+  ai: ["枚举", "多值", "布尔", "文本"],
+  raw: ["文本", "长文本", "数值", "时间", "枚举"],
+  calc: ["枚举", "数值"],
+};
+
+const sourceOptions: Record<string, string[]> = {
+  ai: ["舆情模型", "情感模型", "主题模型", "风控模型", "NER模型"],
+  raw: ["采集字段"],
+  calc: ["加权计算", "时序计算", "规则计算"],
+};
+
+const categoryLabels: Record<string, string> = {
+  ai: "AI标签",
+  raw: "原始标签",
+  calc: "计算标签",
+};
+
+const emptyForm = { name: "", description: "", category: "ai", dataType: "", source: "" };
+
 export default function TagSystem() {
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [form, setForm] = useState({ ...emptyForm });
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+
+  const openDialog = () => {
+    setForm({ ...emptyForm });
+    setErrors({});
+    setDialogOpen(true);
+  };
+
+  const handleSave = () => {
+    const newErrors: Record<string, boolean> = {};
+    if (!form.name.trim()) newErrors.name = true;
+    if (!form.dataType) newErrors.dataType = true;
+    if (!form.source) newErrors.source = true;
+    if (Object.keys(newErrors).length) {
+      setErrors(newErrors);
+      return;
+    }
+    setDialogOpen(false);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -119,7 +166,7 @@ export default function TagSystem() {
           <h1 className="text-2xl font-bold text-foreground">标签管理</h1>
           <p className="text-sm text-muted-foreground mt-1">管理AI标签、原始标签与计算标签，构建完整特征体系</p>
         </div>
-        <Button className="gap-2"><Plus className="w-4 h-4" /> 新建标签</Button>
+        <Button className="gap-2" onClick={openDialog}><Plus className="w-4 h-4" /> 新建标签</Button>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -180,6 +227,113 @@ export default function TagSystem() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* 新建标签弹窗 */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>新建标签</DialogTitle>
+            <DialogDescription>填写标签基本信息，创建后可在对应分类中管理</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* 标签类型 */}
+            <div className="space-y-1.5">
+              <Label>标签类型 <span className="text-destructive">*</span></Label>
+              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v, dataType: "", source: "" })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ai"><span className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> AI标签</span></SelectItem>
+                  <SelectItem value="raw"><span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> 原始标签</span></SelectItem>
+                  <SelectItem value="calc"><span className="flex items-center gap-1.5"><Calculator className="w-3.5 h-3.5" /> 计算标签</span></SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 标签名称 */}
+            <div className="space-y-1.5">
+              <Label>标签名称 <span className="text-destructive">*</span></Label>
+              <Input
+                placeholder="例如：业务类型、风险等级"
+                value={form.name}
+                onChange={(e) => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: false }); }}
+                className={errors.name ? "border-destructive" : ""}
+              />
+              {errors.name && <p className="text-xs text-destructive">请输入标签名称</p>}
+            </div>
+
+            {/* 标签描述 */}
+            <div className="space-y-1.5">
+              <Label>标签描述</Label>
+              <Textarea
+                placeholder="描述标签的含义和用途"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={2}
+              />
+            </div>
+
+            {/* 数据类型 & 来源 */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>数据类型 <span className="text-destructive">*</span></Label>
+                <Select value={form.dataType} onValueChange={(v) => { setForm({ ...form, dataType: v }); setErrors({ ...errors, dataType: false }); }}>
+                  <SelectTrigger className={errors.dataType ? "border-destructive" : ""}>
+                    <SelectValue placeholder="请选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dataTypeOptions[form.category]?.map((dt) => (
+                      <SelectItem key={dt} value={dt}>{dt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.dataType && <p className="text-xs text-destructive">请选择数据类型</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label>来源 <span className="text-destructive">*</span></Label>
+                <Select value={form.source} onValueChange={(v) => { setForm({ ...form, source: v }); setErrors({ ...errors, source: false }); }}>
+                  <SelectTrigger className={errors.source ? "border-destructive" : ""}>
+                    <SelectValue placeholder="请选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {sourceOptions[form.category]?.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.source && <p className="text-xs text-destructive">请选择来源</p>}
+              </div>
+            </div>
+
+            {/* 计算标签额外：计算公式 */}
+            {form.category === "calc" && (
+              <div className="space-y-1.5">
+                <Label>计算公式</Label>
+                <Textarea
+                  placeholder="例如：(评论+点赞+收藏+分享)×0.5 + 风险等级×0.5"
+                  value=""
+                  rows={2}
+                />
+              </div>
+            )}
+
+            {/* AI标签额外：模型版本 */}
+            {form.category === "ai" && (
+              <div className="space-y-1.5">
+                <Label>模型版本</Label>
+                <Input placeholder="例如：v2.1.0" />
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
+            <Button onClick={handleSave}>创建标签</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
