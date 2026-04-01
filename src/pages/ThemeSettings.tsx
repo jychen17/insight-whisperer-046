@@ -381,13 +381,6 @@ export default function ThemeSettings() {
         </Table>
       </div>
 
-      {selectedTheme && (
-        <>
-          <ThemeFlowCanvas theme={selectedTheme} />
-          <ThemeDetailPanel theme={selectedTheme} onEdit={() => handleEditTheme(selectedTheme)} onDashboard={() => setDashboardDialogTheme(selectedTheme)} />
-        </>
-      )}
-
       <ThemeConfigDialog open={dialogOpen} onOpenChange={setDialogOpen} theme={editingTheme} onSave={handleSaveTheme} />
       {dashboardDialogTheme && (
         <DashboardBuilderDialog theme={dashboardDialogTheme} onClose={() => setDashboardDialogTheme(null)}

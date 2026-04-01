@@ -73,6 +73,7 @@ const App = () => (
             <Route path="/datacenter/tags/rules" element={<TagRules />} />
             <Route path="/datacenter/tags/quality" element={<TagQuality />} />
             <Route path="/datacenter/themes/manage" element={<ThemeSettings />} />
+            <Route path="/datacenter/themes/detail" element={<ThemeDetail />} />
             <Route path="/datacenter/themes/rules" element={<ThemeRules />} />
             <Route path="/datacenter/themes/dashboard" element={<DashboardConfig />} />
             {/* 分析工具 */}
