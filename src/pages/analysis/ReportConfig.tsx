@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, FileText, Clock, Settings2, Copy, Mail, Users, User, Send, Zap } from "lucide-react";
+import { Plus, FileText, Clock, Settings2, Copy, Mail, Users, User, Send, Zap, Eye, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
 interface ReportTemplate {
@@ -87,6 +88,7 @@ const pushChannels = [
 ];
 
 export default function ReportConfig() {
+  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reportType, setReportType] = useState<"oneoff" | "periodic">("periodic");
   const [frequency, setFrequency] = useState("");
@@ -106,6 +108,10 @@ export default function ReportConfig() {
     setSelectedChannels(["wechat"]);
   };
 
+  const viewReports = (templateId: string, templateName: string) => {
+    navigate(`/analysis/reports?source=${templateId}&name=${encodeURIComponent(templateName)}`);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -113,7 +119,12 @@ export default function ReportConfig() {
           <h1 className="text-2xl font-bold text-foreground">报告配置</h1>
           <p className="text-sm text-muted-foreground mt-1">配置自动化报告模板、生成频率与分发规则</p>
         </div>
-        <Button className="gap-2" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4" /> 新建报告</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => navigate("/analysis/reports")}>
+            <Eye className="w-4 h-4" /> 查看所有报告
+          </Button>
+          <Button className="gap-2" onClick={() => { resetForm(); setDialogOpen(true); }}><Plus className="w-4 h-4" /> 新建报告</Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
@@ -178,10 +189,22 @@ export default function ReportConfig() {
                       {t.pushTarget === "group" ? "群推送" : "个人推送"}
                     </div>
                   </TableCell>
-                  <TableCell className="text-right font-medium">{t.generatedCount}</TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto text-primary font-medium"
+                      onClick={() => viewReports(t.id, t.name)}
+                    >
+                      {t.generatedCount}
+                      <ArrowRight className="w-3 h-3 ml-0.5" />
+                    </Button>
+                  </TableCell>
                   <TableCell><Switch checked={t.status} /></TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="查看已生成报告" onClick={() => viewReports(t.id, t.name)}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8"><Settings2 className="w-4 h-4" /></Button>
                       <Button variant="ghost" size="icon" className="h-8 w-8"><Copy className="w-4 h-4" /></Button>
                     </div>
