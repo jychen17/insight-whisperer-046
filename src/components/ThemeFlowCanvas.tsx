@@ -51,12 +51,13 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
     width: nodeW, height: nodeH,
   }));
 
-  // Rule nodes (entry conditions)
-  const ruleNodes: FlowNode[] = theme.tagRules.map((r, i) => ({
-    id: `rule_${r.id}`,
+  // Rule nodes from condition tree
+  const flatConditions = flattenConditions(theme.conditionTree);
+  const ruleNodes: FlowNode[] = flatConditions.map((c, i) => ({
+    id: `rule_${c.id}`,
     type: "rule",
-    label: `${FIELD_LABELS[r.tagName] || r.tagName} ${r.type === "required" ? "=" : r.type === "filter" ? "≠" : "∈"} ${r.tagValue}`,
-    sublabel: r.type === "required" ? "必须满足" : r.type === "filter" ? "过滤排除" : "权重匹配",
+    label: `${FIELD_LABELS[c.field || ""] || c.field} ${c.operator === "equals" ? "=" : c.operator === "not_equals" ? "≠" : "∈"} ${c.value}`,
+    sublabel: "条件",
     x: colX[1], y: 100 + i * 76,
     width: nodeW + 20, height: nodeH,
   }));
