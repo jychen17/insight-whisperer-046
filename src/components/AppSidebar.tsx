@@ -44,9 +44,7 @@ const navGroups: NavGroup[] = [
       {
         label: "首页",
         icon: <Home className="w-4 h-4" />,
-        children: [
-          { label: "首页", path: "/" },
-        ],
+        path: "/",
       },
       {
         label: "舆情主题",
