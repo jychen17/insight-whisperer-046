@@ -12,6 +12,7 @@ import IndustryOverview from "@/pages/IndustryOverview";
 import HotspotDiscover from "@/pages/HotspotDiscover";
 import ExperienceOverview from "@/pages/ExperienceOverview";
 import PlaceholderPage from "@/components/PlaceholderPage";
+import ThemeList from "@/pages/ThemeList";
 import ThemeSettings from "@/pages/ThemeSettings";
 import ThemeDetail from "@/pages/ThemeDetail";
 import NotFound from "./pages/NotFound.tsx";
