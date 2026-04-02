@@ -41,6 +41,13 @@ const navGroups: NavGroup[] = [
     groupLabel: "洞察主题",
     sections: [
       {
+        label: "首页",
+        icon: <Home className="w-4 h-4" />,
+        children: [
+          { label: "首页", path: "/" },
+        ],
+      },
+      {
         label: "舆情主题",
         icon: <Shield className="w-4 h-4" />,
         children: [
