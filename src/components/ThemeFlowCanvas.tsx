@@ -51,6 +51,26 @@ const MERGE_TYPE_LABELS: Record<string, string> = {
   custom: "自定义合并",
 };
 
+// Split expression into display lines (~28 chars each)
+function splitExprLines(text: string, maxLen = 30): string[] {
+  if (text.length <= maxLen) return [text];
+  const lines: string[] = [];
+  let rest = text;
+  while (rest.length > 0) {
+    if (rest.length <= maxLen) { lines.push(rest); break; }
+    // Try to break at AND/OR
+    let breakIdx = -1;
+    for (const sep of [" AND ", " OR "]) {
+      const idx = rest.lastIndexOf(sep, maxLen);
+      if (idx > 0) { breakIdx = idx + sep.length; break; }
+    }
+    if (breakIdx <= 0) breakIdx = maxLen;
+    lines.push(rest.slice(0, breakIdx));
+    rest = rest.slice(breakIdx);
+  }
+  return lines;
+}
+
 export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
