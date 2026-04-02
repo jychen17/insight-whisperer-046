@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import {
   ChevronDown,
   ChevronRight,
+  Home,
   Eye,
   Shield,
   Globe,
