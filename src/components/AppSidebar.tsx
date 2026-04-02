@@ -39,13 +39,18 @@ interface NavGroup {
 
 const navGroups: NavGroup[] = [
   {
-    groupLabel: "洞察主题",
+    groupLabel: "首页",
     sections: [
       {
         label: "首页",
         icon: <Home className="w-4 h-4" />,
         path: "/",
       },
+    ],
+  },
+  {
+    groupLabel: "洞察主题",
+    sections: [
       {
         label: "舆情主题",
         icon: <Shield className="w-4 h-4" />,
