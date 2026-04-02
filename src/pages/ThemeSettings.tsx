@@ -224,8 +224,10 @@ const defaultThemes: ThemeConfig[] = [
   {
     id: "experience", name: "产品体验主题", description: "用户反馈收集、产品问题洞察", owner: "赵六",
     type: "builtin", status: "active", icon: "💡",
-    dataSources: [{ taskId: "t6", taskName: "用户反馈监控", platforms: ["小红书", "黑猫投诉", "微博"], timeRange: "近7天", enabled: true }],
-    conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "intent", operator: "equals", value: "用户反馈" }] },
+    dataSources: [{ taskId: "t6", taskName: "用户反馈监控", platforms: ["小红书", "黑猫投诉", "微博"], timeRange: "近7天", enabled: true,
+      conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "intent", operator: "equals", value: "用户反馈" }] },
+    }],
+    conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
       { key: "sentiment", fieldType: "ai", displayPosition: "both", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["正面", "负面", "中性"] },
       { key: "platform", fieldType: "raw", displayPosition: "list", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["小红书", "黑猫投诉", "微博"] },
