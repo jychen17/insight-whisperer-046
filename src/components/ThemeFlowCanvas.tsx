@@ -446,7 +446,7 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
                     </text>
                   )}
                   {/* Sublabel */}
-                  {node.sublabel && (
+                  {node.sublabel && node.type !== "rule" && (
                     <text
                       x={isMerge ? node.x + 34 : isTheme ? node.x + node.width / 2 : node.x + 30}
                       y={node.y + (isTheme ? node.height / 2 + 16 : node.height / 2 + 11)}
