@@ -129,18 +129,31 @@ const defaultThemes: ThemeConfig[] = [
     id: "sentiment", name: "舆情主题", description: "品牌声誉风险监测与预警", owner: "张三",
     type: "builtin", status: "active", icon: "🛡️",
     dataSources: [
-      { taskId: "t1", taskName: "同程-万达", platforms: ["小红书", "微博", "抖音"], timeRange: "近7天", enabled: true },
-      { taskId: "t2", taskName: "同程-金服", platforms: ["微博", "黑猫投诉"], timeRange: "近7天", enabled: true },
+      { taskId: "t1", taskName: "同程-万达", platforms: ["小红书", "微博", "抖音"], timeRange: "近7天", enabled: true,
+        conditionTree: {
+          id: "root_t1", type: "group", logic: "AND", children: [
+            { id: "c1_t1", type: "condition", field: "platform", operator: "equals", value: "小红书" },
+            { id: "c2_t1", type: "condition", field: "sentiment", operator: "equals", value: "负面" },
+            { id: "g1_t1", type: "group", logic: "OR", children: [
+              { id: "c3_t1", type: "condition", field: "risk_level", operator: "equals", value: "高" },
+              { id: "c4_t1", type: "condition", field: "risk_level", operator: "equals", value: "中" },
+            ]},
+          ],
+        },
+      },
+      { taskId: "t2", taskName: "同程-金服", platforms: ["微博", "黑猫投诉"], timeRange: "近7天", enabled: true,
+        conditionTree: {
+          id: "root_t2", type: "group", logic: "AND", children: [
+            { id: "c1_t2", type: "condition", field: "sentiment", operator: "equals", value: "负面" },
+            { id: "g1_t2", type: "group", logic: "OR", children: [
+              { id: "c2_t2", type: "condition", field: "risk_level", operator: "equals", value: "高" },
+              { id: "c3_t2", type: "condition", field: "risk_level", operator: "equals", value: "中" },
+            ]},
+          ],
+        },
+      },
     ],
-    conditionTree: {
-      id: "root", type: "group", logic: "AND", children: [
-        { id: "c1", type: "condition", field: "sentiment", operator: "equals", value: "负面" },
-        { id: "g1", type: "group", logic: "OR", children: [
-          { id: "c2", type: "condition", field: "risk_level", operator: "equals", value: "高" },
-          { id: "c3", type: "condition", field: "risk_level", operator: "equals", value: "中" },
-        ]},
-      ],
-    },
+    conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
       { key: "sentiment", fieldType: "ai", displayPosition: "both", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["正面", "负面", "中性"] },
       { key: "risk_level", fieldType: "ai", displayPosition: "both", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["高", "中", "低"] },
