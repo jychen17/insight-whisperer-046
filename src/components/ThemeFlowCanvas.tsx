@@ -4,10 +4,22 @@ import { Button } from "@/components/ui/button";
 import { GitBranch, ZoomIn, ZoomOut, Maximize2, Database, Filter, GitMerge } from "lucide-react";
 import type { ThemeConfig, ConditionNode } from "@/pages/ThemeSettings";
 
-function flattenConditions(node: ConditionNode | undefined): ConditionNode[] {
-  if (!node) return [];
-  if (node.type === "condition") return [node];
-  return (node.children || []).flatMap(c => flattenConditions(c));
+function conditionToText(node: ConditionNode | undefined): string {
+  if (!node) return "";
+  if (node.type === "condition") {
+    const opLabel = node.operator === "equals" ? "=" : node.operator === "not_equals" ? "≠" : node.operator === "contains" ? "∈" : node.operator || "=";
+    return `${FIELD_LABELS[node.field || ""] || node.field} ${opLabel} ${node.value}`;
+  }
+  const childTexts = (node.children || []).map(c => conditionToText(c)).filter(Boolean);
+  if (childTexts.length === 0) return "";
+  const joined = childTexts.join(` ${node.logic || "AND"} `);
+  return childTexts.length > 1 ? `(${joined})` : joined;
+}
+
+function hasConditions(node: ConditionNode | undefined): boolean {
+  if (!node) return false;
+  if (node.type === "condition") return true;
+  return (node.children || []).some(c => hasConditions(c));
 }
 
 interface FlowNode {
