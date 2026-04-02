@@ -68,6 +68,7 @@ export interface DataSourceConfig {
   platforms: string[];
   timeRange: string;
   enabled: boolean;
+  conditionTree?: ConditionNode;
 }
 
 export interface TagRule {
