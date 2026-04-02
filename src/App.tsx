@@ -12,6 +12,7 @@ import IndustryOverview from "@/pages/IndustryOverview";
 import HotspotDiscover from "@/pages/HotspotDiscover";
 import ExperienceOverview from "@/pages/ExperienceOverview";
 import PlaceholderPage from "@/components/PlaceholderPage";
+import ThemeList from "@/pages/ThemeList";
 import ThemeSettings from "@/pages/ThemeSettings";
 import ThemeDetail from "@/pages/ThemeDetail";
 import NotFound from "./pages/NotFound.tsx";
@@ -51,7 +52,7 @@ const App = () => (
             <Route path="/experience/overview" element={<ExperienceOverview />} />
             <Route path="/experience/detail" element={<PlaceholderPage title="产品体验列表" />} />
             {/* 洞察主题 - 更多主题 */}
-            <Route path="/themes/list" element={<PlaceholderPage title="主题列表" />} />
+            <Route path="/themes/list" element={<ThemeList />} />
             {/* 数据中心 */}
             <Route path="/datacenter/tasks" element={<CollectionTasks />} />
             <Route path="/datacenter/keywords" element={<KeywordManage />} />
