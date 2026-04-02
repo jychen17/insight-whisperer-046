@@ -4,10 +4,22 @@ import { Button } from "@/components/ui/button";
 import { GitBranch, ZoomIn, ZoomOut, Maximize2, Database, Filter, GitMerge } from "lucide-react";
 import type { ThemeConfig, ConditionNode } from "@/pages/ThemeSettings";
 
-function flattenConditions(node: ConditionNode | undefined): ConditionNode[] {
-  if (!node) return [];
-  if (node.type === "condition") return [node];
-  return (node.children || []).flatMap(c => flattenConditions(c));
+function conditionToText(node: ConditionNode | undefined): string {
+  if (!node) return "";
+  if (node.type === "condition") {
+    const opLabel = node.operator === "equals" ? "=" : node.operator === "not_equals" ? "≠" : node.operator === "contains" ? "∈" : node.operator || "=";
+    return `${FIELD_LABELS[node.field || ""] || node.field} ${opLabel} ${node.value}`;
+  }
+  const childTexts = (node.children || []).map(c => conditionToText(c)).filter(Boolean);
+  if (childTexts.length === 0) return "";
+  const joined = childTexts.join(` ${node.logic || "AND"} `);
+  return childTexts.length > 1 ? `(${joined})` : joined;
+}
+
+function hasConditions(node: ConditionNode | undefined): boolean {
+  if (!node) return false;
+  if (node.type === "condition") return true;
+  return (node.children || []).some(c => hasConditions(c));
 }
 
 interface FlowNode {
@@ -38,6 +50,26 @@ const MERGE_TYPE_LABELS: Record<string, string> = {
   time_window: "时间窗口合并",
   custom: "自定义合并",
 };
+
+// Split expression into display lines (~28 chars each)
+function splitExprLines(text: string, maxLen = 30): string[] {
+  if (text.length <= maxLen) return [text];
+  const lines: string[] = [];
+  let rest = text;
+  while (rest.length > 0) {
+    if (rest.length <= maxLen) { lines.push(rest); break; }
+    // Try to break at AND/OR
+    let breakIdx = -1;
+    for (const sep of [" AND ", " OR "]) {
+      const idx = rest.lastIndexOf(sep, maxLen);
+      if (idx > 0) { breakIdx = idx + sep.length; break; }
+    }
+    if (breakIdx <= 0) breakIdx = maxLen;
+    lines.push(rest.slice(0, breakIdx));
+    rest = rest.slice(breakIdx);
+  }
+  return lines;
+}
 
 export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -71,47 +103,60 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
     width: nodeW, height: nodeH,
   }));
 
-  // Rule nodes - per data source
+  // Rule nodes - one per data source showing full condition tree
   const ruleFlowNodes: FlowNode[] = [];
-  let ruleYOffset = 0;
+  const ruleToSourceMap: Record<string, string> = {}; // ruleId -> sourceId
+  let ruleIdx = 0;
+
   theme.dataSources.forEach(ds => {
-    const dsConditions = flattenConditions(ds.conditionTree);
-    dsConditions.forEach(c => {
+    const tree = ds.conditionTree;
+    if (tree && hasConditions(tree)) {
+      const exprText = conditionToText(tree);
+      // Split long expressions into lines for display
+      const lines = splitExprLines(exprText);
+      const lineH = 18;
+      const h = Math.max(nodeH, 28 + lines.length * lineH);
+      const ruleId = `rule_${ds.taskId}`;
       ruleFlowNodes.push({
-        id: `rule_${ds.taskId}_${c.id}`,
+        id: ruleId,
         type: "rule",
-        label: `${FIELD_LABELS[c.field || ""] || c.field} ${c.operator === "equals" ? "=" : c.operator === "not_equals" ? "≠" : "∈"} ${c.value}`,
+        label: exprText,
         sublabel: ds.taskName,
-        x: colX[1], y: 100 + ruleYOffset * 72,
-        width: nodeW + 20, height: nodeH,
+        x: colX[1], y: 100 + ruleIdx * (h + 16),
+        width: nodeW + 80, height: h,
       });
-      ruleYOffset++;
-    });
+      ruleToSourceMap[ruleId] = `src_${ds.taskId}`;
+      ruleIdx++;
+    }
   });
+
   // Fallback: if no per-datasource conditions, use theme-level conditionTree
-  if (ruleFlowNodes.length === 0) {
-    const flatConditions = flattenConditions(theme.conditionTree);
-    flatConditions.forEach((c, i) => {
-      ruleFlowNodes.push({
-        id: `rule_${c.id}`,
-        type: "rule",
-        label: `${FIELD_LABELS[c.field || ""] || c.field} ${c.operator === "equals" ? "=" : c.operator === "not_equals" ? "≠" : "∈"} ${c.value}`,
-        sublabel: "条件",
-        x: colX[1], y: 100 + i * 72,
-        width: nodeW + 20, height: nodeH,
-      });
+  if (ruleFlowNodes.length === 0 && hasConditions(theme.conditionTree)) {
+    const exprText = conditionToText(theme.conditionTree);
+    const lines = splitExprLines(exprText);
+    const lineH = 18;
+    const h = Math.max(nodeH, 28 + lines.length * lineH);
+    ruleFlowNodes.push({
+      id: "rule_global",
+      type: "rule",
+      label: exprText,
+      sublabel: "全局条件",
+      x: colX[1], y: 100,
+      width: nodeW + 80, height: h,
     });
   }
 
-  // Theme node
-  const maxRows = Math.max(sourceFlowNodes.length, ruleFlowNodes.length, 1);
+  // Theme node - center vertically based on actual content height
+  const srcMaxY = sourceFlowNodes.length > 0 ? Math.max(...sourceFlowNodes.map(n => n.y + n.height)) : 200;
+  const ruleMaxY = ruleFlowNodes.length > 0 ? Math.max(...ruleFlowNodes.map(n => n.y + n.height)) : 200;
+  const contentMidY = Math.max(srcMaxY, ruleMaxY) / 2 + 50;
   const themeNode: FlowNode = {
     id: "theme_dest",
     type: "theme",
     label: theme.name,
     sublabel: `${theme.fieldConfigs.length} 个字段`,
     x: colX[2],
-    y: 100 + (maxRows - 1) * 72 / 2,
+    y: contentMidY - 30,
     width: nodeW, height: 60,
   };
 
@@ -137,7 +182,13 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
   // Edges
   const edges: FlowEdge[] = [];
   if (ruleFlowNodes.length > 0) {
-    sourceFlowNodes.forEach(s => ruleFlowNodes.forEach(r => edges.push({ from: s.id, to: r.id })));
+    // Connect each source to its own rule node only
+    ruleFlowNodes.forEach(r => {
+      const srcId = ruleToSourceMap[r.id];
+      if (srcId) {
+        edges.push({ from: srcId, to: r.id });
+      }
+    });
     ruleFlowNodes.forEach(r => edges.push({ from: r.id, to: themeNode.id }));
   } else {
     sourceFlowNodes.forEach(s => edges.push({ from: s.id, to: themeNode.id }));
@@ -367,18 +418,35 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
                     <text x={node.x + node.width / 2} y={node.y + 16} textAnchor="middle" fill="hsl(var(--primary))" fontSize="16">{theme.icon}</text>
                   )}
                   {/* Source dot */}
-                  {!isTheme && !isMerge && <circle cx={node.x + 18} cy={node.y + node.height / 2} r={5} fill={st.dot} opacity={0.7} />}
-                  {/* Label */}
-                  <text
-                    x={isMerge ? node.x + 34 : isTheme ? node.x + node.width / 2 : node.x + 30}
-                    y={node.y + (node.sublabel ? (isTheme ? node.height / 2 + 2 : node.height / 2 - 4) : node.height / 2 + 4)}
-                    textAnchor={isTheme ? "middle" : "start"}
-                    fill="hsl(var(--foreground))" fontSize={isTheme ? "12" : "11"} fontWeight="600"
-                  >
-                    {node.label.length > 14 ? node.label.slice(0, 14) + "…" : node.label}
-                  </text>
+                  {!isTheme && !isMerge && node.type !== "rule" && <circle cx={node.x + 18} cy={node.y + node.height / 2} r={5} fill={st.dot} opacity={0.7} />}
+                  {/* Rule filter icon */}
+                  {node.type === "rule" && <text x={node.x + 14} y={node.y + 18} textAnchor="middle" fill={st.dot} fontSize="13">⚙</text>}
+                  {/* Label - multi-line for rules */}
+                  {node.type === "rule" ? (
+                    <>
+                      {/* Data source name header */}
+                      <text x={node.x + 28} y={node.y + 16} fill="hsl(var(--muted-foreground))" fontSize="9" fontWeight="500">
+                        {node.sublabel}
+                      </text>
+                      {/* Expression lines */}
+                      {splitExprLines(node.label).map((line, li) => (
+                        <text key={li} x={node.x + 12} y={node.y + 32 + li * 16} fill="hsl(var(--foreground))" fontSize="10" fontWeight="500" fontFamily="monospace">
+                          {line.length > 36 ? line.slice(0, 36) + "…" : line}
+                        </text>
+                      ))}
+                    </>
+                  ) : (
+                    <text
+                      x={isMerge ? node.x + 34 : isTheme ? node.x + node.width / 2 : node.x + 30}
+                      y={node.y + (node.sublabel ? (isTheme ? node.height / 2 + 2 : node.height / 2 - 4) : node.height / 2 + 4)}
+                      textAnchor={isTheme ? "middle" : "start"}
+                      fill="hsl(var(--foreground))" fontSize={isTheme ? "12" : "11"} fontWeight="600"
+                    >
+                      {node.label.length > 14 ? node.label.slice(0, 14) + "…" : node.label}
+                    </text>
+                  )}
                   {/* Sublabel */}
-                  {node.sublabel && (
+                  {node.sublabel && node.type !== "rule" && (
                     <text
                       x={isMerge ? node.x + 34 : isTheme ? node.x + node.width / 2 : node.x + 30}
                       y={node.y + (isTheme ? node.height / 2 + 16 : node.height / 2 + 11)}
