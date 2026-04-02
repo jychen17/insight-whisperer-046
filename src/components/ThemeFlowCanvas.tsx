@@ -180,7 +180,13 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
   // Edges
   const edges: FlowEdge[] = [];
   if (ruleFlowNodes.length > 0) {
-    sourceFlowNodes.forEach(s => ruleFlowNodes.forEach(r => edges.push({ from: s.id, to: r.id })));
+    // Connect each source to its own rule node only
+    ruleFlowNodes.forEach(r => {
+      const srcId = ruleToSourceMap[r.id];
+      if (srcId) {
+        edges.push({ from: srcId, to: r.id });
+      }
+    });
     ruleFlowNodes.forEach(r => edges.push({ from: r.id, to: themeNode.id }));
   } else {
     sourceFlowNodes.forEach(s => edges.push({ from: s.id, to: themeNode.id }));
