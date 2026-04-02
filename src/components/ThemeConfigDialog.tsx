@@ -73,13 +73,21 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   useEffect(() => {
     if (open) {
       setStep(0); setErrors({}); setDsSearch(""); setFieldSearch("");
-      setCollapsedGroups({});
-      setForm(theme ? {
+      setCollapsedGroups({}); setActiveConditionDS("");
+      const initForm = theme ? {
         ...theme,
         mergeNodes: Array.isArray(theme.mergeNodes) ? theme.mergeNodes : [],
         conditionTree: theme.conditionTree || { ...emptyConditionTree },
         fieldConfigs: Array.isArray(theme.fieldConfigs) ? theme.fieldConfigs : [],
-      } : { ...emptyTheme, id: `custom_${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10) });
+        dataSources: (theme.dataSources || []).map(ds => ({
+          ...ds,
+          conditionTree: ds.conditionTree || { ...emptyConditionTree },
+        })),
+      } : { ...emptyTheme, id: `custom_${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10) };
+      setForm(initForm);
+      if (initForm.dataSources.length > 0) {
+        setActiveConditionDS(initForm.dataSources[0].taskId);
+      }
     }
   }, [open, theme]);
 
