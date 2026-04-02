@@ -208,8 +208,10 @@ const defaultThemes: ThemeConfig[] = [
   {
     id: "hotspot", name: "热点洞察主题", description: "社媒热点发现、话题趋势追踪", owner: "王五",
     type: "builtin", status: "active", icon: "⚡",
-    dataSources: [{ taskId: "t5", taskName: "全平台热点", platforms: ["微博", "抖音", "小红书", "百度", "快手"], timeRange: "实时", enabled: true }],
-    conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "topic", operator: "contains", value: "旅游" }] },
+    dataSources: [{ taskId: "t5", taskName: "全平台热点", platforms: ["微博", "抖音", "小红书", "百度", "快手"], timeRange: "实时", enabled: true,
+      conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "topic", operator: "contains", value: "旅游" }] },
+    }],
+    conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
       { key: "platform", fieldType: "raw", displayPosition: "list", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["微博", "抖音", "小红书", "百度", "快手"] },
       { key: "likes", fieldType: "raw", displayPosition: "list", isFilter: false, filterType: "text", hasSystemEnum: false, enumValues: [] },
