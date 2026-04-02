@@ -146,15 +146,17 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
     });
   }
 
-  // Theme node
-  const maxRows = Math.max(sourceFlowNodes.length, ruleFlowNodes.length, 1);
+  // Theme node - center vertically based on actual content height
+  const srcMaxY = sourceFlowNodes.length > 0 ? Math.max(...sourceFlowNodes.map(n => n.y + n.height)) : 200;
+  const ruleMaxY = ruleFlowNodes.length > 0 ? Math.max(...ruleFlowNodes.map(n => n.y + n.height)) : 200;
+  const contentMidY = Math.max(srcMaxY, ruleMaxY) / 2 + 50;
   const themeNode: FlowNode = {
     id: "theme_dest",
     type: "theme",
     label: theme.name,
     sublabel: `${theme.fieldConfigs.length} 个字段`,
     x: colX[2],
-    y: 100 + (maxRows - 1) * 72 / 2,
+    y: contentMidY - 30,
     width: nodeW, height: 60,
   };
 
