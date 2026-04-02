@@ -13,12 +13,10 @@ import {
   Palette,
   BarChart3,
   Settings,
-  Users,
-  Lock,
   Bell,
-  FileText,
   Search,
-  Key,
+  Monitor,
+  FolderOpen,
 } from "lucide-react";
 
 interface NavChild {
@@ -47,38 +45,37 @@ const navGroups: NavGroup[] = [
         children: [
           { label: "舆情大盘", path: "/sentiment/overview" },
           { label: "舆情列表", path: "/sentiment/detail" },
-          { label: "舆情预警", path: "/sentiment/alerts" },
-          { label: "舆情报告", path: "/sentiment/reports" },
         ],
       },
       {
-        label: "行业咨询主题",
+        label: "行业资讯主题",
         icon: <Globe className="w-4 h-4" />,
         children: [
-          { label: "行业大盘", path: "/industry/overview" },
-          { label: "竞品监测", path: "/industry/competitors" },
-          { label: "市场动态", path: "/industry/market" },
-          { label: "趋势分析", path: "/industry/trends" },
+          { label: "行业资讯大盘", path: "/industry/overview" },
+          { label: "行业资讯列表", path: "/industry/detail" },
         ],
       },
       {
         label: "热点洞察主题",
         icon: <Zap className="w-4 h-4" />,
         children: [
-          { label: "热点发现", path: "/hotspot/discover" },
-          { label: "话题分析", path: "/hotspot/topics" },
-          { label: "关键词洞察", path: "/hotspot/keywords" },
-          { label: "内容洞察", path: "/hotspot/content" },
+          { label: "热点洞察大盘", path: "/hotspot/discover" },
+          { label: "热点洞察列表", path: "/hotspot/detail" },
         ],
       },
       {
         label: "产品体验主题",
         icon: <Lightbulb className="w-4 h-4" />,
         children: [
-          { label: "体验概览", path: "/experience/overview" },
-          { label: "问题分析", path: "/experience/issues" },
-          { label: "用户反馈", path: "/experience/feedback" },
-          { label: "优化建议", path: "/experience/suggestions" },
+          { label: "产品体验大盘", path: "/experience/overview" },
+          { label: "产品体验列表", path: "/experience/detail" },
+        ],
+      },
+      {
+        label: "更多主题",
+        icon: <FolderOpen className="w-4 h-4" />,
+        children: [
+          { label: "主题列表", path: "/themes/list" },
         ],
       },
     ],
@@ -91,9 +88,7 @@ const navGroups: NavGroup[] = [
         icon: <Database className="w-4 h-4" />,
         children: [
           { label: "采集任务管理", path: "/datacenter/tasks" },
-          { label: "数据源配置", path: "/datacenter/sources" },
           { label: "关键词管理", path: "/datacenter/keywords" },
-          { label: "采集质量监控", path: "/datacenter/quality" },
         ],
       },
       {
@@ -101,8 +96,6 @@ const navGroups: NavGroup[] = [
         icon: <Tags className="w-4 h-4" />,
         children: [
           { label: "标签体系", path: "/datacenter/tags/system" },
-          { label: "标签规则(分流)", path: "/datacenter/tags/rules" },
-          { label: "标签质量", path: "/datacenter/tags/quality" },
         ],
       },
       {
@@ -110,8 +103,29 @@ const navGroups: NavGroup[] = [
         icon: <Palette className="w-4 h-4" />,
         children: [
           { label: "主题管理", path: "/datacenter/themes/manage" },
-          { label: "预警配置", path: "/datacenter/themes/rules" },
           { label: "看板配置", path: "/datacenter/themes/dashboard" },
+        ],
+      },
+      {
+        label: "预警管理",
+        icon: <Bell className="w-4 h-4" />,
+        children: [
+          { label: "预警配置", path: "/datacenter/themes/rules" },
+          { label: "预警列表", path: "/datacenter/alerts/list" },
+        ],
+      },
+    ],
+  },
+  {
+    groupLabel: "专项监控",
+    sections: [
+      {
+        label: "专项监控",
+        icon: <Monitor className="w-4 h-4" />,
+        children: [
+          { label: "内容监控", path: "/monitor/content" },
+          { label: "账户监控", path: "/monitor/account" },
+          { label: "话题监控", path: "/monitor/topic" },
         ],
       },
     ],
@@ -125,8 +139,7 @@ const navGroups: NavGroup[] = [
         children: [
           { label: "智能报告", path: "/analysis/reports" },
           { label: "报告配置", path: "/analysis/report-config" },
-          { label: "数据导出", path: "/analysis/export" },
-          { label: "自定义分析", path: "/analysis/custom" },
+          { label: "报告模板", path: "/analysis/templates" },
         ],
       },
     ],
