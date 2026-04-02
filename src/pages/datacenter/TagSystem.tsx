@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Brain, FileText, Calculator, Tag, Settings2, ChevronRight } from "lucide-react";
+import { Plus, Brain, FileText, Calculator, Tag, Search, Eye, Pencil } from "lucide-react";
 
 interface TagItem {
   id: string;
@@ -19,42 +19,40 @@ interface TagItem {
   dataType: string;
   source: string;
   status: boolean;
-  coverage: number;
-  taggedCount: number;
 }
 
 const aiTags: TagItem[] = [
-  { id: "AI01", name: "业务类型", description: "AI识别内容所属业务线（酒店/机票/度假等）", dataType: "枚举", source: "舆情模型", status: true, coverage: 96.2, taggedCount: 245800 },
-  { id: "AI02", name: "情感类型", description: "NLP模型识别文本正面/负面/中性情感", dataType: "枚举", source: "情感模型", status: true, coverage: 98.5, taggedCount: 312400 },
-  { id: "AI03", name: "内容主题", description: "AI聚类识别内容主题标签", dataType: "多值", source: "主题模型", status: true, coverage: 88.3, taggedCount: 198500 },
-  { id: "AI04", name: "是否负面舆情", description: "综合判断是否构成负面舆情", dataType: "布尔", source: "舆情模型", status: true, coverage: 97.8, taggedCount: 305200 },
-  { id: "AI05", name: "舆情问题类型", description: "识别投诉/曝光/维权等问题类型", dataType: "枚举", source: "舆情模型", status: true, coverage: 91.4, taggedCount: 156800 },
-  { id: "AI06", name: "舆情判断依据", description: "AI输出的舆情判定关键依据文本", dataType: "文本", source: "舆情模型", status: true, coverage: 89.6, taggedCount: 142300 },
-  { id: "AI07", name: "风险等级", description: "AI风控模型识别内容风险级别", dataType: "枚举", source: "风控模型", status: true, coverage: 95.1, taggedCount: 287600 },
-  { id: "AI08", name: "风险判断依据", description: "风控模型输出的判断依据", dataType: "文本", source: "风控模型", status: true, coverage: 93.2, taggedCount: 265400 },
-  { id: "AI09", name: "OTA品牌", description: "识别提及的OTA品牌名称", dataType: "枚举", source: "NER模型", status: true, coverage: 94.6, taggedCount: 234500 },
-  { id: "AI10", name: "所属BG", description: "识别内容对应的业务BG", dataType: "枚举", source: "风控模型", status: false, coverage: 72.3, taggedCount: 89200 },
+  { id: "AI01", name: "业务类型", description: "AI识别内容所属业务线（酒店/机票/度假等）", dataType: "枚举", source: "舆情模型", status: true },
+  { id: "AI02", name: "情感类型", description: "NLP模型识别文本正面/负面/中性情感", dataType: "枚举", source: "情感模型", status: true },
+  { id: "AI03", name: "内容主题", description: "AI聚类识别内容主题标签", dataType: "多值", source: "主题模型", status: true },
+  { id: "AI04", name: "是否负面舆情", description: "综合判断是否构成负面舆情", dataType: "布尔", source: "舆情模型", status: true },
+  { id: "AI05", name: "舆情问题类型", description: "识别投诉/曝光/维权等问题类型", dataType: "枚举", source: "舆情模型", status: true },
+  { id: "AI06", name: "舆情判断依据", description: "AI输出的舆情判定关键依据文本", dataType: "文本", source: "舆情模型", status: true },
+  { id: "AI07", name: "风险等级", description: "AI风控模型识别内容风险级别", dataType: "枚举", source: "风控模型", status: true },
+  { id: "AI08", name: "风险判断依据", description: "风控模型输出的判断依据", dataType: "文本", source: "风控模型", status: true },
+  { id: "AI09", name: "OTA品牌", description: "识别提及的OTA品牌名称", dataType: "枚举", source: "NER模型", status: true },
+  { id: "AI10", name: "所属BG", description: "识别内容对应的业务BG", dataType: "枚举", source: "风控模型", status: false },
 ];
 
 const rawTags: TagItem[] = [
-  { id: "RAW01", name: "标题", description: "原始内容标题", dataType: "文本", source: "采集字段", status: true, coverage: 99.9, taggedCount: 674350 },
-  { id: "RAW02", name: "正文内容", description: "原始正文/帖子内容", dataType: "长文本", source: "采集字段", status: true, coverage: 99.8, taggedCount: 674350 },
-  { id: "RAW03", name: "发布人昵称", description: "内容发布者昵称", dataType: "文本", source: "采集字段", status: true, coverage: 98.2, taggedCount: 662100 },
-  { id: "RAW04", name: "发布人粉丝数", description: "发布者粉丝/关注者数量", dataType: "数值", source: "采集字段", status: true, coverage: 85.6, taggedCount: 577200 },
-  { id: "RAW05", name: "发布时间", description: "内容原始发布时间", dataType: "时间", source: "采集字段", status: true, coverage: 99.9, taggedCount: 674350 },
-  { id: "RAW06", name: "点赞量", description: "内容获得的点赞数", dataType: "数值", source: "采集字段", status: true, coverage: 96.4, taggedCount: 650200 },
-  { id: "RAW07", name: "评论量", description: "内容获得的评论数", dataType: "数值", source: "采集字段", status: true, coverage: 95.8, taggedCount: 645800 },
-  { id: "RAW08", name: "收藏量", description: "内容获得的收藏/保存数", dataType: "数值", source: "采集字段", status: true, coverage: 78.3, taggedCount: 528100 },
-  { id: "RAW09", name: "分享量", description: "内容被分享/转发次数", dataType: "数值", source: "采集字段", status: true, coverage: 82.1, taggedCount: 553600 },
-  { id: "RAW10", name: "平台来源", description: "数据采集来源平台", dataType: "枚举", source: "采集字段", status: true, coverage: 100, taggedCount: 674350 },
+  { id: "RAW01", name: "标题", description: "原始内容标题", dataType: "文本", source: "采集字段", status: true },
+  { id: "RAW02", name: "正文内容", description: "原始正文/帖子内容", dataType: "长文本", source: "采集字段", status: true },
+  { id: "RAW03", name: "发布人昵称", description: "内容发布者昵称", dataType: "文本", source: "采集字段", status: true },
+  { id: "RAW04", name: "发布人粉丝数", description: "发布者粉丝/关注者数量", dataType: "数值", source: "采集字段", status: true },
+  { id: "RAW05", name: "发布时间", description: "内容原始发布时间", dataType: "时间", source: "采集字段", status: true },
+  { id: "RAW06", name: "点赞量", description: "内容获得的点赞数", dataType: "数值", source: "采集字段", status: true },
+  { id: "RAW07", name: "评论量", description: "内容获得的评论数", dataType: "数值", source: "采集字段", status: true },
+  { id: "RAW08", name: "收藏量", description: "内容获得的收藏/保存数", dataType: "数值", source: "采集字段", status: true },
+  { id: "RAW09", name: "分享量", description: "内容被分享/转发次数", dataType: "数值", source: "采集字段", status: true },
+  { id: "RAW10", name: "平台来源", description: "数据采集来源平台", dataType: "枚举", source: "采集字段", status: true },
 ];
 
 const calcTags: TagItem[] = [
-  { id: "CALC01", name: "发酵等级", description: "低(评论<10)、中(10-50)、快(>50)", dataType: "枚举", source: "评论量", status: true, coverage: 95.8, taggedCount: 645800 },
-  { id: "CALC02", name: "风险分数", description: "(评论+点赞+收藏+分享+阅读)×0.5 + 风险等级×0.5", dataType: "数值", source: "加权计算", status: true, coverage: 94.2, taggedCount: 635200 },
-  { id: "CALC03", name: "互动热度", description: "点赞+评论+收藏+分享的加权综合分", dataType: "数值", source: "加权计算", status: true, coverage: 93.5, taggedCount: 630800 },
-  { id: "CALC04", name: "传播速度", description: "单位时间内互动增量", dataType: "数值", source: "时序计算", status: true, coverage: 88.1, taggedCount: 594200 },
-  { id: "CALC05", name: "影响力指数", description: "发布人粉丝数×互动率的综合评分", dataType: "数值", source: "加权计算", status: false, coverage: 76.4, taggedCount: 515200 },
+  { id: "CALC01", name: "发酵等级", description: "低(评论<10)、中(10-50)、快(>50)", dataType: "枚举", source: "评论量", status: true },
+  { id: "CALC02", name: "风险分数", description: "(评论+点赞+收藏+分享+阅读)×0.5 + 风险等级×0.5", dataType: "数值", source: "加权计算", status: true },
+  { id: "CALC03", name: "互动热度", description: "点赞+评论+收藏+分享的加权综合分", dataType: "数值", source: "加权计算", status: true },
+  { id: "CALC04", name: "传播速度", description: "单位时间内互动增量", dataType: "数值", source: "时序计算", status: true },
+  { id: "CALC05", name: "影响力指数", description: "发布人粉丝数×互动率的综合评分", dataType: "数值", source: "加权计算", status: false },
 ];
 
 const typeIcons: Record<string, typeof Brain> = {
@@ -63,54 +61,73 @@ const typeIcons: Record<string, typeof Brain> = {
   "计算标签": Calculator,
 };
 
-const stats = [
-  { label: "AI标签", value: aiTags.length.toString(), desc: "模型自动识别" },
-  { label: "原始标签", value: rawTags.length.toString(), desc: "采集原始字段" },
-  { label: "计算标签", value: calcTags.length.toString(), desc: "加权/规则计算" },
-  { label: "标注覆盖率", value: "94.2%" },
-];
+interface Filters {
+  search: string;
+  dataType: string;
+  source: string;
+  status: string;
+}
 
-function TagTable({ tags, category }: { tags: TagItem[]; category: string }) {
+function TagTable({ tags, category, filters }: { tags: TagItem[]; category: string; filters: Filters }) {
   const Icon = typeIcons[category] || Tag;
+
+  const filtered = useMemo(() => {
+    return tags.filter((t) => {
+      if (filters.search && !t.name.includes(filters.search) && !t.id.toLowerCase().includes(filters.search.toLowerCase())) return false;
+      if (filters.dataType && filters.dataType !== "all" && t.dataType !== filters.dataType) return false;
+      if (filters.source && filters.source !== "all" && t.source !== filters.source) return false;
+      if (filters.status === "enabled" && !t.status) return false;
+      if (filters.status === "disabled" && t.status) return false;
+      return true;
+    });
+  }, [tags, filters]);
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead className="w-20">标签ID</TableHead>
           <TableHead>标签名称</TableHead>
           <TableHead>数据类型</TableHead>
           <TableHead>来源</TableHead>
-          <TableHead>覆盖率</TableHead>
-          <TableHead className="text-right">已标注数</TableHead>
           <TableHead>状态</TableHead>
           <TableHead className="text-right">操作</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {tags.map((t) => (
-          <TableRow key={t.id}>
-            <TableCell>
-              <div className="flex items-center gap-2">
-                <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium text-sm">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.description}</p>
-                </div>
-              </div>
-            </TableCell>
-            <TableCell><Badge variant="outline" className="text-xs">{t.dataType}</Badge></TableCell>
-            <TableCell className="text-sm text-muted-foreground">{t.source}</TableCell>
-            <TableCell>
-              <span className={t.coverage >= 95 ? "text-emerald-500" : t.coverage >= 85 ? "text-amber-500" : "text-destructive"}>
-                {t.coverage}%
-              </span>
-            </TableCell>
-            <TableCell className="text-right text-sm">{t.taggedCount.toLocaleString()}</TableCell>
-            <TableCell><Switch checked={t.status} /></TableCell>
-            <TableCell className="text-right">
-              <Button variant="ghost" size="icon" className="h-8 w-8"><Settings2 className="w-4 h-4" /></Button>
-            </TableCell>
+        {filtered.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={6} className="text-center text-muted-foreground py-8">暂无匹配的标签</TableCell>
           </TableRow>
-        ))}
+        ) : (
+          filtered.map((t) => (
+            <TableRow key={t.id}>
+              <TableCell className="text-xs text-muted-foreground font-mono">{t.id}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium text-sm">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.description}</p>
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell><Badge variant="outline" className="text-xs">{t.dataType}</Badge></TableCell>
+              <TableCell className="text-sm text-muted-foreground">{t.source}</TableCell>
+              <TableCell><Switch checked={t.status} /></TableCell>
+              <TableCell className="text-right">
+                <div className="flex items-center justify-end gap-1">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" title="查看">
+                    <Eye className="w-4 h-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" title="编辑">
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))
+        )}
       </TableBody>
     </Table>
   );
@@ -128,11 +145,8 @@ const sourceOptions: Record<string, string[]> = {
   calc: ["加权计算", "时序计算", "规则计算"],
 };
 
-const categoryLabels: Record<string, string> = {
-  ai: "AI标签",
-  raw: "原始标签",
-  calc: "计算标签",
-};
+const allDataTypes = ["枚举", "多值", "布尔", "文本", "长文本", "数值", "时间"];
+const allSources = ["舆情模型", "情感模型", "主题模型", "风控模型", "NER模型", "采集字段", "加权计算", "时序计算", "规则计算", "评论量"];
 
 const emptyForm = { name: "", description: "", category: "ai", dataType: "", source: "" };
 
@@ -140,6 +154,7 @@ export default function TagSystem() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ ...emptyForm });
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [filters, setFilters] = useState<Filters>({ search: "", dataType: "", source: "", status: "" });
 
   const openDialog = () => {
     setForm({ ...emptyForm });
@@ -159,6 +174,10 @@ export default function TagSystem() {
     setDialogOpen(false);
   };
 
+  const updateFilter = (key: keyof Filters, value: string) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -169,17 +188,54 @@ export default function TagSystem() {
         <Button className="gap-2" onClick={openDialog}><Plus className="w-4 h-4" /> 新建标签</Button>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">{s.label}</p>
-              <p className="text-2xl font-bold text-foreground mt-1">{s.value}</p>
-              {s.desc && <p className="text-xs text-muted-foreground mt-0.5">{s.desc}</p>}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* 筛选条件 */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-[280px]">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="搜索标签名称或ID"
+                value={filters.search}
+                onChange={(e) => updateFilter("search", e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+            <Select value={filters.dataType} onValueChange={(v) => updateFilter("dataType", v)}>
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue placeholder="数据类型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部类型</SelectItem>
+                {allDataTypes.map((dt) => (
+                  <SelectItem key={dt} value={dt}>{dt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filters.source} onValueChange={(v) => updateFilter("source", v)}>
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue placeholder="来源" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部来源</SelectItem>
+                {allSources.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filters.status} onValueChange={(v) => updateFilter("status", v)}>
+              <SelectTrigger className="w-[120px] h-9">
+                <SelectValue placeholder="状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部状态</SelectItem>
+                <SelectItem value="enabled">已启用</SelectItem>
+                <SelectItem value="disabled">已停用</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="ai" className="space-y-4">
         <TabsList>
@@ -197,7 +253,7 @@ export default function TagSystem() {
                 <Badge variant="secondary" className="ml-2">{aiTags.length} 个</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent><TagTable tags={aiTags} category="AI标签" /></CardContent>
+            <CardContent><TagTable tags={aiTags} category="AI标签" filters={filters} /></CardContent>
           </Card>
         </TabsContent>
 
@@ -210,7 +266,7 @@ export default function TagSystem() {
                 <Badge variant="secondary" className="ml-2">{rawTags.length} 个</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent><TagTable tags={rawTags} category="原始标签" /></CardContent>
+            <CardContent><TagTable tags={rawTags} category="原始标签" filters={filters} /></CardContent>
           </Card>
         </TabsContent>
 
@@ -223,7 +279,7 @@ export default function TagSystem() {
                 <Badge variant="secondary" className="ml-2">{calcTags.length} 个</Badge>
               </CardTitle>
             </CardHeader>
-            <CardContent><TagTable tags={calcTags} category="计算标签" /></CardContent>
+            <CardContent><TagTable tags={calcTags} category="计算标签" filters={filters} /></CardContent>
           </Card>
         </TabsContent>
       </Tabs>
@@ -237,13 +293,10 @@ export default function TagSystem() {
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            {/* 标签类型 */}
             <div className="space-y-1.5">
               <Label>标签类型 <span className="text-destructive">*</span></Label>
               <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v, dataType: "", source: "" })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ai"><span className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> AI标签</span></SelectItem>
                   <SelectItem value="raw"><span className="flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" /> 原始标签</span></SelectItem>
@@ -252,7 +305,6 @@ export default function TagSystem() {
               </Select>
             </div>
 
-            {/* 标签名称 */}
             <div className="space-y-1.5">
               <Label>标签名称 <span className="text-destructive">*</span></Label>
               <Input
@@ -264,7 +316,6 @@ export default function TagSystem() {
               {errors.name && <p className="text-xs text-destructive">请输入标签名称</p>}
             </div>
 
-            {/* 标签描述 */}
             <div className="space-y-1.5">
               <Label>标签描述</Label>
               <Textarea
@@ -275,7 +326,6 @@ export default function TagSystem() {
               />
             </div>
 
-            {/* 数据类型 & 来源 */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>数据类型 <span className="text-destructive">*</span></Label>
@@ -307,19 +357,13 @@ export default function TagSystem() {
               </div>
             </div>
 
-            {/* 计算标签额外：计算公式 */}
             {form.category === "calc" && (
               <div className="space-y-1.5">
                 <Label>计算公式</Label>
-                <Textarea
-                  placeholder="例如：(评论+点赞+收藏+分享)×0.5 + 风险等级×0.5"
-                  value=""
-                  rows={2}
-                />
+                <Textarea placeholder="例如：(评论+点赞+收藏+分享)×0.5 + 风险等级×0.5" value="" rows={2} />
               </div>
             )}
 
-            {/* AI标签额外：模型版本 */}
             {form.category === "ai" && (
               <div className="space-y-1.5">
                 <Label>模型版本</Label>
