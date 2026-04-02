@@ -58,17 +58,6 @@ const themeModules = [
 
 const utilModules = [
   {
-    key: "datacenter",
-    icon: Database,
-    title: "数据中心",
-    desc: "管理数据采集任务、标签体系与主题配置，保障数据质量与规范",
-    path: "/datacenter/tasks",
-    tags: ["数据采集", "标签管理", "主题配置", "预警管理"],
-    gradient: "from-violet-500/20 to-purple-500/20",
-    iconColor: "text-violet-500",
-    borderColor: "border-violet-500/30",
-  },
-  {
     key: "monitor",
     icon: Monitor,
     title: "专项监控",
@@ -89,17 +78,6 @@ const utilModules = [
     gradient: "from-sky-500/20 to-indigo-500/20",
     iconColor: "text-sky-500",
     borderColor: "border-sky-500/30",
-  },
-  {
-    key: "settings",
-    icon: Settings,
-    title: "系统设置",
-    desc: "用户、权限、通知与日志管理，保障系统安全与稳定运行",
-    path: "/settings/users",
-    tags: ["用户管理", "权限管理", "通知设置"],
-    gradient: "from-gray-500/20 to-slate-500/20",
-    iconColor: "text-muted-foreground",
-    borderColor: "border-muted-foreground/30",
   },
 ];
 
