@@ -416,16 +416,33 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
                     <text x={node.x + node.width / 2} y={node.y + 16} textAnchor="middle" fill="hsl(var(--primary))" fontSize="16">{theme.icon}</text>
                   )}
                   {/* Source dot */}
-                  {!isTheme && !isMerge && <circle cx={node.x + 18} cy={node.y + node.height / 2} r={5} fill={st.dot} opacity={0.7} />}
-                  {/* Label */}
-                  <text
-                    x={isMerge ? node.x + 34 : isTheme ? node.x + node.width / 2 : node.x + 30}
-                    y={node.y + (node.sublabel ? (isTheme ? node.height / 2 + 2 : node.height / 2 - 4) : node.height / 2 + 4)}
-                    textAnchor={isTheme ? "middle" : "start"}
-                    fill="hsl(var(--foreground))" fontSize={isTheme ? "12" : "11"} fontWeight="600"
-                  >
-                    {node.label.length > 14 ? node.label.slice(0, 14) + "…" : node.label}
-                  </text>
+                  {!isTheme && !isMerge && node.type !== "rule" && <circle cx={node.x + 18} cy={node.y + node.height / 2} r={5} fill={st.dot} opacity={0.7} />}
+                  {/* Rule filter icon */}
+                  {node.type === "rule" && <text x={node.x + 14} y={node.y + 18} textAnchor="middle" fill={st.dot} fontSize="13">⚙</text>}
+                  {/* Label - multi-line for rules */}
+                  {node.type === "rule" ? (
+                    <>
+                      {/* Data source name header */}
+                      <text x={node.x + 28} y={node.y + 16} fill="hsl(var(--muted-foreground))" fontSize="9" fontWeight="500">
+                        {node.sublabel}
+                      </text>
+                      {/* Expression lines */}
+                      {splitExprLines(node.label).map((line, li) => (
+                        <text key={li} x={node.x + 12} y={node.y + 32 + li * 16} fill="hsl(var(--foreground))" fontSize="10" fontWeight="500" fontFamily="monospace">
+                          {line.length > 36 ? line.slice(0, 36) + "…" : line}
+                        </text>
+                      ))}
+                    </>
+                  ) : (
+                    <text
+                      x={isMerge ? node.x + 34 : isTheme ? node.x + node.width / 2 : node.x + 30}
+                      y={node.y + (node.sublabel ? (isTheme ? node.height / 2 + 2 : node.height / 2 - 4) : node.height / 2 + 4)}
+                      textAnchor={isTheme ? "middle" : "start"}
+                      fill="hsl(var(--foreground))" fontSize={isTheme ? "12" : "11"} fontWeight="600"
+                    >
+                      {node.label.length > 14 ? node.label.slice(0, 14) + "…" : node.label}
+                    </text>
+                  )}
                   {/* Sublabel */}
                   {node.sublabel && (
                     <text
