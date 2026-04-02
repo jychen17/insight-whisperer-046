@@ -111,27 +111,44 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const toggleTask = (task: typeof MOCK_TASKS[0]) => {
     setForm(f => {
       const exists = f.dataSources.find(ds => ds.taskId === task.id);
-      if (exists) return { ...f, dataSources: f.dataSources.filter(ds => ds.taskId !== task.id) };
-      return { ...f, dataSources: [...f.dataSources, { taskId: task.id, taskName: task.name, platforms: task.platforms, timeRange: "近7天", enabled: true }] };
+      if (exists) {
+        const newDS = f.dataSources.filter(ds => ds.taskId !== task.id);
+        // Reset active tab if removed
+        if (activeConditionDS === task.id && newDS.length > 0) {
+          setActiveConditionDS(newDS[0].taskId);
+        }
+        return { ...f, dataSources: newDS };
+      }
+      const newDs = { taskId: task.id, taskName: task.name, platforms: task.platforms, timeRange: "近7天", enabled: true, conditionTree: { ...emptyConditionTree, id: `root_${task.id}` } };
+      if (f.dataSources.length === 0) setActiveConditionDS(task.id);
+      return { ...f, dataSources: [...f.dataSources, newDs] };
     });
   };
 
-  // ── Condition Tree ──
-  const updateConditionTree = (tree: ConditionNode) => setForm(f => ({ ...f, conditionTree: tree }));
+  // ── Condition Tree (per data source) ──
+  const updateDSConditionTree = (taskId: string, tree: ConditionNode) => {
+    setForm(f => ({
+      ...f,
+      dataSources: f.dataSources.map(ds => ds.taskId === taskId ? { ...ds, conditionTree: tree } : ds),
+    }));
+  };
+
+  const getActiveDS = () => form.dataSources.find(ds => ds.taskId === activeConditionDS);
+  const getActiveDSTree = () => getActiveDS()?.conditionTree || emptyConditionTree;
 
   const addCondition = (parentId: string) => {
     const newCond: ConditionNode = { id: `c_${Date.now()}`, type: "condition", field: "", operator: "equals", value: "" };
-    updateConditionTree(insertIntoTree(form.conditionTree, parentId, newCond));
+    updateDSConditionTree(activeConditionDS, insertIntoTree(getActiveDSTree(), parentId, newCond));
   };
   const addGroup = (parentId: string) => {
     const newGroup: ConditionNode = { id: `g_${Date.now()}`, type: "group", logic: "AND", children: [] };
-    updateConditionTree(insertIntoTree(form.conditionTree, parentId, newGroup));
+    updateDSConditionTree(activeConditionDS, insertIntoTree(getActiveDSTree(), parentId, newGroup));
   };
   const removeConditionNode = (nodeId: string) => {
-    updateConditionTree(removeFromTree(form.conditionTree, nodeId));
+    updateDSConditionTree(activeConditionDS, removeFromTree(getActiveDSTree(), nodeId));
   };
   const updateConditionNode = (nodeId: string, update: Partial<ConditionNode>) => {
-    updateConditionTree(updateInTree(form.conditionTree, nodeId, update));
+    updateDSConditionTree(activeConditionDS, updateInTree(getActiveDSTree(), nodeId, update));
   };
 
   // ── Fields ──
