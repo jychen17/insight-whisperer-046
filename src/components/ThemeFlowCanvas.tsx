@@ -71,16 +71,37 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
     width: nodeW, height: nodeH,
   }));
 
-  // Rule nodes
-  const flatConditions = flattenConditions(theme.conditionTree);
-  const ruleFlowNodes: FlowNode[] = flatConditions.map((c, i) => ({
-    id: `rule_${c.id}`,
-    type: "rule",
-    label: `${FIELD_LABELS[c.field || ""] || c.field} ${c.operator === "equals" ? "=" : c.operator === "not_equals" ? "≠" : "∈"} ${c.value}`,
-    sublabel: "条件",
-    x: colX[1], y: 100 + i * 72,
-    width: nodeW + 20, height: nodeH,
-  }));
+  // Rule nodes - per data source
+  const ruleFlowNodes: FlowNode[] = [];
+  let ruleYOffset = 0;
+  theme.dataSources.forEach(ds => {
+    const dsConditions = flattenConditions(ds.conditionTree);
+    dsConditions.forEach(c => {
+      ruleFlowNodes.push({
+        id: `rule_${ds.taskId}_${c.id}`,
+        type: "rule",
+        label: `${FIELD_LABELS[c.field || ""] || c.field} ${c.operator === "equals" ? "=" : c.operator === "not_equals" ? "≠" : "∈"} ${c.value}`,
+        sublabel: ds.taskName,
+        x: colX[1], y: 100 + ruleYOffset * 72,
+        width: nodeW + 20, height: nodeH,
+      });
+      ruleYOffset++;
+    });
+  });
+  // Fallback: if no per-datasource conditions, use theme-level conditionTree
+  if (ruleFlowNodes.length === 0) {
+    const flatConditions = flattenConditions(theme.conditionTree);
+    flatConditions.forEach((c, i) => {
+      ruleFlowNodes.push({
+        id: `rule_${c.id}`,
+        type: "rule",
+        label: `${FIELD_LABELS[c.field || ""] || c.field} ${c.operator === "equals" ? "=" : c.operator === "not_equals" ? "≠" : "∈"} ${c.value}`,
+        sublabel: "条件",
+        x: colX[1], y: 100 + i * 72,
+        width: nodeW + 20, height: nodeH,
+      });
+    });
+  }
 
   // Theme node
   const maxRows = Math.max(sourceFlowNodes.length, ruleFlowNodes.length, 1);

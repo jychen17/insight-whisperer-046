@@ -118,13 +118,27 @@ export default function ThemeDetail() {
           </div>
         </div>
 
-        {/* Conditions */}
+        {/* Conditions (per data source) */}
         <div>
           <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-            <span className="w-1 h-4 rounded-full gradient-primary inline-block" /> 入主题条件
+            <span className="w-1 h-4 rounded-full gradient-primary inline-block" /> 入主题条件（按数据源）
           </h3>
-          <div className="bg-muted/30 rounded-md px-4 py-3 border border-border">
-            <code className="text-xs text-foreground">{conditionToText(currentTheme.conditionTree)}</code>
+          <div className="space-y-2">
+            {currentTheme.dataSources.map(ds => {
+              const tree = ds.conditionTree;
+              const hasConditions = tree && tree.children && tree.children.length > 0;
+              return (
+                <div key={ds.taskId} className="bg-muted/30 rounded-md px-4 py-3 border border-border">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{ds.taskName}</Badge>
+                    <span className="text-[10px] text-muted-foreground">{ds.platforms.join("、")}</span>
+                  </div>
+                  <code className="text-xs text-foreground">
+                    {hasConditions ? conditionToText(tree!) : "（无条件限制）"}
+                  </code>
+                </div>
+              );
+            })}
           </div>
         </div>
 

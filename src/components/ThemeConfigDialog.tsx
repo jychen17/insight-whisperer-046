@@ -65,6 +65,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const [dsSearch, setDsSearch] = useState("");
   const [fieldSearch, setFieldSearch] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [activeConditionDS, setActiveConditionDS] = useState<string>("");
 
   const isEdit = !!theme;
   const steps = ["基本信息", "数据源", "入主题条件与字段", "合并管线"];
@@ -72,13 +73,21 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   useEffect(() => {
     if (open) {
       setStep(0); setErrors({}); setDsSearch(""); setFieldSearch("");
-      setCollapsedGroups({});
-      setForm(theme ? {
+      setCollapsedGroups({}); setActiveConditionDS("");
+      const initForm = theme ? {
         ...theme,
         mergeNodes: Array.isArray(theme.mergeNodes) ? theme.mergeNodes : [],
         conditionTree: theme.conditionTree || { ...emptyConditionTree },
         fieldConfigs: Array.isArray(theme.fieldConfigs) ? theme.fieldConfigs : [],
-      } : { ...emptyTheme, id: `custom_${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10) });
+        dataSources: (theme.dataSources || []).map(ds => ({
+          ...ds,
+          conditionTree: ds.conditionTree || { ...emptyConditionTree },
+        })),
+      } : { ...emptyTheme, id: `custom_${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10) };
+      setForm(initForm);
+      if (initForm.dataSources.length > 0) {
+        setActiveConditionDS(initForm.dataSources[0].taskId);
+      }
     }
   }, [open, theme]);
 
@@ -102,27 +111,44 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const toggleTask = (task: typeof MOCK_TASKS[0]) => {
     setForm(f => {
       const exists = f.dataSources.find(ds => ds.taskId === task.id);
-      if (exists) return { ...f, dataSources: f.dataSources.filter(ds => ds.taskId !== task.id) };
-      return { ...f, dataSources: [...f.dataSources, { taskId: task.id, taskName: task.name, platforms: task.platforms, timeRange: "近7天", enabled: true }] };
+      if (exists) {
+        const newDS = f.dataSources.filter(ds => ds.taskId !== task.id);
+        // Reset active tab if removed
+        if (activeConditionDS === task.id && newDS.length > 0) {
+          setActiveConditionDS(newDS[0].taskId);
+        }
+        return { ...f, dataSources: newDS };
+      }
+      const newDs = { taskId: task.id, taskName: task.name, platforms: task.platforms, timeRange: "近7天", enabled: true, conditionTree: { ...emptyConditionTree, id: `root_${task.id}` } };
+      if (f.dataSources.length === 0) setActiveConditionDS(task.id);
+      return { ...f, dataSources: [...f.dataSources, newDs] };
     });
   };
 
-  // ── Condition Tree ──
-  const updateConditionTree = (tree: ConditionNode) => setForm(f => ({ ...f, conditionTree: tree }));
+  // ── Condition Tree (per data source) ──
+  const updateDSConditionTree = (taskId: string, tree: ConditionNode) => {
+    setForm(f => ({
+      ...f,
+      dataSources: f.dataSources.map(ds => ds.taskId === taskId ? { ...ds, conditionTree: tree } : ds),
+    }));
+  };
+
+  const getActiveDS = () => form.dataSources.find(ds => ds.taskId === activeConditionDS);
+  const getActiveDSTree = () => getActiveDS()?.conditionTree || emptyConditionTree;
 
   const addCondition = (parentId: string) => {
     const newCond: ConditionNode = { id: `c_${Date.now()}`, type: "condition", field: "", operator: "equals", value: "" };
-    updateConditionTree(insertIntoTree(form.conditionTree, parentId, newCond));
+    updateDSConditionTree(activeConditionDS, insertIntoTree(getActiveDSTree(), parentId, newCond));
   };
   const addGroup = (parentId: string) => {
     const newGroup: ConditionNode = { id: `g_${Date.now()}`, type: "group", logic: "AND", children: [] };
-    updateConditionTree(insertIntoTree(form.conditionTree, parentId, newGroup));
+    updateDSConditionTree(activeConditionDS, insertIntoTree(getActiveDSTree(), parentId, newGroup));
   };
   const removeConditionNode = (nodeId: string) => {
-    updateConditionTree(removeFromTree(form.conditionTree, nodeId));
+    updateDSConditionTree(activeConditionDS, removeFromTree(getActiveDSTree(), nodeId));
   };
   const updateConditionNode = (nodeId: string, update: Partial<ConditionNode>) => {
-    updateConditionTree(updateInTree(form.conditionTree, nodeId, update));
+    updateDSConditionTree(activeConditionDS, updateInTree(getActiveDSTree(), nodeId, update));
   };
 
   // ── Fields ──
@@ -335,19 +361,52 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
           {/* ═══════ Step 3: Conditions + Fields ═══════ */}
           {step === 2 && (
             <div className="space-y-6">
-              {/* Nested condition builder */}
+              {/* Per-datasource condition builder */}
               <div>
-                <label className="text-xs font-medium text-foreground mb-1 block">数据入主题条件（支持嵌套表达式）</label>
-                <p className="text-[11px] text-muted-foreground mb-3">满足以下条件的数据自动归入此主题，支持 AND/OR 组合与括号嵌套</p>
-                <ConditionTreeEditor
-                  node={form.conditionTree}
-                  onAddCondition={addCondition}
-                  onAddGroup={addGroup}
-                  onRemove={removeConditionNode}
-                  onUpdate={updateConditionNode}
-                  depth={0}
-                  isRoot
-                />
+                <label className="text-xs font-medium text-foreground mb-1 block">各数据源入主题条件</label>
+                <p className="text-[11px] text-muted-foreground mb-3">每个数据源可独立配置入主题规则，支持 AND/OR 组合与括号嵌套</p>
+
+                {form.dataSources.length === 0 ? (
+                  <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
+                    <p className="text-xs text-muted-foreground">请先在上一步选择数据源</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Data source tabs */}
+                    <div className="flex gap-1 mb-3 flex-wrap">
+                      {form.dataSources.map(ds => (
+                        <button key={ds.taskId} onClick={() => setActiveConditionDS(ds.taskId)}
+                          className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                            activeConditionDS === ds.taskId
+                              ? "border-primary bg-primary/10 text-primary font-medium"
+                              : "border-border text-muted-foreground hover:bg-muted/50"
+                          }`}>
+                          {ds.taskName}
+                          <span className="ml-1 text-[10px] opacity-60">({ds.platforms.slice(0, 2).join("、")}{ds.platforms.length > 2 ? "…" : ""})</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Active datasource condition tree */}
+                    {getActiveDS() && (
+                      <div className="border border-primary/20 rounded-lg p-3 bg-primary/5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{getActiveDS()?.taskName}</Badge>
+                          <span className="text-[10px] text-muted-foreground">平台：{getActiveDS()?.platforms.join("、")}</span>
+                        </div>
+                        <ConditionTreeEditor
+                          node={getActiveDSTree()}
+                          onAddCondition={addCondition}
+                          onAddGroup={addGroup}
+                          onRemove={removeConditionNode}
+                          onUpdate={updateConditionNode}
+                          depth={0}
+                          isRoot
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Field selection with groups */}
