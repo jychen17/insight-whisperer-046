@@ -196,34 +196,50 @@ export default function AppSidebar() {
             </div>
             {group.sections.map((section) => (
               <div key={section.label}>
-                <button
-                  onClick={() => toggleSection(section.label)}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
-                >
-                  <span className="text-primary">{section.icon}</span>
-                  <span className="flex-1 text-left">{section.label}</span>
-                  {openSections[section.label] ? (
-                    <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
-                  ) : (
-                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                  )}
-                </button>
-                {openSections[section.label] && section.children && (
-                  <div className="ml-4">
-                    {section.children.map((child) => (
-                      <Link
-                        key={child.path}
-                        to={child.path}
-                        className={`block px-6 py-1.5 text-sm transition-colors ${
-                          isActive(child.path)
-                            ? "text-primary font-medium bg-accent"
-                            : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
-                        }`}
-                      >
-                        {child.label}
-                      </Link>
-                    ))}
-                  </div>
+                {section.path && !section.children ? (
+                  <Link
+                    to={section.path}
+                    className={`w-full flex items-center gap-2 px-4 py-2 text-sm transition-colors ${
+                      isActive(section.path)
+                        ? "text-primary font-medium bg-accent"
+                        : "text-sidebar-foreground hover:bg-accent"
+                    }`}
+                  >
+                    <span className="text-primary">{section.icon}</span>
+                    <span className="flex-1 text-left">{section.label}</span>
+                  </Link>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => toggleSection(section.label)}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-sidebar-foreground hover:bg-accent transition-colors"
+                    >
+                      <span className="text-primary">{section.icon}</span>
+                      <span className="flex-1 text-left">{section.label}</span>
+                      {openSections[section.label] ? (
+                        <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                      )}
+                    </button>
+                    {openSections[section.label] && section.children && (
+                      <div className="ml-4">
+                        {section.children.map((child) => (
+                          <Link
+                            key={child.path}
+                            to={child.path}
+                            className={`block px-6 py-1.5 text-sm transition-colors ${
+                              isActive(child.path)
+                                ? "text-primary font-medium bg-accent"
+                                : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
+                            }`}
+                          >
+                            {child.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             ))}
