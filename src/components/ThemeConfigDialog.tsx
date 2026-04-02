@@ -361,19 +361,52 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
           {/* ═══════ Step 3: Conditions + Fields ═══════ */}
           {step === 2 && (
             <div className="space-y-6">
-              {/* Nested condition builder */}
+              {/* Per-datasource condition builder */}
               <div>
-                <label className="text-xs font-medium text-foreground mb-1 block">数据入主题条件（支持嵌套表达式）</label>
-                <p className="text-[11px] text-muted-foreground mb-3">满足以下条件的数据自动归入此主题，支持 AND/OR 组合与括号嵌套</p>
-                <ConditionTreeEditor
-                  node={form.conditionTree}
-                  onAddCondition={addCondition}
-                  onAddGroup={addGroup}
-                  onRemove={removeConditionNode}
-                  onUpdate={updateConditionNode}
-                  depth={0}
-                  isRoot
-                />
+                <label className="text-xs font-medium text-foreground mb-1 block">各数据源入主题条件</label>
+                <p className="text-[11px] text-muted-foreground mb-3">每个数据源可独立配置入主题规则，支持 AND/OR 组合与括号嵌套</p>
+
+                {form.dataSources.length === 0 ? (
+                  <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
+                    <p className="text-xs text-muted-foreground">请先在上一步选择数据源</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Data source tabs */}
+                    <div className="flex gap-1 mb-3 flex-wrap">
+                      {form.dataSources.map(ds => (
+                        <button key={ds.taskId} onClick={() => setActiveConditionDS(ds.taskId)}
+                          className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                            activeConditionDS === ds.taskId
+                              ? "border-primary bg-primary/10 text-primary font-medium"
+                              : "border-border text-muted-foreground hover:bg-muted/50"
+                          }`}>
+                          {ds.taskName}
+                          <span className="ml-1 text-[10px] opacity-60">({ds.platforms.slice(0, 2).join("、")}{ds.platforms.length > 2 ? "…" : ""})</span>
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Active datasource condition tree */}
+                    {getActiveDS() && (
+                      <div className="border border-primary/20 rounded-lg p-3 bg-primary/5">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{getActiveDS()?.taskName}</Badge>
+                          <span className="text-[10px] text-muted-foreground">平台：{getActiveDS()?.platforms.join("、")}</span>
+                        </div>
+                        <ConditionTreeEditor
+                          node={getActiveDSTree()}
+                          onAddCondition={addCondition}
+                          onAddGroup={addGroup}
+                          onRemove={removeConditionNode}
+                          onUpdate={updateConditionNode}
+                          depth={0}
+                          isRoot
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Field selection with groups */}
