@@ -185,7 +185,7 @@ export default function AppSidebar() {
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-2">
           <Eye className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-foreground text-sm">外部洞察平台</span>
+          <span className="font-semibold text-foreground text-sm">灵泉数据</span>
         </div>
       </div>
       <nav className="flex-1 py-1">
