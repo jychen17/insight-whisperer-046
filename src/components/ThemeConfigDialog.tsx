@@ -390,9 +390,39 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                     {/* Active datasource condition tree */}
                     {getActiveDS() && (
                       <div className="border border-primary/20 rounded-lg p-3 bg-primary/5">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{getActiveDS()?.taskName}</Badge>
-                          <span className="text-[10px] text-muted-foreground">平台：{getActiveDS()?.platforms.join("、")}</span>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{getActiveDS()?.taskName}</Badge>
+                            <span className="text-[10px] text-muted-foreground">平台：{getActiveDS()?.platforms.join("、")}</span>
+                          </div>
+                          {/* Copy from another datasource */}
+                          {form.dataSources.length > 1 && (
+                            <div className="flex items-center gap-1">
+                              <Copy className="w-3 h-3 text-muted-foreground" />
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  const sourceDS = form.dataSources.find(ds => ds.taskId === e.target.value);
+                                  if (sourceDS?.conditionTree) {
+                                    const cloneTree = JSON.parse(JSON.stringify(sourceDS.conditionTree));
+                                    // Regenerate IDs to avoid conflicts
+                                    const reId = (node: any) => {
+                                      node.id = `${node.id}_copy_${Date.now()}`;
+                                      (node.children || []).forEach(reId);
+                                    };
+                                    reId(cloneTree);
+                                    updateDSConditionTree(activeConditionDS, cloneTree);
+                                  }
+                                }}
+                                className="px-1.5 py-1 text-[10px] border border-border rounded bg-card text-foreground"
+                              >
+                                <option value="">复制规则自...</option>
+                                {form.dataSources.filter(ds => ds.taskId !== activeConditionDS).map(ds => (
+                                  <option key={ds.taskId} value={ds.taskId}>{ds.taskName}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
                         </div>
                         <ConditionTreeEditor
                           node={getActiveDSTree()}
