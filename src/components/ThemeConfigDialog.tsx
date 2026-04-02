@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, GripVertical, GitMerge, ArrowUp, ArrowDown, Search, ChevronDown, ChevronRight, Check } from "lucide-react";
+import { X, Plus, Trash2, GripVertical, GitMerge, ArrowUp, ArrowDown, Search, ChevronDown, ChevronRight, Check, Copy } from "lucide-react";
 import type {
   ThemeConfig,
   DataSourceConfig,
