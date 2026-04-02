@@ -65,6 +65,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const [dsSearch, setDsSearch] = useState("");
   const [fieldSearch, setFieldSearch] = useState("");
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [activeConditionDS, setActiveConditionDS] = useState<string>("");
 
   const isEdit = !!theme;
   const steps = ["基本信息", "数据源", "入主题条件与字段", "合并管线"];
