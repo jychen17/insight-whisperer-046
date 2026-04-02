@@ -28,6 +28,7 @@ interface NavChild {
 interface NavSection {
   label: string;
   icon: React.ReactNode;
+  path?: string;
   children?: NavChild[];
 }
 
