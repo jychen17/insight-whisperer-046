@@ -83,35 +83,46 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
     width: nodeW, height: nodeH,
   }));
 
-  // Rule nodes - per data source
+  // Rule nodes - one per data source showing full condition tree
   const ruleFlowNodes: FlowNode[] = [];
-  let ruleYOffset = 0;
+  const ruleToSourceMap: Record<string, string> = {}; // ruleId -> sourceId
+  let ruleIdx = 0;
+
   theme.dataSources.forEach(ds => {
-    const dsConditions = flattenConditions(ds.conditionTree);
-    dsConditions.forEach(c => {
+    const tree = ds.conditionTree;
+    if (tree && hasConditions(tree)) {
+      const exprText = conditionToText(tree);
+      // Split long expressions into lines for display
+      const lines = splitExprLines(exprText);
+      const lineH = 18;
+      const h = Math.max(nodeH, 28 + lines.length * lineH);
+      const ruleId = `rule_${ds.taskId}`;
       ruleFlowNodes.push({
-        id: `rule_${ds.taskId}_${c.id}`,
+        id: ruleId,
         type: "rule",
-        label: `${FIELD_LABELS[c.field || ""] || c.field} ${c.operator === "equals" ? "=" : c.operator === "not_equals" ? "≠" : "∈"} ${c.value}`,
+        label: exprText,
         sublabel: ds.taskName,
-        x: colX[1], y: 100 + ruleYOffset * 72,
-        width: nodeW + 20, height: nodeH,
+        x: colX[1], y: 100 + ruleIdx * (h + 16),
+        width: nodeW + 80, height: h,
       });
-      ruleYOffset++;
-    });
+      ruleToSourceMap[ruleId] = `src_${ds.taskId}`;
+      ruleIdx++;
+    }
   });
+
   // Fallback: if no per-datasource conditions, use theme-level conditionTree
-  if (ruleFlowNodes.length === 0) {
-    const flatConditions = flattenConditions(theme.conditionTree);
-    flatConditions.forEach((c, i) => {
-      ruleFlowNodes.push({
-        id: `rule_${c.id}`,
-        type: "rule",
-        label: `${FIELD_LABELS[c.field || ""] || c.field} ${c.operator === "equals" ? "=" : c.operator === "not_equals" ? "≠" : "∈"} ${c.value}`,
-        sublabel: "条件",
-        x: colX[1], y: 100 + i * 72,
-        width: nodeW + 20, height: nodeH,
-      });
+  if (ruleFlowNodes.length === 0 && hasConditions(theme.conditionTree)) {
+    const exprText = conditionToText(theme.conditionTree);
+    const lines = splitExprLines(exprText);
+    const lineH = 18;
+    const h = Math.max(nodeH, 28 + lines.length * lineH);
+    ruleFlowNodes.push({
+      id: "rule_global",
+      type: "rule",
+      label: exprText,
+      sublabel: "全局条件",
+      x: colX[1], y: 100,
+      width: nodeW + 80, height: h,
     });
   }
 
