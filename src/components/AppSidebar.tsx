@@ -143,10 +143,10 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    groupLabel: "分析工具",
+    groupLabel: "分析总结",
     sections: [
       {
-        label: "分析工具",
+        label: "分析总结",
         icon: <BarChart3 className="w-4 h-4" />,
         children: [
           { label: "分析首页", path: "/analysis/home" },
