@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Bot, Sparkles, FileText, Settings2,
   AlertTriangle, TrendingUp, FolderOpen, ArrowRight,
+  Clock, Calendar, BarChart3, Layout,
 } from "lucide-react";
 
 const hotTags = [
@@ -16,6 +17,13 @@ const hotTags = [
   "#竞品对比报告",
   "#本月NPS趋势分析",
   "#热点事件传播路径",
+];
+
+const reportTemplates = [
+  { icon: FileText, title: "舆情日报模板", desc: "自动汇总每日舆情数据与风险预警", tags: ["日报", "舆情"] },
+  { icon: BarChart3, title: "竞品对比模板", desc: "横向对比多品牌各维度表现", tags: ["周报", "行业"] },
+  { icon: Clock, title: "热点追踪模板", desc: "追踪热点事件的传播路径与影响", tags: ["专项", "热点"] },
+  { icon: Calendar, title: "体验洞察模板", desc: "用户反馈NPS分析与问题归因", tags: ["月报", "体验"] },
 ];
 
 const quickEntries = [
@@ -44,6 +52,10 @@ export default function AnalysisHome() {
 
   const handleTagClick = (tag: string) => {
     setQuery(tag);
+  };
+
+  const handleUseTemplate = (title: string) => {
+    setQuery(`使用「${title}」生成报告`);
   };
 
   return (
@@ -89,6 +101,51 @@ export default function AnalysisHome() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Report Templates */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-foreground">报告模板</h2>
+          <Button variant="ghost" size="sm" className="gap-1 text-xs text-muted-foreground" onClick={() => navigate("/analysis/report-templates")}>
+            <Layout className="w-3.5 h-3.5" /> 模板管理
+            <ArrowRight className="w-3 h-3" />
+          </Button>
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          {reportTemplates.map((t) => {
+            const Icon = t.icon;
+            return (
+              <Card
+                key={t.title}
+                className="cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all group"
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex gap-1">
+                      {t.tags.map(tag => (
+                        <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">{tag}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">{t.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1 mb-3">{t.desc}</p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full gap-1 text-xs h-7"
+                    onClick={() => handleUseTemplate(t.title)}
+                  >
+                    <Sparkles className="w-3 h-3" /> 快速使用
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Quick Entry Cards */}
       <div className="grid grid-cols-2 gap-4">
