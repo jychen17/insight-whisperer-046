@@ -151,6 +151,7 @@ const navGroups: NavGroup[] = [
         children: [
           { label: "分析首页", path: "/analysis/home" },
           { label: "报告配置", path: "/analysis/report-config" },
+          { label: "报告模板管理", path: "/analysis/report-templates" },
           { label: "报告管理", path: "/analysis/report-manage" },
         ],
       },
