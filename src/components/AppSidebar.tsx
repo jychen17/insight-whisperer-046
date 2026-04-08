@@ -143,15 +143,16 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    groupLabel: "分析工具",
+    groupLabel: "分析总结",
     sections: [
       {
-        label: "分析工具",
+        label: "分析总结",
         icon: <BarChart3 className="w-4 h-4" />,
         children: [
-          { label: "智能报告", path: "/analysis/reports" },
-          { label: "报告配置", path: "/analysis/report-config" },
-          { label: "报告模板", path: "/analysis/templates" },
+          { label: "分析首页", path: "/analysis/home" },
+          { label: "专项报告配置", path: "/analysis/report-config" },
+          { label: "报告详情", path: "/analysis/reports" },
+          { label: "报告管理", path: "/analysis/templates" },
         ],
       },
     ],

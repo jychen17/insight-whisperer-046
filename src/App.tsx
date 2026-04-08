@@ -26,6 +26,7 @@ import DashboardConfig from "@/pages/datacenter/DashboardConfig";
 // 分析工具
 import SmartReports from "@/pages/analysis/SmartReports";
 import ReportConfig from "@/pages/analysis/ReportConfig";
+import AnalysisHome from "@/pages/analysis/AnalysisHome";
 
 const queryClient = new QueryClient();
 
@@ -68,6 +69,7 @@ const App = () => (
             <Route path="/monitor/account" element={<PlaceholderPage title="账户监控" />} />
             <Route path="/monitor/topic" element={<PlaceholderPage title="话题监控" />} />
             {/* 分析工具 */}
+            <Route path="/analysis/home" element={<AnalysisHome />} />
             <Route path="/analysis/reports" element={<SmartReports />} />
             <Route path="/analysis/report-config" element={<ReportConfig />} />
             <Route path="/analysis/templates" element={<PlaceholderPage title="报告模板" />} />
