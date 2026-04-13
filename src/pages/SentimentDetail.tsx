@@ -395,7 +395,12 @@ export default function SentimentDetail() {
             <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
               <Layers className="w-4 h-4 text-primary" /> 合并事件 ({mergedEvents.length})
             </h2>
-            <span className="text-xs text-muted-foreground">共 {items.filter(i => i.mergedEventId).length} 条舆情已合并</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">共 {items.filter(i => i.mergedEventId).length} 条舆情已合并</span>
+              <Button size="sm" className="h-7 text-xs gap-1" onClick={() => setAutoClusterOpen(true)}>
+                <Sparkles className="w-3 h-3" /> 自动聚类
+              </Button>
+            </div>
           </div>
           {mergedEvents.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground text-sm bg-card rounded-lg border border-border">
