@@ -153,7 +153,7 @@ const initialItems: SentimentItem[] = [
     business: "同程旅行-国内酒店", sentiment: "中性", issueType: "其他",
     summary: "租房广告内容，与企业舆情无关",
     comments: 1, likes: 3, collects: 2, shares: 0,
-    isNoise: true, noiseCategory: "rental_ad", handleStatus: "ignored", handleRecords: [],
+    isNoise: true, noiseCategory: "rental_ad", handleStatus: "silent", handleRecords: [],
   },
   {
     id: 6, title: "招聘旅游顾问 底薪6000+提成", platform: "抖音", author: "HR小王",
@@ -162,7 +162,7 @@ const initialItems: SentimentItem[] = [
     business: "同程旅行-人资", sentiment: "中性", issueType: "其他",
     summary: "招聘广告内容，与企业舆情无关",
     comments: 0, likes: 5, collects: 1, shares: 0,
-    isNoise: true, noiseCategory: "recruitment", handleStatus: "ignored", handleRecords: [],
+    isNoise: true, noiseCategory: "recruitment", handleStatus: "silent", handleRecords: [],
   },
 ];
 
@@ -203,9 +203,11 @@ export default function SentimentDetail() {
   const [handleDialogOpen, setHandleDialogOpen] = useState(false);
   const [handleDialogType, setHandleDialogType] = useState<"event" | "article">("article");
   const [handleTargetId, setHandleTargetId] = useState<string | number | null>(null);
-  const [handleAction, setHandleAction] = useState<HandleAction>("ignore");
+  const [handleAction, setHandleAction] = useState<HandleAction>("silent");
+  const [handleAssignee, setHandleAssignee] = useState("");
   const [handleComplaintNo, setHandleComplaintNo] = useState("");
-  const [handleEscalateTarget, setHandleEscalateTarget] = useState("公关部");
+  const [handleEscalateRole, setHandleEscalateRole] = useState("cs_supervisor");
+  const [handleEscalateTarget, setHandleEscalateTarget] = useState("");
   const [handleRemark, setHandleRemark] = useState("");
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
   const [batchHandleDialogOpen, setBatchHandleDialogOpen] = useState(false);
