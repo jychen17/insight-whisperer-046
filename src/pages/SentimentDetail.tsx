@@ -457,7 +457,39 @@ export default function SentimentDetail() {
     toast({ title: "已完结" });
   };
 
-  const runAutoCluster = () => {
+  const openRemarkDialog = (type: "event" | "article", targetId: string | number) => {
+    setRemarkDialogType(type);
+    setRemarkTargetId(targetId);
+    setRemarkOperator("");
+    setRemarkText("");
+    setRemarkDialogOpen(true);
+  };
+
+  const confirmAddRemark = () => {
+    if (!remarkText.trim()) {
+      toast({ title: "请输入备注内容", variant: "destructive" });
+      return;
+    }
+    const record: HandleRecord = {
+      id: `rec-${Date.now()}`,
+      action: "add_remark",
+      operator: remarkOperator || "当前用户",
+      time: new Date().toLocaleString("zh-CN"),
+      remark: remarkText,
+    };
+    if (remarkDialogType === "event") {
+      setMergedEvents(prev => prev.map(e =>
+        e.id === remarkTargetId ? { ...e, handleRecords: [...(e.handleRecords || []), record] } : e
+      ));
+    } else {
+      setItems(prev => prev.map(i =>
+        i.id === remarkTargetId ? { ...i, handleRecords: [...(i.handleRecords || []), record] } : i
+      ));
+    }
+    setRemarkDialogOpen(false);
+    toast({ title: "备注已添加" });
+  };
+
     setIsClustering(true);
     setClusterProgress(0);
     const availableItems = items.filter(i => !i.isNoise && !i.mergedEventId);
@@ -619,6 +651,7 @@ export default function SentimentDetail() {
     if (r.action === "escalate") return `升级到${r.escalateRole || ""}: ${r.escalateTarget}`;
     if (r.action === "close") return "标记完结";
     if (r.action === "reopen") return "重新打开";
+    if (r.action === "add_remark") return "追加备注";
     return r.action;
   };
 
