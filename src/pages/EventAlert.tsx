@@ -118,7 +118,7 @@ const defaultRules: AlertRule[] = [
       { field: "event_comments", operator: ">=", value: "100" },
       { field: "event_likes", operator: ">=", value: "200" },
     ],
-    pushTiming: "incremental",
+    pushTiming: "realtime",
     channels: [
       { type: "wechat", personal: true, group: false, personalTargets: [], groupWebhook: "" },
     ],
@@ -135,8 +135,10 @@ const defaultRules: AlertRule[] = [
     ],
     pushTiming: "scheduled",
     scheduledInterval: "day",
+    scheduledTimeStart: "08:00",
+    scheduledTimeEnd: "20:00",
     channels: [
-      { type: "email", personal: true, group: false, personalTargets: [], groupWebhook: "" },
+      { type: "wechat", personal: true, group: false, personalTargets: [], groupWebhook: "" },
     ],
     eventScope: "all",
   },
