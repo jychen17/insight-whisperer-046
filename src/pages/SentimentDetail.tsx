@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink } from "lucide-react";
+import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink, FileText, CheckCircle2, XCircle, ArrowUpRight, ClipboardList, History, User } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -22,6 +22,28 @@ const NOISE_CATEGORIES = [
   { value: "duplicate", label: "重复内容" },
   { value: "other", label: "其他噪音" },
 ];
+
+/* ── Processing types ── */
+export type HandleAction = "ignore" | "complaint" | "escalate";
+export interface HandleRecord {
+  id: string;
+  action: HandleAction;
+  operator: string;
+  time: string;
+  complaintNo?: string;
+  escalateTarget?: string;
+  remark?: string;
+}
+
+export type HandleStatus = "pending" | "ignored" | "processing" | "escalated" | "closed";
+
+const HANDLE_STATUS_MAP: Record<HandleStatus, { label: string; color: string }> = {
+  pending: { label: "待处理", color: "bg-amber-500/10 text-amber-600" },
+  ignored: { label: "已忽略", color: "bg-muted text-muted-foreground" },
+  processing: { label: "处理中", color: "bg-primary/10 text-primary" },
+  escalated: { label: "已升级", color: "bg-destructive/10 text-destructive" },
+  closed: { label: "已关闭", color: "bg-emerald-500/10 text-emerald-600" },
+};
 
 export interface SentimentItem {
   id: number;
@@ -47,6 +69,8 @@ export interface SentimentItem {
   isNoise?: boolean;
   noiseCategory?: string;
   mergedEventId?: string | null;
+  handleStatus?: HandleStatus;
+  handleRecords?: HandleRecord[];
 }
 
 interface MergedEvent {
@@ -69,6 +93,8 @@ interface MergedEvent {
   totalComments?: number;
   totalShares?: number;
   totalCollects?: number;
+  handleStatus?: HandleStatus;
+  handleRecords?: HandleRecord[];
 }
 
 const initialItems: SentimentItem[] = [
@@ -78,7 +104,7 @@ const initialItems: SentimentItem[] = [
     collectTime: "2026-03-30 11:08:57", region: "湖南", riskLevel: "一般", speed: "低",
     business: "同程旅行-国内酒店", sentiment: "负向情感-客户投诉", issueType: "其他",
     summary: "用户投诉长沙雅致酒店装修噪音扰民且未提前告知，处理方案不合理（投诉风险，品牌声誉风险）",
-    comments: 2, likes: 0, collects: 0, shares: 0,
+    comments: 2, likes: 0, collects: 0, shares: 0, handleStatus: "pending", handleRecords: [],
   },
   {
     id: 2, title: "骂机票 ✈", platform: "小红书", author: "蔡尔朗朗朗",
@@ -86,7 +112,7 @@ const initialItems: SentimentItem[] = [
     collectTime: "2026-03-30 11:07:02", region: "江苏", riskLevel: "一般", speed: "高",
     business: "同程旅行-国内机票", sentiment: "负向情感-客户投诉", issueType: "机票退改",
     summary: "用户因不满多家OTA平台机票价格暴涨，威胁刺激抵制（投诉风险，品牌声誉风险）",
-    comments: 53, likes: 0, collects: 0, shares: 0,
+    comments: 53, likes: 0, collects: 0, shares: 0, handleStatus: "pending", handleRecords: [],
   },
   {
     id: 3, title: "同程金融借贷还款无门，债权转让金额乱，求帮忙协商", platform: "黑猫投诉APP", author: "润家曦",
@@ -94,7 +120,7 @@ const initialItems: SentimentItem[] = [
     collectTime: "2026-03-30 10:45:16", region: "-", riskLevel: "一般", speed: "低",
     business: "同程旅行-金服", sentiment: "负向情感-客户投诉", issueType: "金融服务",
     summary: "用户投诉同程金融借贷产品还款困难，债权转让金额混乱",
-    comments: 0, likes: 0, collects: 0, shares: 0,
+    comments: 0, likes: 0, collects: 0, shares: 0, handleStatus: "pending", handleRecords: [],
   },
   {
     id: 4, title: "同程旅行隐瞒机票全损规则，2232元仅退83元", platform: "黑猫投诉APP", author: "匿名",
@@ -102,7 +128,7 @@ const initialItems: SentimentItem[] = [
     collectTime: "2026-03-30 10:00:24", region: "-", riskLevel: "一般", speed: "低",
     business: "同程旅行-国内机票", sentiment: "负向情感-客户投诉", issueType: "机票退改",
     summary: "用户投诉同程旅行隐瞒机票退改全损规则，高额机票仅退83元",
-    comments: 0, likes: 0, collects: 0, shares: 0,
+    comments: 0, likes: 0, collects: 0, shares: 0, handleStatus: "pending", handleRecords: [],
   },
   {
     id: 5, title: "长沙租房 近IFS 精装修一室一厅 拎包入住", platform: "小红书", author: "长沙租房小助手",
@@ -111,7 +137,7 @@ const initialItems: SentimentItem[] = [
     business: "同程旅行-国内酒店", sentiment: "中性", issueType: "其他",
     summary: "租房广告内容，与企业舆情无关",
     comments: 1, likes: 3, collects: 2, shares: 0,
-    isNoise: true, noiseCategory: "rental_ad",
+    isNoise: true, noiseCategory: "rental_ad", handleStatus: "ignored", handleRecords: [],
   },
   {
     id: 6, title: "招聘旅游顾问 底薪6000+提成", platform: "抖音", author: "HR小王",
@@ -120,7 +146,7 @@ const initialItems: SentimentItem[] = [
     business: "同程旅行-人资", sentiment: "中性", issueType: "其他",
     summary: "招聘广告内容，与企业舆情无关",
     comments: 0, likes: 5, collects: 1, shares: 0,
-    isNoise: true, noiseCategory: "recruitment",
+    isNoise: true, noiseCategory: "recruitment", handleStatus: "ignored", handleRecords: [],
   },
 ];
 
@@ -157,6 +183,20 @@ export default function SentimentDetail() {
   const [eventFilterLatestDateStart, setEventFilterLatestDateStart] = useState("");
   const [eventFilterLatestDateEnd, setEventFilterLatestDateEnd] = useState("");
 
+  // Handle processing states
+  const [handleDialogOpen, setHandleDialogOpen] = useState(false);
+  const [handleDialogType, setHandleDialogType] = useState<"event" | "article">("article");
+  const [handleTargetId, setHandleTargetId] = useState<string | number | null>(null);
+  const [handleAction, setHandleAction] = useState<HandleAction>("ignore");
+  const [handleComplaintNo, setHandleComplaintNo] = useState("");
+  const [handleEscalateTarget, setHandleEscalateTarget] = useState("公关部");
+  const [handleRemark, setHandleRemark] = useState("");
+  const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
+  const [batchHandleDialogOpen, setBatchHandleDialogOpen] = useState(false);
+  const [batchHandleType, setBatchHandleType] = useState<"event" | "article">("article");
+  // Handle filter for events
+  const [eventFilterHandleStatus, setEventFilterHandleStatus] = useState<"all" | HandleStatus>("all");
+
   const displayItems = useMemo(() => {
     const filtered = items.filter(item => {
       if (showNoiseFilter === "normal") return !item.isNoise;
@@ -169,6 +209,10 @@ export default function SentimentDetail() {
 
   const toggleSelect = (id: number) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const toggleEventSelect = (id: string) => {
+    setSelectedEventIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
   const handleMerge = () => {
@@ -201,15 +245,10 @@ export default function SentimentDetail() {
     return {
       importance,
       trendDirection: fermentSpeed === "high" ? "up" : fermentSpeed === "medium" ? "stable" : "down",
-      totalInteractions,
-      totalComments,
-      totalLikes,
-      totalShares,
-      totalCollects,
+      totalInteractions, totalComments, totalLikes, totalShares, totalCollects,
       keyPlatforms: [...new Set(posts.map(p => p.platform))].slice(0, 3),
       sentimentBreakdown: { negative, neutral, positive },
-      topBusiness,
-      fermentSpeed,
+      topBusiness, fermentSpeed,
       firstTime: times[0],
       latestTime: times[times.length - 1],
     };
@@ -225,6 +264,8 @@ export default function SentimentDetail() {
       postIds: selectedIds,
       createdAt: new Date().toLocaleString("zh-CN"),
       summary: `合并了 ${selectedIds.length} 条相关舆情，涉及平台: ${[...new Set(selectedItems.map(i => i.platform))].join("、")}`,
+      handleStatus: "pending",
+      handleRecords: [],
       ...meta,
     };
     setMergedEvents(prev => [...prev, newEvent]);
@@ -262,6 +303,76 @@ export default function SentimentDetail() {
   };
 
   const getEventPosts = (eventId: string) => items.filter(i => i.mergedEventId === eventId);
+
+  /* ── Processing handlers ── */
+  const openHandleDialog = (type: "event" | "article", targetId: string | number) => {
+    setHandleDialogType(type);
+    setHandleTargetId(targetId);
+    setHandleAction("ignore");
+    setHandleComplaintNo("");
+    setHandleEscalateTarget("公关部");
+    setHandleRemark("");
+    setHandleDialogOpen(true);
+  };
+
+  const createRecord = (): HandleRecord => ({
+    id: `rec-${Date.now()}`,
+    action: handleAction,
+    operator: "当前用户",
+    time: new Date().toLocaleString("zh-CN"),
+    complaintNo: handleAction === "complaint" ? handleComplaintNo : undefined,
+    escalateTarget: handleAction === "escalate" ? handleEscalateTarget : undefined,
+    remark: handleRemark || undefined,
+  });
+
+  const actionToStatus = (action: HandleAction): HandleStatus => {
+    if (action === "ignore") return "ignored";
+    if (action === "complaint") return "processing";
+    return "escalated";
+  };
+
+  const confirmHandle = () => {
+    const record = createRecord();
+    const newStatus = actionToStatus(handleAction);
+    if (handleDialogType === "event") {
+      setMergedEvents(prev => prev.map(e =>
+        e.id === handleTargetId ? { ...e, handleStatus: newStatus, handleRecords: [...(e.handleRecords || []), record] } : e
+      ));
+    } else {
+      setItems(prev => prev.map(i =>
+        i.id === handleTargetId ? { ...i, handleStatus: newStatus, handleRecords: [...(i.handleRecords || []), record] } : i
+      ));
+    }
+    setHandleDialogOpen(false);
+    toast({ title: "处理成功", description: `已${handleAction === "ignore" ? "忽略" : handleAction === "complaint" ? "录入投诉单号" : "升级处理"}` });
+  };
+
+  const confirmBatchHandle = () => {
+    const record = createRecord();
+    const newStatus = actionToStatus(handleAction);
+    if (batchHandleType === "event") {
+      setMergedEvents(prev => prev.map(e =>
+        selectedEventIds.includes(e.id) ? { ...e, handleStatus: newStatus, handleRecords: [...(e.handleRecords || []), record] } : e
+      ));
+      setSelectedEventIds([]);
+    } else {
+      setItems(prev => prev.map(i =>
+        selectedIds.includes(i.id) ? { ...i, handleStatus: newStatus, handleRecords: [...(i.handleRecords || []), record] } : i
+      ));
+      setSelectedIds([]);
+    }
+    setBatchHandleDialogOpen(false);
+    toast({ title: "批量处理成功" });
+  };
+
+  const openBatchHandle = (type: "event" | "article") => {
+    setBatchHandleType(type);
+    setHandleAction("ignore");
+    setHandleComplaintNo("");
+    setHandleEscalateTarget("公关部");
+    setHandleRemark("");
+    setBatchHandleDialogOpen(true);
+  };
 
   const runAutoCluster = () => {
     setIsClustering(true);
@@ -302,6 +413,8 @@ export default function SentimentDetail() {
           createdAt: new Date().toLocaleString("zh-CN"),
           summary: `通过${methodLabel}在${clusterTimeWindow}h内自动聚类，合并了 ${ids.length} 条舆情`,
           clusterMethod: methodLabel,
+          handleStatus: "pending",
+          handleRecords: [],
           ...meta,
         });
         ids.forEach(id => {
@@ -329,7 +442,6 @@ export default function SentimentDetail() {
   useEffect(() => {
     if (!hasAutoClustered && mergedEvents.length === 0) {
       setHasAutoClustered(true);
-      // Run auto cluster immediately (simulate)
       const availableItems = items.filter(i => !i.isNoise && !i.mergedEventId);
       const groups: Record<string, number[]> = {};
       availableItems.forEach(item => {
@@ -349,6 +461,8 @@ export default function SentimentDetail() {
           id: eid, title: `${key} - 自动聚类事件`, postIds: ids,
           createdAt: new Date().toLocaleString("zh-CN"),
           summary: `通过${methodLabel}在${clusterTimeWindow}h内自动聚类，合并了 ${ids.length} 条舆情`,
+          handleStatus: "pending",
+          handleRecords: [],
           ...meta,
         });
         ids.forEach(id => {
@@ -363,11 +477,9 @@ export default function SentimentDetail() {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Determine if we show articles view
   const showArticles = mainTab === "all" || (mainTab === "sentiment" && sentimentView === "articles");
   const showEvents = mainTab === "sentiment" && sentimentView === "events";
 
-  // Filtered events
   const filteredEvents = useMemo(() => {
     let evts = mergedEvents;
     if (eventSearchQuery) {
@@ -391,6 +503,9 @@ export default function SentimentDetail() {
     if (eventFilterLatestDateEnd) {
       evts = evts.filter(e => (e.latestTime || "") <= eventFilterLatestDateEnd + " 23:59:59");
     }
+    if (eventFilterHandleStatus !== "all") {
+      evts = evts.filter(e => (e.handleStatus || "pending") === eventFilterHandleStatus);
+    }
     return [...evts].sort((a, b) => {
       switch (eventSortBy) {
         case "firstTime_desc": return (b.firstTime || "").localeCompare(a.firstTime || "");
@@ -403,7 +518,7 @@ export default function SentimentDetail() {
         default: return 0;
       }
     });
-  }, [mergedEvents, eventSearchQuery, eventFilterImportance, eventFilterPlatform, eventSortBy, eventFilterFirstDateStart, eventFilterFirstDateEnd, eventFilterLatestDateStart, eventFilterLatestDateEnd]);
+  }, [mergedEvents, eventSearchQuery, eventFilterImportance, eventFilterPlatform, eventSortBy, eventFilterFirstDateStart, eventFilterFirstDateEnd, eventFilterLatestDateStart, eventFilterLatestDateEnd, eventFilterHandleStatus]);
 
   const importanceBadgeMap = {
     high: <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-[10px] gap-0.5"><Flame className="w-2.5 h-2.5" />重大</Badge>,
@@ -413,6 +528,79 @@ export default function SentimentDetail() {
 
   const speedLabel = { high: "高", medium: "中", low: "低" };
   const speedColor = { high: "text-destructive", medium: "text-amber-600", low: "text-muted-foreground" };
+
+  /* ── Handle processing dialog content (shared between single & batch) ── */
+  const renderHandleForm = () => (
+    <div className="space-y-4 py-2">
+      <div>
+        <label className="text-xs font-medium text-foreground mb-2 block">处置方式</label>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            { value: "ignore" as HandleAction, label: "忽略/静默", icon: XCircle, desc: "无需处理" },
+            { value: "complaint" as HandleAction, label: "录入投诉单号", icon: ClipboardList, desc: "需要跟进处理" },
+            { value: "escalate" as HandleAction, label: "升级处理", icon: ArrowUpRight, desc: "升级到公关/业务线" },
+          ]).map(opt => (
+            <label
+              key={opt.value}
+              className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                handleAction === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"
+              }`}
+            >
+              <input type="radio" className="sr-only" checked={handleAction === opt.value} onChange={() => setHandleAction(opt.value)} />
+              <div className="flex items-center gap-1.5">
+                <opt.icon className="w-3.5 h-3.5" />
+                <span className="text-xs font-medium text-foreground">{opt.label}</span>
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</div>
+            </label>
+          ))}
+        </div>
+      </div>
+      {handleAction === "complaint" && (
+        <div>
+          <label className="text-xs text-muted-foreground">投诉单号</label>
+          <input
+            className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+            value={handleComplaintNo}
+            onChange={e => setHandleComplaintNo(e.target.value)}
+            placeholder="请输入投诉单号"
+          />
+        </div>
+      )}
+      {handleAction === "escalate" && (
+        <div>
+          <label className="text-xs text-muted-foreground">升级目标</label>
+          <select
+            className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+            value={handleEscalateTarget}
+            onChange={e => setHandleEscalateTarget(e.target.value)}
+          >
+            <option>公关部</option>
+            <option>品牌部</option>
+            <option>客服中心</option>
+            <option>法务部</option>
+            <option>业务线负责人</option>
+          </select>
+        </div>
+      )}
+      <div>
+        <label className="text-xs text-muted-foreground">备注</label>
+        <textarea
+          className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
+          rows={2}
+          value={handleRemark}
+          onChange={e => setHandleRemark(e.target.value)}
+          placeholder="可选填备注..."
+        />
+      </div>
+    </div>
+  );
+
+  const renderStatusBadge = (status: HandleStatus | undefined) => {
+    const s = status || "pending";
+    const info = HANDLE_STATUS_MAP[s];
+    return <Badge className={`${info.color} border-0 text-[10px]`}>{info.label}</Badge>;
+  };
 
   return (
     <div className="space-y-5">
@@ -476,7 +664,7 @@ export default function SentimentDetail() {
         <div className="space-y-4">
           {/* Event filters */}
           <div className="bg-card rounded-lg border border-border p-4">
-            <div className="grid grid-cols-5 gap-3">
+            <div className="grid grid-cols-6 gap-3">
               <div>
                 <label className="text-xs text-muted-foreground">事件等级</label>
                 <select
@@ -498,6 +686,21 @@ export default function SentimentDetail() {
                   onChange={e => setEventFilterPlatform(e.target.value)}
                 >
                   {filters.platforms.map(p => <option key={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">处理状态</label>
+                <select
+                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                  value={eventFilterHandleStatus}
+                  onChange={e => setEventFilterHandleStatus(e.target.value as typeof eventFilterHandleStatus)}
+                >
+                  <option value="all">全部</option>
+                  <option value="pending">待处理</option>
+                  <option value="ignored">已忽略</option>
+                  <option value="processing">处理中</option>
+                  <option value="escalated">已升级</option>
+                  <option value="closed">已关闭</option>
                 </select>
               </div>
               <div>
@@ -529,8 +732,26 @@ export default function SentimentDetail() {
             </div>
             <div className="flex justify-between items-center mt-3">
               <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                <span>事件数: <span className="text-foreground font-medium">{mergedEvents.length}</span> 个</span>
-                <span>已合并文章: <span className="text-foreground font-medium">{items.filter(i => i.mergedEventId).length}</span> 条</span>
+                <label className="flex items-center gap-1">
+                  <input
+                    type="checkbox"
+                    className="rounded"
+                    checked={selectedEventIds.length > 0 && selectedEventIds.length === filteredEvents.length}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedEventIds(filteredEvents.map(e => e.id));
+                      else setSelectedEventIds([]);
+                    }}
+                  />
+                  <span>全选</span>
+                </label>
+                {selectedEventIds.length > 0 && (
+                  <>
+                    <span className="text-primary font-medium">已选 {selectedEventIds.length} 个事件</span>
+                    <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={() => openBatchHandle("event")}>
+                      <ClipboardList className="w-3 h-3" /> 批量处置
+                    </Button>
+                  </>
+                )}
               </div>
               <div className="flex gap-2">
                 <select
@@ -550,29 +771,7 @@ export default function SentimentDetail() {
             </div>
           </div>
 
-          {/* Event Stats Summary */}
-          {mergedEvents.length > 0 && (
-            <div className="grid grid-cols-4 gap-3">
-              <div className="bg-card rounded-lg border border-border p-3 text-center">
-                <div className="text-lg font-semibold text-foreground">{mergedEvents.length}</div>
-                <div className="text-[11px] text-muted-foreground">合并事件</div>
-              </div>
-              <div className="bg-card rounded-lg border border-border p-3 text-center">
-                <div className="text-lg font-semibold text-destructive">{mergedEvents.filter(e => e.importance === "high").length}</div>
-                <div className="text-[11px] text-muted-foreground">重大事件</div>
-              </div>
-              <div className="bg-card rounded-lg border border-border p-3 text-center">
-                <div className="text-lg font-semibold text-foreground">{items.filter(i => i.mergedEventId).length}</div>
-                <div className="text-[11px] text-muted-foreground">已合并文章</div>
-              </div>
-              <div className="bg-card rounded-lg border border-border p-3 text-center">
-                <div className="text-lg font-semibold text-foreground">{mergedEvents.reduce((s, e) => s + (e.totalInteractions || 0), 0)}</div>
-                <div className="text-[11px] text-muted-foreground">总互动量</div>
-              </div>
-            </div>
-          )}
-
-          {/* Event Cards */}
+          {/* Event Cards (no stat cards) */}
           {filteredEvents.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground text-sm bg-card rounded-lg border border-border">
               <Layers className="w-8 h-8 mx-auto mb-3 opacity-30" />
@@ -593,14 +792,21 @@ export default function SentimentDetail() {
                 return (
                   <div key={event.id} className={`bg-card rounded-lg border border-border overflow-hidden ${importanceColors[event.importance || "low"]}`}>
                     <div className="p-4 cursor-pointer hover:bg-muted/20 transition-colors" onClick={() => setExpandedEventId(isExpanded ? null : event.id)}>
-                      {/* Row 1: Title & badges */}
+                      {/* Row 1: Title & badges & handle status */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
+                            <input
+                              type="checkbox"
+                              className="rounded"
+                              checked={selectedEventIds.includes(event.id)}
+                              onChange={(e) => { e.stopPropagation(); toggleEventSelect(event.id); }}
+                              onClick={e => e.stopPropagation()}
+                            />
                             {importanceBadgeMap[event.importance || "low"]}
+                            {renderStatusBadge(event.handleStatus)}
                             <h3 className="text-sm font-semibold text-foreground">{event.title}</h3>
                           </div>
-                          {/* Row 2: Core tags */}
                           <div className="flex items-center gap-2 mt-2 flex-wrap">
                             {event.sentimentBreakdown && (
                               <>
@@ -625,7 +831,10 @@ export default function SentimentDetail() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openHandleDialog("event", event.id); }}>
+                            <ClipboardList className="w-3 h-3" /> 处置
+                          </Button>
                           <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); navigate(`/sentiment/event-detail?id=${event.id}`); }}>
                             <ExternalLink className="w-3 h-3" /> 详情
                           </Button>
@@ -685,6 +894,21 @@ export default function SentimentDetail() {
                         {event.trendDirection === "up" && <span className="flex items-center gap-0.5 text-destructive ml-auto"><TrendingUp className="w-3 h-3" />趋势上升</span>}
                         {event.trendDirection === "down" && <span className="flex items-center gap-0.5 text-emerald-600 ml-auto"><TrendingDown className="w-3 h-3" />趋势下降</span>}
                       </div>
+
+                      {/* Processing records preview */}
+                      {(event.handleRecords || []).length > 0 && (
+                        <div className="mt-2 pt-2 border-t border-border">
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1">
+                            <History className="w-3 h-3" /> 最新处理记录
+                          </div>
+                          {(event.handleRecords || []).slice(-1).map(r => (
+                            <div key={r.id} className="text-[11px] text-muted-foreground">
+                              <span className="text-foreground">{r.operator}</span> 于 {r.time} {r.action === "ignore" ? "忽略了该事件" : r.action === "complaint" ? `录入投诉单号: ${r.complaintNo}` : `升级到: ${r.escalateTarget}`}
+                              {r.remark && <span className="ml-1">（{r.remark}）</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Expanded: post list */}
@@ -698,7 +922,9 @@ export default function SentimentDetail() {
                               <TableHead className="text-xs">发布者</TableHead>
                               <TableHead className="text-xs">发布时间</TableHead>
                               <TableHead className="text-xs">情感</TableHead>
+                              <TableHead className="text-xs">处理状态</TableHead>
                               <TableHead className="text-xs">互动量</TableHead>
+                              <TableHead className="text-xs">操作</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -709,7 +935,13 @@ export default function SentimentDetail() {
                                 <TableCell className="text-xs">{post.author}</TableCell>
                                 <TableCell className="text-xs">{post.publishTime}</TableCell>
                                 <TableCell><Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{post.sentiment}</Badge></TableCell>
+                                <TableCell>{renderStatusBadge(post.handleStatus)}</TableCell>
                                 <TableCell className="text-xs">{post.comments + post.likes + post.shares}</TableCell>
+                                <TableCell>
+                                  <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", post.id)}>
+                                    <ClipboardList className="w-3 h-3" /> 处置
+                                  </Button>
+                                </TableCell>
                               </TableRow>
                             ))}
                           </TableBody>
@@ -801,6 +1033,9 @@ export default function SentimentDetail() {
                   <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => openNoiseDialog(selectedIds)}>
                     <Ban className="w-3 h-3" /> 标记为噪音
                   </Button>
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openBatchHandle("article")}>
+                    <ClipboardList className="w-3 h-3" /> 批量处置
+                  </Button>
                 </>
               )}
             </div>
@@ -842,6 +1077,7 @@ export default function SentimentDetail() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate">{item.title}</h3>
+                          {renderStatusBadge(item.handleStatus)}
                           {item.isNoise && (
                             <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
                               <Ban className="w-2.5 h-2.5 mr-0.5" />
@@ -862,6 +1098,9 @@ export default function SentimentDetail() {
                           <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
                         ) : (
                           <>
+                            <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
+                              <ClipboardList className="w-3 h-3" /> 处置
+                            </Button>
                             <button
                               className="text-muted-foreground hover:text-destructive"
                               title="标记为噪音"
@@ -899,6 +1138,20 @@ export default function SentimentDetail() {
                       <span>收藏量: {item.collects}</span>
                       <span>分享量: {item.shares}</span>
                     </div>
+                    {/* Processing records */}
+                    {(item.handleRecords || []).length > 0 && (
+                      <div className="pt-2 border-t border-border">
+                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1">
+                          <History className="w-3 h-3" /> 处理记录
+                        </div>
+                        {(item.handleRecords || []).map(r => (
+                          <div key={r.id} className="text-[11px] text-muted-foreground">
+                            <span className="text-foreground">{r.operator}</span> 于 {r.time} {r.action === "ignore" ? "忽略了该文章" : r.action === "complaint" ? `录入投诉单号: ${r.complaintNo}` : `升级到: ${r.escalateTarget}`}
+                            {r.remark && <span className="ml-1">（{r.remark}）</span>}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -974,6 +1227,38 @@ export default function SentimentDetail() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setNoiseDialogOpen(false)}>取消</Button>
             <Button variant="destructive" onClick={confirmMarkNoise}>确认标记</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Handle Processing Dialog (single) */}
+      <Dialog open={handleDialogOpen} onOpenChange={setHandleDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-primary" /> {handleDialogType === "event" ? "事件处置" : "文章处置"}
+            </DialogTitle>
+          </DialogHeader>
+          {renderHandleForm()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
+            <Button onClick={confirmHandle}>确认处置</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Batch Handle Dialog */}
+      <Dialog open={batchHandleDialogOpen} onOpenChange={setBatchHandleDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-primary" /> 批量处置（{batchHandleType === "event" ? `${selectedEventIds.length} 个事件` : `${selectedIds.length} 条文章`}）
+            </DialogTitle>
+          </DialogHeader>
+          {renderHandleForm()}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBatchHandleDialogOpen(false)}>取消</Button>
+            <Button onClick={confirmBatchHandle}>确认批量处置</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
