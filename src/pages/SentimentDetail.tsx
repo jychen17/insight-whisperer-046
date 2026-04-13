@@ -2,9 +2,10 @@ import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2 } from "lucide-react";
+import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
+import { Progress } from "@/components/ui/progress";
 
 const filters = {
   brands: ["同程旅行", "携程", "美团", "飞猪", "去哪儿"],
@@ -121,6 +122,12 @@ export default function SentimentDetail() {
   const [noiseDialogOpen, setNoiseDialogOpen] = useState(false);
   const [noiseCategory, setNoiseCategory] = useState("unrelated");
   const [noiseTargetIds, setNoiseTargetIds] = useState<number[]>([]);
+  const [autoClusterOpen, setAutoClusterOpen] = useState(false);
+  const [clusterMethod, setClusterMethod] = useState<"text_similarity" | "same_content">("text_similarity");
+  const [clusterTimeWindow, setClusterTimeWindow] = useState(24);
+  const [clusterSimilarity, setClusterSimilarity] = useState(0.7);
+  const [isClustering, setIsClustering] = useState(false);
+  const [clusterProgress, setClusterProgress] = useState(0);
 
   // Filtered items based on noise filter
   const displayItems = useMemo(() => {
@@ -193,6 +200,68 @@ export default function SentimentDetail() {
   };
 
   const getEventPosts = (eventId: string) => items.filter(i => i.mergedEventId === eventId);
+
+  // Simulated auto-clustering
+  const runAutoCluster = () => {
+    setIsClustering(true);
+    setClusterProgress(0);
+    const availableItems = items.filter(i => !i.isNoise && !i.mergedEventId);
+
+    // Simulate progress
+    const interval = setInterval(() => {
+      setClusterProgress(prev => {
+        if (prev >= 90) { clearInterval(interval); return 90; }
+        return prev + 15;
+      });
+    }, 300);
+
+    // Simulate clustering result after delay
+    setTimeout(() => {
+      clearInterval(interval);
+      setClusterProgress(100);
+
+      // Mock: group by issueType within time window as a simulation
+      const groups: Record<string, number[]> = {};
+      availableItems.forEach(item => {
+        const key = clusterMethod === "same_content" ? item.issueType : item.issueType;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item.id);
+      });
+
+      const newEvents: MergedEvent[] = [];
+      const updatedItems = [...items];
+
+      Object.entries(groups).forEach(([key, ids]) => {
+        if (ids.length < 2) return;
+        const eventId = `auto-${Date.now()}-${key}`;
+        const posts = updatedItems.filter(i => ids.includes(i.id));
+        newEvents.push({
+          id: eventId,
+          title: `${key} - 自动聚类事件`,
+          postIds: ids,
+          createdAt: new Date().toLocaleString("zh-CN"),
+          summary: `通过${clusterMethod === "text_similarity" ? "文本相似度" : "内容相同"}在${clusterTimeWindow}h内自动聚类，合并了 ${ids.length} 条舆情，涉及平台: ${[...new Set(posts.map(i => i.platform))].join("、")}`,
+        });
+        ids.forEach(id => {
+          const idx = updatedItems.findIndex(i => i.id === id);
+          if (idx >= 0) updatedItems[idx] = { ...updatedItems[idx], mergedEventId: eventId };
+        });
+      });
+
+      if (newEvents.length === 0) {
+        toast({ title: "未发现可聚类的舆情", description: "当前条件下无相似内容" });
+      } else {
+        setItems(updatedItems);
+        setMergedEvents(prev => [...prev, ...newEvents]);
+        toast({ title: "自动聚类完成", description: `生成了 ${newEvents.length} 个事件` });
+        setMainTab("events");
+      }
+
+      setIsClustering(false);
+      setAutoClusterOpen(false);
+      setClusterProgress(0);
+    }, 2000);
+  };
 
   return (
     <div className="space-y-5">
@@ -326,7 +395,12 @@ export default function SentimentDetail() {
             <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
               <Layers className="w-4 h-4 text-primary" /> 合并事件 ({mergedEvents.length})
             </h2>
-            <span className="text-xs text-muted-foreground">共 {items.filter(i => i.mergedEventId).length} 条舆情已合并</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">共 {items.filter(i => i.mergedEventId).length} 条舆情已合并</span>
+              <Button size="sm" className="h-7 text-xs gap-1" onClick={() => setAutoClusterOpen(true)}>
+                <Sparkles className="w-3 h-3" /> 自动聚类
+              </Button>
+            </div>
           </div>
           {mergedEvents.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground text-sm bg-card rounded-lg border border-border">
@@ -557,6 +631,106 @@ export default function SentimentDetail() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setNoiseDialogOpen(false)}>取消</Button>
             <Button variant="destructive" onClick={confirmMarkNoise}>确认标记</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auto Cluster Dialog */}
+      <Dialog open={autoClusterOpen} onOpenChange={v => { if (!isClustering) setAutoClusterOpen(v); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> 自动聚类合并
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5 py-2">
+            <div>
+              <label className="text-xs font-medium text-foreground mb-2 block">聚类方式</label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: "text_similarity" as const, label: "文本相似度", desc: "基于标题和正文语义相似度聚类" },
+                  { value: "same_content" as const, label: "内容相同", desc: "标题或正文完全匹配的内容归并" },
+                ]).map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                      clusterMethod === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"
+                    }`}
+                  >
+                    <input type="radio" className="sr-only" checked={clusterMethod === opt.value} onChange={() => setClusterMethod(opt.value)} />
+                    <div className="text-xs font-medium text-foreground">{opt.label}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</div>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-foreground mb-2 flex items-center gap-1">
+                <Clock className="w-3 h-3" /> 时间窗口
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[6, 12, 24, 48, 72].map(h => (
+                  <button
+                    key={h}
+                    onClick={() => setClusterTimeWindow(h)}
+                    className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                      clusterTimeWindow === h ? "border-primary bg-primary/10 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"
+                    }`}
+                  >{h}小时</button>
+                ))}
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={720}
+                    value={clusterTimeWindow}
+                    onChange={e => setClusterTimeWindow(Number(e.target.value) || 24)}
+                    className="w-16 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                  />
+                  <span className="text-xs text-muted-foreground">h</span>
+                </div>
+              </div>
+            </div>
+            {clusterMethod === "text_similarity" && (
+              <div>
+                <label className="text-xs font-medium text-foreground mb-2 block">
+                  相似度阈值: <span className="text-primary">{(clusterSimilarity * 100).toFixed(0)}%</span>
+                </label>
+                <input
+                  type="range"
+                  min={0.3}
+                  max={1}
+                  step={0.05}
+                  value={clusterSimilarity}
+                  onChange={e => setClusterSimilarity(Number(e.target.value))}
+                  className="w-full accent-primary"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                  <span>宽松 (30%)</span>
+                  <span>严格 (100%)</span>
+                </div>
+              </div>
+            )}
+            <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+              <div>待处理舆情: <span className="text-foreground font-medium">{items.filter(i => !i.isNoise && !i.mergedEventId).length}</span> 条</div>
+              <div>聚类方式: <span className="text-foreground">{clusterMethod === "text_similarity" ? "文本相似度" : "内容相同"}</span></div>
+              <div>时间窗口: <span className="text-foreground">{clusterTimeWindow} 小时内</span></div>
+            </div>
+            {isClustering && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">正在聚类分析...</span>
+                  <span className="text-primary font-medium">{clusterProgress}%</span>
+                </div>
+                <Progress value={clusterProgress} className="h-1.5" />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAutoClusterOpen(false)} disabled={isClustering}>取消</Button>
+            <Button onClick={runAutoCluster} disabled={isClustering}>
+              {isClustering ? "聚类中..." : "开始聚类"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
