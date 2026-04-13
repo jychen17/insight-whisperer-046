@@ -1062,8 +1062,8 @@ export default function SentimentDetail() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAutoClusterOpen(false)} disabled={isClustering}>取消</Button>
-            <Button onClick={runAutoCluster} disabled={isClustering}>
-              {isClustering ? "聚类中..." : "开始聚类"}
+            <Button onClick={() => { runAutoCluster(); }} disabled={isClustering}>
+              {isClustering ? "聚类中..." : "保存并重新聚类"}
             </Button>
           </DialogFooter>
         </DialogContent>
