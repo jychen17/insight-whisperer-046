@@ -1293,27 +1293,9 @@ export default function SentimentDetail() {
                           <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
                         ) : (
                           <>
-                            {item.handleStatus === "closed" ? (
-                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => handleReopen("article", item.id)}>
-                                <History className="w-3 h-3" /> 重新打开
-                              </Button>
-                            ) : (
-                              <>
-                                <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
-                                  <ClipboardList className="w-3 h-3" /> 处置
-                                </Button>
-                                {item.handleStatus !== "pending" && (
-                                  <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => handleClose("article", item.id)}>
-                                    <CheckCircle2 className="w-3 h-3" /> 完结
-                                  </Button>
-                                )}
-                              </>
-                            )}
-                            {(item.handleRecords || []).length > 0 && (
-                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openRemarkDialog("article", item.id)}>
-                                <MessageSquarePlus className="w-3 h-3" /> 追加备注
-                              </Button>
-                            )}
+                            <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
+                              <ClipboardList className="w-3 h-3" /> 处置
+                            </Button>
                             <button
                               className="text-muted-foreground hover:text-destructive"
                               title="标记为噪音"
@@ -1567,41 +1549,6 @@ export default function SentimentDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Remark Dialog */}
-      <Dialog open={remarkDialogOpen} onOpenChange={setRemarkDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquarePlus className="w-4 h-4 text-primary" /> 追加处理备注
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-xs text-muted-foreground">操作人</label>
-              <input
-                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-                value={remarkOperator}
-                onChange={e => setRemarkOperator(e.target.value)}
-                placeholder="请输入您的姓名或工号"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">备注内容 <span className="text-destructive">*</span></label>
-              <textarea
-                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
-                rows={4}
-                value={remarkText}
-                onChange={e => setRemarkText(e.target.value)}
-                placeholder="请输入处理进展、反馈结果或补充说明..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRemarkDialogOpen(false)}>取消</Button>
-            <Button onClick={confirmAddRemark}>提交备注</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
