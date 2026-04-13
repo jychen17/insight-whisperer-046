@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe } from "lucide-react";
+import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -67,6 +68,7 @@ interface MergedEvent {
   totalLikes?: number;
   totalComments?: number;
   totalShares?: number;
+  totalCollects?: number;
 }
 
 const initialItems: SentimentItem[] = [
@@ -123,8 +125,8 @@ const initialItems: SentimentItem[] = [
 ];
 
 export default function SentimentDetail() {
+  const navigate = useNavigate();
   const [mainTab, setMainTab] = useState<"sentiment" | "all">("sentiment");
-  // Sub-view under sentiment tab: events (default) or articles
   const [sentimentView, setSentimentView] = useState<"events" | "articles">("events");
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const [items, setItems] = useState<SentimentItem[]>(initialItems);
@@ -143,12 +145,17 @@ export default function SentimentDetail() {
   const [clusterSimilarity, setClusterSimilarity] = useState(0.7);
   const [isClustering, setIsClustering] = useState(false);
   const [clusterProgress, setClusterProgress] = useState(0);
-  const [eventSortBy, setEventSortBy] = useState<"importance" | "time" | "count">("importance");
+  const [eventSortBy, setEventSortBy] = useState<string>("firstTime_desc");
   const [eventSearchQuery, setEventSearchQuery] = useState("");
+  const [hasAutoClustered, setHasAutoClustered] = useState(false);
 
   // Event filter states
   const [eventFilterImportance, setEventFilterImportance] = useState<"all" | "high" | "medium" | "low">("all");
   const [eventFilterPlatform, setEventFilterPlatform] = useState("全部");
+  const [eventFilterFirstDateStart, setEventFilterFirstDateStart] = useState("");
+  const [eventFilterFirstDateEnd, setEventFilterFirstDateEnd] = useState("");
+  const [eventFilterLatestDateStart, setEventFilterLatestDateStart] = useState("");
+  const [eventFilterLatestDateEnd, setEventFilterLatestDateEnd] = useState("");
 
   const displayItems = useMemo(() => {
     const filtered = items.filter(item => {
@@ -178,7 +185,8 @@ export default function SentimentDetail() {
     const totalComments = posts.reduce((s, p) => s + p.comments, 0);
     const totalLikes = posts.reduce((s, p) => s + p.likes, 0);
     const totalShares = posts.reduce((s, p) => s + p.shares, 0);
-    const totalInteractions = totalComments + totalLikes + totalShares;
+    const totalCollects = posts.reduce((s, p) => s + p.collects, 0);
+    const totalInteractions = totalComments + totalLikes + totalShares + totalCollects;
     const negative = posts.filter(p => p.sentiment.includes("负向")).length;
     const positive = posts.filter(p => p.sentiment.includes("正向")).length;
     const neutral = posts.length - negative - positive;
@@ -197,6 +205,7 @@ export default function SentimentDetail() {
       totalComments,
       totalLikes,
       totalShares,
+      totalCollects,
       keyPlatforms: [...new Set(posts.map(p => p.platform))].slice(0, 3),
       sentimentBreakdown: { negative, neutral, positive },
       topBusiness,
@@ -316,6 +325,44 @@ export default function SentimentDetail() {
     }, 2000);
   };
 
+  // Auto-cluster on first load
+  useEffect(() => {
+    if (!hasAutoClustered && mergedEvents.length === 0) {
+      setHasAutoClustered(true);
+      // Run auto cluster immediately (simulate)
+      const availableItems = items.filter(i => !i.isNoise && !i.mergedEventId);
+      const groups: Record<string, number[]> = {};
+      availableItems.forEach(item => {
+        const key = item.issueType;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item.id);
+      });
+      const newEvents: MergedEvent[] = [];
+      const updatedItems = [...items];
+      const methodLabel = clusterMethod === "text_similarity" ? "文本相似度" : clusterMethod === "title_same" ? "标题相同" : "正文相同";
+      Object.entries(groups).forEach(([key, ids]) => {
+        if (ids.length < 2) return;
+        const eid = `auto-${Date.now()}-${key}`;
+        const posts = updatedItems.filter(i => ids.includes(i.id));
+        const meta = buildEventMeta(posts, methodLabel);
+        newEvents.push({
+          id: eid, title: `${key} - 自动聚类事件`, postIds: ids,
+          createdAt: new Date().toLocaleString("zh-CN"),
+          summary: `通过${methodLabel}在${clusterTimeWindow}h内自动聚类，合并了 ${ids.length} 条舆情`,
+          ...meta,
+        });
+        ids.forEach(id => {
+          const idx = updatedItems.findIndex(i => i.id === id);
+          if (idx >= 0) updatedItems[idx] = { ...updatedItems[idx], mergedEventId: eid };
+        });
+      });
+      if (newEvents.length > 0) {
+        setItems(updatedItems);
+        setMergedEvents(newEvents);
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Determine if we show articles view
   const showArticles = mainTab === "all" || (mainTab === "sentiment" && sentimentView === "articles");
   const showEvents = mainTab === "sentiment" && sentimentView === "events";
@@ -332,15 +379,31 @@ export default function SentimentDetail() {
     if (eventFilterPlatform !== "全部") {
       evts = evts.filter(e => e.keyPlatforms?.includes(eventFilterPlatform));
     }
+    if (eventFilterFirstDateStart) {
+      evts = evts.filter(e => (e.firstTime || "") >= eventFilterFirstDateStart);
+    }
+    if (eventFilterFirstDateEnd) {
+      evts = evts.filter(e => (e.firstTime || "") <= eventFilterFirstDateEnd + " 23:59:59");
+    }
+    if (eventFilterLatestDateStart) {
+      evts = evts.filter(e => (e.latestTime || "") >= eventFilterLatestDateStart);
+    }
+    if (eventFilterLatestDateEnd) {
+      evts = evts.filter(e => (e.latestTime || "") <= eventFilterLatestDateEnd + " 23:59:59");
+    }
     return [...evts].sort((a, b) => {
-      if (eventSortBy === "importance") {
-        const order = { high: 3, medium: 2, low: 1 };
-        return (order[b.importance || "low"] || 0) - (order[a.importance || "low"] || 0);
+      switch (eventSortBy) {
+        case "firstTime_desc": return (b.firstTime || "").localeCompare(a.firstTime || "");
+        case "latestTime_desc": return (b.latestTime || "").localeCompare(a.latestTime || "");
+        case "count_desc": return b.postIds.length - a.postIds.length;
+        case "comments_desc": return (b.totalComments || 0) - (a.totalComments || 0);
+        case "likes_desc": return (b.totalLikes || 0) - (a.totalLikes || 0);
+        case "collects_desc": return (b.totalCollects || 0) - (a.totalCollects || 0);
+        case "shares_desc": return (b.totalShares || 0) - (a.totalShares || 0);
+        default: return 0;
       }
-      if (eventSortBy === "count") return b.postIds.length - a.postIds.length;
-      return 0;
     });
-  }, [mergedEvents, eventSearchQuery, eventFilterImportance, eventFilterPlatform, eventSortBy]);
+  }, [mergedEvents, eventSearchQuery, eventFilterImportance, eventFilterPlatform, eventSortBy, eventFilterFirstDateStart, eventFilterFirstDateEnd, eventFilterLatestDateStart, eventFilterLatestDateEnd]);
 
   const importanceBadgeMap = {
     high: <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-[10px] gap-0.5"><Flame className="w-2.5 h-2.5" />重大</Badge>,
@@ -398,7 +461,10 @@ export default function SentimentDetail() {
           {sentimentView === "events" && (
             <div className="flex items-center gap-2 ml-auto">
               <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setAutoClusterOpen(true)}>
-                <Sparkles className="w-3 h-3" /> 智能聚类
+                <Settings2 className="w-3 h-3" /> 聚类设置
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => navigate("/sentiment/event-alert")}>
+                <Bell className="w-3 h-3" /> 事件预警
               </Button>
             </div>
           )}
@@ -435,18 +501,18 @@ export default function SentimentDetail() {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">聚类方式</label>
-                <select className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" value={clusterMethod} onChange={e => setClusterMethod(e.target.value as typeof clusterMethod)}>
-                  <option value="text_similarity">文本相似度</option>
-                  <option value="title_same">标题相同</option>
-                  <option value="content_same">正文相同</option>
-                </select>
+                <label className="text-xs text-muted-foreground">首发日期</label>
+                <div className="flex gap-1 mt-1">
+                  <input type="date" className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" value={eventFilterFirstDateStart} onChange={e => setEventFilterFirstDateStart(e.target.value)} />
+                  <input type="date" className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" value={eventFilterFirstDateEnd} onChange={e => setEventFilterFirstDateEnd(e.target.value)} />
+                </div>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">时间窗口</label>
-                <select className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" value={clusterTimeWindow} onChange={e => setClusterTimeWindow(Number(e.target.value))}>
-                  {[6, 12, 24, 48, 72].map(h => <option key={h} value={h}>{h}小时</option>)}
-                </select>
+                <label className="text-xs text-muted-foreground">最新发布日期</label>
+                <div className="flex gap-1 mt-1">
+                  <input type="date" className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" value={eventFilterLatestDateStart} onChange={e => setEventFilterLatestDateStart(e.target.value)} />
+                  <input type="date" className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" value={eventFilterLatestDateEnd} onChange={e => setEventFilterLatestDateEnd(e.target.value)} />
+                </div>
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">搜索事件</label>
@@ -463,19 +529,22 @@ export default function SentimentDetail() {
             </div>
             <div className="flex justify-between items-center mt-3">
               <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                <span>待处理: <span className="text-foreground font-medium">{items.filter(i => !i.isNoise && !i.mergedEventId).length}</span> 条</span>
-                <span>已聚类: <span className="text-foreground font-medium">{items.filter(i => i.mergedEventId).length}</span> 条</span>
                 <span>事件数: <span className="text-foreground font-medium">{mergedEvents.length}</span> 个</span>
+                <span>已合并文章: <span className="text-foreground font-medium">{items.filter(i => i.mergedEventId).length}</span> 条</span>
               </div>
               <div className="flex gap-2">
                 <select
                   value={eventSortBy}
-                  onChange={e => setEventSortBy(e.target.value as typeof eventSortBy)}
+                  onChange={e => setEventSortBy(e.target.value)}
                   className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
                 >
-                  <option value="importance">按重要性排序</option>
-                  <option value="time">按时间排序</option>
-                  <option value="count">按舆情数量排序</option>
+                  <option value="firstTime_desc">首发时间降序</option>
+                  <option value="latestTime_desc">最新发布时间降序</option>
+                  <option value="count_desc">文章数量降序</option>
+                  <option value="comments_desc">总评论量降序</option>
+                  <option value="likes_desc">总点赞量降序</option>
+                  <option value="collects_desc">总收藏量降序</option>
+                  <option value="shares_desc">总分享量降序</option>
                 </select>
               </div>
             </div>
@@ -494,7 +563,7 @@ export default function SentimentDetail() {
               </div>
               <div className="bg-card rounded-lg border border-border p-3 text-center">
                 <div className="text-lg font-semibold text-foreground">{items.filter(i => i.mergedEventId).length}</div>
-                <div className="text-[11px] text-muted-foreground">已合并舆情</div>
+                <div className="text-[11px] text-muted-foreground">已合并文章</div>
               </div>
               <div className="bg-card rounded-lg border border-border p-3 text-center">
                 <div className="text-lg font-semibold text-foreground">{mergedEvents.reduce((s, e) => s + (e.totalInteractions || 0), 0)}</div>
@@ -507,13 +576,8 @@ export default function SentimentDetail() {
           {filteredEvents.length === 0 ? (
             <div className="text-center py-16 text-muted-foreground text-sm bg-card rounded-lg border border-border">
               <Layers className="w-8 h-8 mx-auto mb-3 opacity-30" />
-              <p>{mergedEvents.length === 0 ? "暂无合并事件" : "未找到匹配的事件"}</p>
-              <p className="text-xs mt-1">{mergedEvents.length === 0 ? "点击「智能聚类」自动合并相似舆情，或切换到「原始文章」手动选择合并" : "请调整筛选条件"}</p>
-              {mergedEvents.length === 0 && (
-                <Button size="sm" className="mt-4 text-xs gap-1" onClick={() => setAutoClusterOpen(true)}>
-                  <Sparkles className="w-3 h-3" /> 立即聚类
-                </Button>
-              )}
+              <p>{mergedEvents.length === 0 ? "暂无合并事件，正在自动聚类..." : "未找到匹配的事件"}</p>
+              <p className="text-xs mt-1">{mergedEvents.length === 0 ? "系统将自动进行智能聚类" : "请调整筛选条件"}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -538,17 +602,16 @@ export default function SentimentDetail() {
                           </div>
                           {/* Row 2: Core tags */}
                           <div className="flex items-center gap-2 mt-2 flex-wrap">
-                            {/* Sentiment breakdown */}
                             {event.sentimentBreakdown && (
                               <>
                                 {event.sentimentBreakdown.negative > 0 && (
-                                  <Badge className="bg-destructive/10 text-destructive border-0 text-[10px]">负向 {event.sentimentBreakdown.negative}</Badge>
+                                  <Badge className="bg-destructive/10 text-destructive border-0 text-[10px]">负向</Badge>
                                 )}
                                 {event.sentimentBreakdown.neutral > 0 && (
-                                  <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">中性 {event.sentimentBreakdown.neutral}</Badge>
+                                  <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">中性</Badge>
                                 )}
                                 {event.sentimentBreakdown.positive > 0 && (
-                                  <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">正向 {event.sentimentBreakdown.positive}</Badge>
+                                  <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">正向</Badge>
                                 )}
                               </>
                             )}
@@ -560,12 +623,12 @@ export default function SentimentDetail() {
                                 发酵速度: {speedLabel[event.fermentSpeed]}
                               </Badge>
                             )}
-                            {event.clusterMethod && (
-                              <Badge variant="outline" className="text-[10px] text-muted-foreground">{event.clusterMethod}</Badge>
-                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
+                          <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); navigate(`/sentiment/event-detail?id=${event.id}`); }}>
+                            <ExternalLink className="w-3 h-3" /> 详情
+                          </Button>
                           <Button size="sm" variant="ghost" className="h-6 text-[11px] text-destructive hover:text-destructive" onClick={(e) => { e.stopPropagation(); handleUnmerge(event.id); }}>
                             拆分
                           </Button>
@@ -574,28 +637,34 @@ export default function SentimentDetail() {
                       </div>
 
                       {/* Row 3: Key metrics */}
-                      <div className="grid grid-cols-6 gap-3 mt-3 bg-muted/20 rounded-md p-2.5">
+                      <div className="grid grid-cols-7 gap-3 mt-3 bg-muted/20 rounded-md p-2.5">
                         <div className="text-center">
                           <div className="text-xs font-semibold text-foreground">{event.postIds.length}</div>
-                          <div className="text-[10px] text-muted-foreground">舆情总量</div>
+                          <div className="text-[10px] text-muted-foreground">文章总量</div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
                             <ThumbsUp className="w-3 h-3" /> {event.totalLikes || 0}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">总点赞</div>
+                          <div className="text-[10px] text-muted-foreground">总点赞量</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
+                            <Bookmark className="w-3 h-3" /> {event.totalCollects || 0}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">总收藏量</div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
                             <MessageCircle className="w-3 h-3" /> {event.totalComments || 0}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">总评论</div>
+                          <div className="text-[10px] text-muted-foreground">总评论量</div>
                         </div>
                         <div className="text-center">
                           <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
                             <Share2 className="w-3 h-3" /> {event.totalShares || 0}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">总分享</div>
+                          <div className="text-[10px] text-muted-foreground">总分享量</div>
                         </div>
                         <div className="text-center">
                           <div className="text-[10px] text-foreground">{event.firstTime || "-"}</div>
@@ -615,7 +684,6 @@ export default function SentimentDetail() {
                         ))}
                         {event.trendDirection === "up" && <span className="flex items-center gap-0.5 text-destructive ml-auto"><TrendingUp className="w-3 h-3" />趋势上升</span>}
                         {event.trendDirection === "down" && <span className="flex items-center gap-0.5 text-emerald-600 ml-auto"><TrendingDown className="w-3 h-3" />趋势下降</span>}
-                        {event.trendDirection === "stable" && <span className="flex items-center gap-0.5 text-muted-foreground ml-auto">趋势平稳</span>}
                       </div>
                     </div>
 
@@ -915,7 +983,7 @@ export default function SentimentDetail() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" /> 智能聚类合并
+              <Settings2 className="w-4 h-4 text-primary" /> 聚类设置
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-5 py-2">
@@ -994,8 +1062,8 @@ export default function SentimentDetail() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAutoClusterOpen(false)} disabled={isClustering}>取消</Button>
-            <Button onClick={runAutoCluster} disabled={isClustering}>
-              {isClustering ? "聚类中..." : "开始聚类"}
+            <Button onClick={() => { runAutoCluster(); }} disabled={isClustering}>
+              {isClustering ? "聚类中..." : "保存并重新聚类"}
             </Button>
           </DialogFooter>
         </DialogContent>
