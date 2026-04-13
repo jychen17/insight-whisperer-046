@@ -400,85 +400,88 @@ export default function SentimentDetail() {
       )}
 
       {/* Cards / List - show on sentiment/all tabs */}
-      {mainTab !== "events" && (displayItems.unmerged.length === 0 && showNoiseFilter === "noise" && items.filter(i => i.isNoise).length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">暂无噪音帖</div>
-      ) : displayItems.unmerged.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">暂无数据</div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4">
-          {displayItems.unmerged.map((item) => (
-            <div
-              key={item.id}
-              className={`bg-card rounded-lg border p-4 space-y-3 animate-fade-in hover:shadow-md transition-shadow ${
-                item.isNoise ? "border-muted opacity-60" : selectedIds.includes(item.id) ? "border-primary" : "border-border"
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate">{item.title}</h3>
-                    {item.isNoise && (
-                      <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
-                        <Ban className="w-2.5 h-2.5 mr-0.5" />
-                        {NOISE_CATEGORIES.find(c => c.value === item.noiseCategory)?.label || "噪音"}
-                      </Badge>
+      {mainTab !== "events" && (() => {
+        if (displayItems.unmerged.length === 0 && showNoiseFilter === "noise" && items.filter(i => i.isNoise).length === 0) {
+          return <div className="text-center py-12 text-muted-foreground text-sm">暂无噪音帖</div>;
+        }
+        if (displayItems.unmerged.length === 0) {
+          return <div className="text-center py-12 text-muted-foreground text-sm">暂无数据</div>;
+        }
+        return (
+          <div className="grid grid-cols-2 gap-4">
+            {displayItems.unmerged.map((item) => (
+              <div
+                key={item.id}
+                className={`bg-card rounded-lg border p-4 space-y-3 animate-fade-in hover:shadow-md transition-shadow ${
+                  item.isNoise ? "border-muted opacity-60" : selectedIds.includes(item.id) ? "border-primary" : "border-border"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate">{item.title}</h3>
+                      {item.isNoise && (
+                        <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
+                          <Ban className="w-2.5 h-2.5 mr-0.5" />
+                          {NOISE_CATEGORIES.find(c => c.value === item.noiseCategory)?.label || "噪音"}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
+                      <span>{item.platform}</span>
+                      <span>发布者: {item.author}</span>
+                      <span>内容类型: {item.contentType}</span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.userType}</Badge>
+                      <Badge className="text-[10px] px-1.5 py-0 bg-primary/80">{item.fans}</Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {item.isNoise ? (
+                      <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
+                    ) : (
+                      <>
+                        <button
+                          className="text-muted-foreground hover:text-destructive"
+                          title="标记为噪音"
+                          onClick={() => openNoiseDialog([item.id])}
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                        </button>
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={() => toggleSelect(item.id)}
+                        />
+                      </>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
-                    <span>{item.platform}</span>
-                    <span>发布者: {item.author}</span>
-                    <span>内容类型: {item.contentType}</span>
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.userType}</Badge>
-                    <Badge className="text-[10px] px-1.5 py-0 bg-primary/80">{item.fans}</Badge>
-                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {item.isNoise ? (
-                    <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
-                  ) : (
-                    <>
-                      <button
-                        className="text-muted-foreground hover:text-destructive"
-                        title="标记为噪音"
-                        onClick={() => openNoiseDialog([item.id])}
-                      >
-                        <Ban className="w-3.5 h-3.5" />
-                      </button>
-                      <input
-                        type="checkbox"
-                        className="rounded"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={() => toggleSelect(item.id)}
-                      />
-                    </>
-                  )}
+                <div className="text-[11px] text-muted-foreground space-y-0.5">
+                  <div>发布时间: {item.publishTime} &nbsp; 收录时间: {item.collectTime} &nbsp; 收录地区: {item.region}</div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge variant="outline" className="text-[10px]">初始等级: {item.riskLevel}</Badge>
+                  <Badge variant="outline" className="text-[10px]">发酵速度: {item.speed}</Badge>
+                  <Badge className="text-[10px] bg-primary/20 text-primary border-0">{item.business}</Badge>
+                  <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">{item.sentiment}</Badge>
+                  <Badge variant="outline" className="text-[10px]">舆情问题分类: {item.issueType}</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.summary}</div>
+                {!item.isNoise && (
+                  <div className="text-destructive text-xs font-medium">AI摘要：{item.summary}</div>
+                )}
+                <div className="flex gap-4 text-[11px] text-muted-foreground">
+                  <span>评论量: {item.comments}</span>
+                  <span>点赞量: {item.likes}</span>
+                  <span>收藏量: {item.collects}</span>
+                  <span>分享量: {item.shares}</span>
                 </div>
               </div>
-              <div className="text-[11px] text-muted-foreground space-y-0.5">
-                <div>发布时间: {item.publishTime} &nbsp; 收录时间: {item.collectTime} &nbsp; 收录地区: {item.region}</div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <Badge variant="outline" className="text-[10px]">初始等级: {item.riskLevel}</Badge>
-                <Badge variant="outline" className="text-[10px]">发酵速度: {item.speed}</Badge>
-                <Badge className="text-[10px] bg-primary/20 text-primary border-0">{item.business}</Badge>
-                <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">{item.sentiment}</Badge>
-                <Badge variant="outline" className="text-[10px]">舆情问题分类: {item.issueType}</Badge>
-              </div>
-              <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.summary}</div>
-              {!item.isNoise && (
-                <div className="text-destructive text-xs font-medium">AI摘要：{item.summary}</div>
-              )}
-              <div className="flex gap-4 text-[11px] text-muted-foreground">
-                <span>评论量: {item.comments}</span>
-                <span>点赞量: {item.likes}</span>
-                <span>收藏量: {item.collects}</span>
-                <span>分享量: {item.shares}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      }
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Merge Dialog */}
       <Dialog open={mergeDialogOpen} onOpenChange={setMergeDialogOpen}>
