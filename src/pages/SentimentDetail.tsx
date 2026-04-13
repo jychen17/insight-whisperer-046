@@ -109,6 +109,7 @@ const initialItems: SentimentItem[] = [
 ];
 
 export default function SentimentDetail() {
+  const [mainTab, setMainTab] = useState<"sentiment" | "all" | "events">("sentiment");
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const [items, setItems] = useState<SentimentItem[]>(initialItems);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -200,8 +201,16 @@ export default function SentimentDetail() {
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold text-foreground">舆情详情</h1>
           <div className="flex rounded-md border border-border overflow-hidden">
-            <button className="px-3 py-1 text-xs bg-primary text-primary-foreground">舆情内容</button>
-            <button className="px-3 py-1 text-xs bg-card text-muted-foreground border-l border-border">全部内容</button>
+            {([["sentiment", "舆情内容"], ["events", "事件合并"], ["all", "全部内容"]] as const).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setMainTab(key)}
+                className={`px-3 py-1 text-xs ${mainTab === key ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"} ${key !== "sentiment" ? "border-l border-border" : ""}`}
+              >
+                {label}
+                {key === "events" && mergedEvents.length > 0 && <span className="ml-1">({mergedEvents.length})</span>}
+              </button>
+            ))}
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs">
@@ -212,7 +221,8 @@ export default function SentimentDetail() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters - show on sentiment/all tabs */}
+      {mainTab !== "events" && (
       <div className="bg-card rounded-lg border border-border p-4 space-y-3">
         <div className="grid grid-cols-6 gap-3">
           <div>
@@ -254,8 +264,10 @@ export default function SentimentDetail() {
           <button className="px-4 py-1.5 text-xs gradient-primary text-primary-foreground rounded-md font-medium">查询</button>
         </div>
       </div>
+      )}
 
-      {/* Toolbar: merge, noise, filter */}
+      {/* Toolbar: merge, noise, filter - show on sentiment/all tabs */}
+      {mainTab !== "events" && (
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <select className="px-2 py-1 border border-border rounded-md bg-card text-foreground">
@@ -290,7 +302,6 @@ export default function SentimentDetail() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Noise filter tabs */}
           <div className="flex rounded-md border border-border overflow-hidden text-xs">
             {([["normal", "有效舆情"], ["noise", "噪音帖"], ["all", "全部"]] as const).map(([key, label]) => (
               <button
@@ -306,155 +317,171 @@ export default function SentimentDetail() {
           </div>
         </div>
       </div>
-
-      {/* Merged Events Section */}
-      {mergedEvents.length > 0 && showNoiseFilter !== "noise" && (
-        <div className="space-y-3">
-          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Layers className="w-4 h-4 text-primary" /> 合并事件 ({mergedEvents.length})
-          </h2>
-          {mergedEvents.map(event => {
-            const posts = getEventPosts(event.id);
-            const isExpanded = expandedEventId === event.id;
-            return (
-              <div key={event.id} className="bg-card rounded-lg border border-primary/30 overflow-hidden">
-                <div
-                  className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                  onClick={() => setExpandedEventId(isExpanded ? null : event.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Badge className="bg-primary/10 text-primary border-0 text-xs">事件</Badge>
-                      <h3 className="text-sm font-medium text-foreground">{event.title}</h3>
-                      <span className="text-[11px] text-muted-foreground">包含 {posts.length} 条舆情</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="ghost" className="h-6 text-[11px] text-destructive" onClick={(e) => { e.stopPropagation(); handleUnmerge(event.id); }}>
-                        拆分
-                      </Button>
-                      {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1.5">{event.summary}</p>
-                  <div className="flex gap-3 mt-2 text-[11px] text-muted-foreground">
-                    <span>涉及平台: {[...new Set(posts.map(p => p.platform))].join("、")}</span>
-                    <span>总评论: {posts.reduce((s, p) => s + p.comments, 0)}</span>
-                    <span>创建时间: {event.createdAt}</span>
-                  </div>
-                </div>
-                {isExpanded && (
-                  <div className="border-t border-border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs">标题</TableHead>
-                          <TableHead className="text-xs">平台</TableHead>
-                          <TableHead className="text-xs">发布者</TableHead>
-                          <TableHead className="text-xs">发布时间</TableHead>
-                          <TableHead className="text-xs">情感</TableHead>
-                          <TableHead className="text-xs">评论</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {posts.map(post => (
-                          <TableRow key={post.id}>
-                            <TableCell className="text-xs font-medium">{post.title}</TableCell>
-                            <TableCell className="text-xs">{post.platform}</TableCell>
-                            <TableCell className="text-xs">{post.author}</TableCell>
-                            <TableCell className="text-xs">{post.publishTime}</TableCell>
-                            <TableCell><Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{post.sentiment}</Badge></TableCell>
-                            <TableCell className="text-xs">{post.comments}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
       )}
 
-      {/* Cards / List */}
-      {displayItems.unmerged.length === 0 && showNoiseFilter === "noise" && items.filter(i => i.isNoise).length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">暂无噪音帖</div>
-      ) : displayItems.unmerged.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">暂无数据</div>
-      ) : (
-        <div className="grid grid-cols-2 gap-4">
-          {displayItems.unmerged.map((item) => (
-            <div
-              key={item.id}
-              className={`bg-card rounded-lg border p-4 space-y-3 animate-fade-in hover:shadow-md transition-shadow ${
-                item.isNoise ? "border-muted opacity-60" : selectedIds.includes(item.id) ? "border-primary" : "border-border"
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate">{item.title}</h3>
-                    {item.isNoise && (
-                      <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
-                        <Ban className="w-2.5 h-2.5 mr-0.5" />
-                        {NOISE_CATEGORIES.find(c => c.value === item.noiseCategory)?.label || "噪音"}
-                      </Badge>
-                    )}
+      {/* Events Tab Content */}
+      {mainTab === "events" && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Layers className="w-4 h-4 text-primary" /> 合并事件 ({mergedEvents.length})
+            </h2>
+            <span className="text-xs text-muted-foreground">共 {items.filter(i => i.mergedEventId).length} 条舆情已合并</span>
+          </div>
+          {mergedEvents.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground text-sm bg-card rounded-lg border border-border">
+              <Layers className="w-8 h-8 mx-auto mb-3 opacity-30" />
+              <p>暂无合并事件</p>
+              <p className="text-xs mt-1">在"舆情内容"中选择多条舆情后点击"合并为事件"</p>
+            </div>
+          ) : (
+            mergedEvents.map(event => {
+              const posts = getEventPosts(event.id);
+              const isExpanded = expandedEventId === event.id;
+              return (
+                <div key={event.id} className="bg-card rounded-lg border border-primary/30 overflow-hidden">
+                  <div
+                    className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                    onClick={() => setExpandedEventId(isExpanded ? null : event.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge className="bg-primary/10 text-primary border-0 text-xs">事件</Badge>
+                        <h3 className="text-sm font-medium text-foreground">{event.title}</h3>
+                        <span className="text-[11px] text-muted-foreground">包含 {posts.length} 条舆情</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="ghost" className="h-6 text-[11px] text-destructive" onClick={(e) => { e.stopPropagation(); handleUnmerge(event.id); }}>
+                          拆分
+                        </Button>
+                        {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1.5">{event.summary}</p>
+                    <div className="flex gap-3 mt-2 text-[11px] text-muted-foreground">
+                      <span>涉及平台: {[...new Set(posts.map(p => p.platform))].join("、")}</span>
+                      <span>总评论: {posts.reduce((s, p) => s + p.comments, 0)}</span>
+                      <span>创建时间: {event.createdAt}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
-                    <span>{item.platform}</span>
-                    <span>发布者: {item.author}</span>
-                    <span>内容类型: {item.contentType}</span>
-                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.userType}</Badge>
-                    <Badge className="text-[10px] px-1.5 py-0 bg-primary/80">{item.fans}</Badge>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  {item.isNoise ? (
-                    <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
-                  ) : (
-                    <>
-                      <button
-                        className="text-muted-foreground hover:text-destructive"
-                        title="标记为噪音"
-                        onClick={() => openNoiseDialog([item.id])}
-                      >
-                        <Ban className="w-3.5 h-3.5" />
-                      </button>
-                      <input
-                        type="checkbox"
-                        className="rounded"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={() => toggleSelect(item.id)}
-                      />
-                    </>
+                  {isExpanded && (
+                    <div className="border-t border-border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">标题</TableHead>
+                            <TableHead className="text-xs">平台</TableHead>
+                            <TableHead className="text-xs">发布者</TableHead>
+                            <TableHead className="text-xs">发布时间</TableHead>
+                            <TableHead className="text-xs">情感</TableHead>
+                            <TableHead className="text-xs">评论</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {posts.map(post => (
+                            <TableRow key={post.id}>
+                              <TableCell className="text-xs font-medium">{post.title}</TableCell>
+                              <TableCell className="text-xs">{post.platform}</TableCell>
+                              <TableCell className="text-xs">{post.author}</TableCell>
+                              <TableCell className="text-xs">{post.publishTime}</TableCell>
+                              <TableCell><Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{post.sentiment}</Badge></TableCell>
+                              <TableCell className="text-xs">{post.comments}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   )}
                 </div>
-              </div>
-              <div className="text-[11px] text-muted-foreground space-y-0.5">
-                <div>发布时间: {item.publishTime} &nbsp; 收录时间: {item.collectTime} &nbsp; 收录地区: {item.region}</div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                <Badge variant="outline" className="text-[10px]">初始等级: {item.riskLevel}</Badge>
-                <Badge variant="outline" className="text-[10px]">发酵速度: {item.speed}</Badge>
-                <Badge className="text-[10px] bg-primary/20 text-primary border-0">{item.business}</Badge>
-                <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">{item.sentiment}</Badge>
-                <Badge variant="outline" className="text-[10px]">舆情问题分类: {item.issueType}</Badge>
-              </div>
-              <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.summary}</div>
-              {!item.isNoise && (
-                <div className="text-destructive text-xs font-medium">AI摘要：{item.summary}</div>
-              )}
-              <div className="flex gap-4 text-[11px] text-muted-foreground">
-                <span>评论量: {item.comments}</span>
-                <span>点赞量: {item.likes}</span>
-                <span>收藏量: {item.collects}</span>
-                <span>分享量: {item.shares}</span>
-              </div>
-            </div>
-          ))}
+              );
+            })
+          )}
         </div>
       )}
+
+      {/* Cards / List - show on sentiment/all tabs */}
+      {mainTab !== "events" && (() => {
+        if (displayItems.unmerged.length === 0 && showNoiseFilter === "noise" && items.filter(i => i.isNoise).length === 0) {
+          return <div className="text-center py-12 text-muted-foreground text-sm">暂无噪音帖</div>;
+        }
+        if (displayItems.unmerged.length === 0) {
+          return <div className="text-center py-12 text-muted-foreground text-sm">暂无数据</div>;
+        }
+        return (
+          <div className="grid grid-cols-2 gap-4">
+            {displayItems.unmerged.map((item) => (
+              <div
+                key={item.id}
+                className={`bg-card rounded-lg border p-4 space-y-3 animate-fade-in hover:shadow-md transition-shadow ${
+                  item.isNoise ? "border-muted opacity-60" : selectedIds.includes(item.id) ? "border-primary" : "border-border"
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate">{item.title}</h3>
+                      {item.isNoise && (
+                        <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
+                          <Ban className="w-2.5 h-2.5 mr-0.5" />
+                          {NOISE_CATEGORIES.find(c => c.value === item.noiseCategory)?.label || "噪音"}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
+                      <span>{item.platform}</span>
+                      <span>发布者: {item.author}</span>
+                      <span>内容类型: {item.contentType}</span>
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.userType}</Badge>
+                      <Badge className="text-[10px] px-1.5 py-0 bg-primary/80">{item.fans}</Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {item.isNoise ? (
+                      <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
+                    ) : (
+                      <>
+                        <button
+                          className="text-muted-foreground hover:text-destructive"
+                          title="标记为噪音"
+                          onClick={() => openNoiseDialog([item.id])}
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                        </button>
+                        <input
+                          type="checkbox"
+                          className="rounded"
+                          checked={selectedIds.includes(item.id)}
+                          onChange={() => toggleSelect(item.id)}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="text-[11px] text-muted-foreground space-y-0.5">
+                  <div>发布时间: {item.publishTime} &nbsp; 收录时间: {item.collectTime} &nbsp; 收录地区: {item.region}</div>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge variant="outline" className="text-[10px]">初始等级: {item.riskLevel}</Badge>
+                  <Badge variant="outline" className="text-[10px]">发酵速度: {item.speed}</Badge>
+                  <Badge className="text-[10px] bg-primary/20 text-primary border-0">{item.business}</Badge>
+                  <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">{item.sentiment}</Badge>
+                  <Badge variant="outline" className="text-[10px]">舆情问题分类: {item.issueType}</Badge>
+                </div>
+                <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.summary}</div>
+                {!item.isNoise && (
+                  <div className="text-destructive text-xs font-medium">AI摘要：{item.summary}</div>
+                )}
+                <div className="flex gap-4 text-[11px] text-muted-foreground">
+                  <span>评论量: {item.comments}</span>
+                  <span>点赞量: {item.likes}</span>
+                  <span>收藏量: {item.collects}</span>
+                  <span>分享量: {item.shares}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Merge Dialog */}
       <Dialog open={mergeDialogOpen} onOpenChange={setMergeDialogOpen}>
