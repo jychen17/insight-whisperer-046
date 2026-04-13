@@ -571,7 +571,7 @@ export default function SentimentDetail() {
               const isExpanded = expandedEventId === event.id;
               const importanceColors = {
                 high: "border-destructive/40 bg-destructive/5",
-                medium: "border-amber-500/30 bg-amber-500/5",
+                medium: "border-yellow-500/30 bg-yellow-500/5",
                 low: "border-border",
               };
               const importanceBadge = {
