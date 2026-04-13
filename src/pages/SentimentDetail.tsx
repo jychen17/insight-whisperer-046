@@ -329,6 +329,13 @@ export default function SentimentDetail() {
   const getEventPosts = (eventId: string) => items.filter(i => i.mergedEventId === eventId);
 
   /* ── Processing handlers ── */
+  const getTargetStatus = (): HandleStatus => {
+    if (handleDialogType === "event") {
+      return mergedEvents.find(e => e.id === handleTargetId)?.handleStatus || "pending";
+    }
+    return items.find(i => i.id === handleTargetId)?.handleStatus || "pending";
+  };
+
   const openHandleDialog = (type: "event" | "article", targetId: string | number) => {
     setHandleDialogType(type);
     setHandleTargetId(targetId);
