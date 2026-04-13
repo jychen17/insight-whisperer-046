@@ -771,8 +771,8 @@ export default function SentimentDetail() {
             <label className="text-xs text-muted-foreground">操作人</label>
             <input
               className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-              value={handleRemark ? "" : ""}
-              onChange={() => {}}
+              value={handleAssignee}
+              onChange={e => setHandleAssignee(e.target.value)}
               placeholder="请输入姓名或工号（留空则默认当前用户）"
             />
           </div>
