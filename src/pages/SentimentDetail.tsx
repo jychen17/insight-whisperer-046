@@ -24,7 +24,7 @@ const NOISE_CATEGORIES = [
 ];
 
 /* ── Processing types ── */
-export type HandleAction = "silent" | "dispatch" | "escalate" | "close" | "reopen";
+export type HandleAction = "silent" | "dispatch" | "escalate" | "close" | "reopen" | "add_remark";
 export interface HandleRecord {
   id: string;
   action: HandleAction;
