@@ -655,10 +655,11 @@ export default function SentimentDetail() {
           <div className="space-y-5 py-2">
             <div>
               <label className="text-xs font-medium text-foreground mb-2 block">聚类方式</label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {([
-                  { value: "text_similarity" as const, label: "文本相似度", desc: "基于标题和正文语义相似度聚类" },
-                  { value: "same_content" as const, label: "内容相同", desc: "标题或正文完全匹配的内容归并" },
+                  { value: "text_similarity" as const, label: "文本相似度", desc: "基于语义相似度聚类" },
+                  { value: "title_same" as const, label: "标题相同", desc: "标题完全匹配归并" },
+                  { value: "content_same" as const, label: "正文相同", desc: "正文内容完全匹配" },
                 ]).map(opt => (
                   <label
                     key={opt.value}
