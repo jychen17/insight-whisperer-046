@@ -22,7 +22,7 @@ interface RuleCondition {
 }
 
 interface PushChannel {
-  type: "wechat" | "email" | "sms" | "phone";
+  type: "wechat";
   personal: boolean;
   group: boolean;
   personalTargets: string[];
