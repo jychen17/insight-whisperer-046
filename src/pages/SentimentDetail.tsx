@@ -490,6 +490,7 @@ export default function SentimentDetail() {
     toast({ title: "备注已添加" });
   };
 
+  const runAutoCluster = () => {
     setIsClustering(true);
     setClusterProgress(0);
     const availableItems = items.filter(i => !i.isNoise && !i.mergedEventId);
