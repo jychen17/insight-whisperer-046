@@ -116,6 +116,11 @@ export default function EventDetail() {
     return <Badge className={`${info.color} border-0 text-[10px]`}>{info.label}</Badge>;
   };
 
+  const getTargetStatus = (): HandleStatus => {
+    if (handleTargetType === "event") return event.handleStatus;
+    return event.posts.find(p => p.id === handleTargetId)?.handleStatus || "pending";
+  };
+
   const openHandle = (type: "event" | "post", postId?: number) => {
     setHandleTargetType(type);
     setHandleTargetId(postId || null);
