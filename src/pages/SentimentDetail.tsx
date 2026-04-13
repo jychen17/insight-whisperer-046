@@ -185,7 +185,8 @@ export default function SentimentDetail() {
     const totalComments = posts.reduce((s, p) => s + p.comments, 0);
     const totalLikes = posts.reduce((s, p) => s + p.likes, 0);
     const totalShares = posts.reduce((s, p) => s + p.shares, 0);
-    const totalInteractions = totalComments + totalLikes + totalShares;
+    const totalCollects = posts.reduce((s, p) => s + p.collects, 0);
+    const totalInteractions = totalComments + totalLikes + totalShares + totalCollects;
     const negative = posts.filter(p => p.sentiment.includes("负向")).length;
     const positive = posts.filter(p => p.sentiment.includes("正向")).length;
     const neutral = posts.length - negative - positive;
@@ -204,6 +205,7 @@ export default function SentimentDetail() {
       totalComments,
       totalLikes,
       totalShares,
+      totalCollects,
       keyPlatforms: [...new Set(posts.map(p => p.platform))].slice(0, 3),
       sentimentBreakdown: { negative, neutral, positive },
       topBusiness,
