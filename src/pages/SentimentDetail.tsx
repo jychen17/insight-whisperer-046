@@ -1029,7 +1029,7 @@ export default function SentimentDetail() {
                           </div>
                           {(event.handleRecords || []).slice(-1).map(r => (
                             <div key={r.id} className="text-[11px] text-muted-foreground">
-                              <span className="text-foreground">{r.operator}</span> 于 {r.time} {r.action === "ignore" ? "忽略了该事件" : r.action === "complaint" ? `录入投诉单号: ${r.complaintNo}` : `升级到: ${r.escalateTarget}`}
+                              <span className="text-foreground">{r.operator}</span> 于 {r.time} {renderRecordDesc(r)}
                               {r.remark && <span className="ml-1">（{r.remark}）</span>}
                             </div>
                           ))}
@@ -1272,7 +1272,7 @@ export default function SentimentDetail() {
                         </div>
                         {(item.handleRecords || []).map(r => (
                           <div key={r.id} className="text-[11px] text-muted-foreground">
-                            <span className="text-foreground">{r.operator}</span> 于 {r.time} {r.action === "ignore" ? "忽略了该文章" : r.action === "complaint" ? `录入投诉单号: ${r.complaintNo}` : `升级到: ${r.escalateTarget}`}
+                            <span className="text-foreground">{r.operator}</span> 于 {r.time} {renderRecordDesc(r)}
                             {r.remark && <span className="ml-1">（{r.remark}）</span>}
                           </div>
                         ))}
