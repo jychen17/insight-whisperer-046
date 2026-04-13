@@ -116,6 +116,11 @@ export default function EventDetail() {
     return <Badge className={`${info.color} border-0 text-[10px]`}>{info.label}</Badge>;
   };
 
+  const getTargetStatus = (): HandleStatus => {
+    if (handleTargetType === "event") return event.handleStatus;
+    return event.posts.find(p => p.id === handleTargetId)?.handleStatus || "pending";
+  };
+
   const openHandle = (type: "event" | "post", postId?: number) => {
     setHandleTargetType(type);
     setHandleTargetId(postId || null);
@@ -138,10 +143,14 @@ export default function EventDetail() {
   };
 
   const confirmHandle = () => {
+    if (handleAction === "add_remark" && !handleRemark.trim()) {
+      toast({ title: "请输入备注内容", variant: "destructive" });
+      return;
+    }
     const record: HandleRecord = {
       id: `rec-${Date.now()}`,
       action: handleAction,
-      operator: "当前用户",
+      operator: handleAction === "add_remark" && handleAssignee ? handleAssignee : "当前用户",
       time: new Date().toLocaleString("zh-CN"),
       assignee: handleAction === "dispatch" ? handleAssignee : undefined,
       complaintNo: handleAction === "dispatch" ? handleComplaintNo : undefined,
@@ -149,15 +158,16 @@ export default function EventDetail() {
       escalateRole: handleAction === "escalate" ? ESCALATE_ROLES.find(r => r.value === handleEscalateRole)?.label : undefined,
       remark: handleRemark || undefined,
     };
-    const newStatus = actionToStatus(handleAction);
+    const keepStatus = handleAction === "add_remark";
+    const newStatus = keepStatus ? undefined : actionToStatus(handleAction);
 
     if (handleTargetType === "event") {
-      setEvent(prev => ({ ...prev, handleStatus: newStatus, handleRecords: [...prev.handleRecords, record] }));
+      setEvent(prev => ({ ...prev, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...prev.handleRecords, record] }));
     } else {
       setEvent(prev => ({
         ...prev,
         posts: prev.posts.map(p =>
-          p.id === handleTargetId ? { ...p, handleStatus: newStatus, handleRecords: [...p.handleRecords, record] } : p
+          p.id === handleTargetId ? { ...p, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...p.handleRecords, record] } : p
         ),
       }));
     }
@@ -264,24 +274,8 @@ export default function EventDetail() {
           {renderStatusBadge(event.handleStatus)}
         </div>
         <div className="flex items-center gap-2">
-          {event.handleStatus === "closed" ? (
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => handleReopen("event")}>
-              <History className="w-3 h-3" /> 重新打开
-            </Button>
-          ) : (
-            <>
-              <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openHandle("event")}>
-                <ClipboardList className="w-3 h-3" /> 处置事件
-              </Button>
-              {event.handleStatus !== "pending" && (
-                <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => handleCloseItem("event")}>
-                  <CheckCircle2 className="w-3 h-3" /> 完结
-                </Button>
-              )}
-            </>
-          )}
-          <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openRemarkDialog("event")}>
-            <MessageSquarePlus className="w-3 h-3" /> 追加备注
+          <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openHandle("event")}>
+            <ClipboardList className="w-3 h-3" /> 处置事件
           </Button>
           <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => navigate(`/sentiment/event-alert?eventId=${eventId}`)}>
             <Bell className="w-3 h-3" /> 设置预警
@@ -426,26 +420,8 @@ export default function EventDetail() {
                   <TableCell className="text-xs">{post.comments}</TableCell>
                   <TableCell className="text-xs">{post.likes}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
-                      {post.handleStatus === "closed" ? (
-                        <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => handleReopen("post", post.id)}>
-                          <History className="w-3 h-3" /> 重新打开
-                        </Button>
-                      ) : (
-                        <>
-                          <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandle("post", post.id)}>
-                            <ClipboardList className="w-3 h-3" /> 处置
-                          </Button>
-                          {post.handleStatus !== "pending" && (
-                            <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => handleCloseItem("post", post.id)}>
-                              <CheckCircle2 className="w-3 h-3" /> 完结
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openRemarkDialog("post", post.id)}>
-                      <MessageSquarePlus className="w-3 h-3" /> 备注
+                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandle("post", post.id)}>
+                      <ClipboardList className="w-3 h-3" /> 处置
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -487,136 +463,90 @@ export default function EventDetail() {
               <ClipboardList className="w-4 h-4 text-primary" /> {handleTargetType === "event" ? "事件处置" : "文章处置"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-xs font-medium text-foreground mb-2 block">处置方式</label>
-              <div className="grid grid-cols-3 gap-2">
-                {([
-                  { value: "silent" as HandleAction, label: "静默", icon: XCircle, desc: "无需人工处理" },
-                  { value: "dispatch" as HandleAction, label: "分派客服", icon: ClipboardList, desc: "分派给客服跟进" },
-                  { value: "escalate" as HandleAction, label: "升级处理", icon: ArrowUpRight, desc: "升级到上级指定人" },
-                ]).map(opt => (
-                  <label
-                    key={opt.value}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      handleAction === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"
-                    }`}
-                  >
-                    <input type="radio" className="sr-only" checked={handleAction === opt.value} onChange={() => setHandleAction(opt.value)} />
-                    <div className="flex items-center gap-1.5">
-                      <opt.icon className="w-3.5 h-3.5" />
-                      <span className="text-xs font-medium text-foreground">{opt.label}</span>
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</div>
-                  </label>
-                ))}
-              </div>
-            </div>
-            {handleAction === "dispatch" && (
-              <div className="space-y-3">
+          {(() => {
+            const currentStatus = getTargetStatus();
+            const isClosed = currentStatus === "closed";
+            const isPending = currentStatus === "pending";
+            const allActions: { value: HandleAction; label: string; icon: typeof XCircle; desc: string; show: boolean }[] = [
+              { value: "silent", label: "静默", icon: XCircle, desc: "无需人工处理", show: !isClosed },
+              { value: "dispatch", label: "分派客服", icon: ClipboardList, desc: "分派给客服跟进", show: !isClosed },
+              { value: "escalate", label: "升级处理", icon: ArrowUpRight, desc: "升级到上级指定人", show: !isClosed },
+              { value: "close", label: "完结", icon: CheckCircle2, desc: "标记为已完结", show: !isClosed && !isPending },
+              { value: "reopen", label: "重新打开", icon: History, desc: "重新打开处理流程", show: isClosed },
+              { value: "add_remark", label: "追加备注", icon: MessageSquarePlus, desc: "补充处理说明", show: true },
+            ];
+            const visibleActions = allActions.filter(a => a.show);
+            const cols = visibleActions.length <= 3 ? 3 : visibleActions.length <= 4 ? 2 : 3;
+            return (
+              <div className="space-y-4 py-2">
                 <div>
-                  <label className="text-xs text-muted-foreground">分派给</label>
-                  <select
-                    className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-                    value={handleAssignee}
-                    onChange={e => setHandleAssignee(e.target.value)}
-                  >
-                    <option value="">请选择客服</option>
-                    {CS_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">投诉单号（可选）</label>
-                  <input
-                    className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-                    value={handleComplaintNo}
-                    onChange={e => setHandleComplaintNo(e.target.value)}
-                    placeholder="如有投诉单号请输入"
-                  />
-                </div>
-              </div>
-            )}
-            {handleAction === "escalate" && (
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs text-muted-foreground">升级角色</label>
-                  <div className="flex gap-2 mt-1">
-                    {ESCALATE_ROLES.map(role => (
-                      <label
-                        key={role.value}
-                        className={`flex-1 p-2 rounded-md border text-center text-xs cursor-pointer transition-colors ${
-                          handleEscalateRole === role.value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"
-                        }`}
-                      >
-                        <input type="radio" className="sr-only" checked={handleEscalateRole === role.value} onChange={() => { setHandleEscalateRole(role.value); setHandleEscalateTarget(""); }} />
-                        {role.label}
+                  <label className="text-xs font-medium text-foreground mb-2 block">处置方式</label>
+                  <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+                    {visibleActions.map(opt => (
+                      <label key={opt.value} className={`p-3 rounded-lg border cursor-pointer transition-colors ${handleAction === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"}`}>
+                        <input type="radio" className="sr-only" checked={handleAction === opt.value} onChange={() => setHandleAction(opt.value)} />
+                        <div className="flex items-center gap-1.5">
+                          <opt.icon className="w-3.5 h-3.5" />
+                          <span className="text-xs font-medium text-foreground">{opt.label}</span>
+                        </div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</div>
                       </label>
                     ))}
                   </div>
                 </div>
+                {handleAction === "dispatch" && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground">分派给</label>
+                      <select className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleAssignee} onChange={e => setHandleAssignee(e.target.value)}>
+                        <option value="">请选择客服</option>
+                        {CS_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">投诉单号（可选）</label>
+                      <input className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleComplaintNo} onChange={e => setHandleComplaintNo(e.target.value)} placeholder="如有投诉单号请输入" />
+                    </div>
+                  </div>
+                )}
+                {handleAction === "escalate" && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground">升级角色</label>
+                      <div className="flex gap-2 mt-1">
+                        {ESCALATE_ROLES.map(role => (
+                          <label key={role.value} className={`flex-1 p-2 rounded-md border text-center text-xs cursor-pointer transition-colors ${handleEscalateRole === role.value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"}`}>
+                            <input type="radio" className="sr-only" checked={handleEscalateRole === role.value} onChange={() => { setHandleEscalateRole(role.value); setHandleEscalateTarget(""); }} />
+                            {role.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">指定处理人</label>
+                      <select className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleEscalateTarget} onChange={e => setHandleEscalateTarget(e.target.value)}>
+                        <option value="">请选择处理人</option>
+                        {(ESCALATE_PERSONS[handleEscalateRole] || []).map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                )}
+                {handleAction === "add_remark" && (
+                  <div>
+                    <label className="text-xs text-muted-foreground">操作人</label>
+                    <input className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleAssignee} onChange={e => setHandleAssignee(e.target.value)} placeholder="请输入姓名或工号（留空则默认当前用户）" />
+                  </div>
+                )}
                 <div>
-                  <label className="text-xs text-muted-foreground">指定处理人</label>
-                  <select
-                    className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-                    value={handleEscalateTarget}
-                    onChange={e => setHandleEscalateTarget(e.target.value)}
-                  >
-                    <option value="">请选择处理人</option>
-                    {(ESCALATE_PERSONS[handleEscalateRole] || []).map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
+                  <label className="text-xs text-muted-foreground">{handleAction === "add_remark" ? "备注内容 *" : "备注"}</label>
+                  <textarea className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none" rows={handleAction === "add_remark" ? 4 : 2} value={handleRemark} onChange={e => setHandleRemark(e.target.value)} placeholder={handleAction === "add_remark" ? "请输入处理进展、反馈结果或补充说明..." : "可选填备注..."} />
                 </div>
               </div>
-            )}
-            <div>
-              <label className="text-xs text-muted-foreground">备注</label>
-              <textarea
-                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
-                rows={2}
-                value={handleRemark}
-                onChange={e => setHandleRemark(e.target.value)}
-                placeholder="可选填备注..."
-              />
-            </div>
-          </div>
+            );
+          })()}
           <DialogFooter>
             <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
             <Button onClick={confirmHandle}>确认处置</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Remark Dialog */}
-      <Dialog open={remarkDialogOpen} onOpenChange={setRemarkDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquarePlus className="w-4 h-4 text-primary" /> 追加处理备注
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-xs text-muted-foreground">操作人</label>
-              <input
-                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-                value={remarkOperator}
-                onChange={e => setRemarkOperator(e.target.value)}
-                placeholder="请输入您的姓名或工号"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">备注内容 <span className="text-destructive">*</span></label>
-              <textarea
-                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
-                rows={4}
-                value={remarkText}
-                onChange={e => setRemarkText(e.target.value)}
-                placeholder="请输入处理进展、反馈结果或补充说明..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRemarkDialogOpen(false)}>取消</Button>
-            <Button onClick={confirmAddRemark}>提交备注</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

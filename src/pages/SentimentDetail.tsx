@@ -329,6 +329,13 @@ export default function SentimentDetail() {
   const getEventPosts = (eventId: string) => items.filter(i => i.mergedEventId === eventId);
 
   /* ── Processing handlers ── */
+  const getTargetStatus = (): HandleStatus => {
+    if (handleDialogType === "event") {
+      return mergedEvents.find(e => e.id === handleTargetId)?.handleStatus || "pending";
+    }
+    return items.find(i => i.id === handleTargetId)?.handleStatus || "pending";
+  };
+
   const openHandleDialog = (type: "event" | "article", targetId: string | number) => {
     setHandleDialogType(type);
     setHandleTargetId(targetId);
@@ -344,7 +351,7 @@ export default function SentimentDetail() {
   const createRecord = (): HandleRecord => ({
     id: `rec-${Date.now()}`,
     action: handleAction,
-    operator: "当前用户",
+    operator: handleAction === "add_remark" && handleAssignee ? handleAssignee : "当前用户",
     time: new Date().toLocaleString("zh-CN"),
     assignee: handleAction === "dispatch" ? handleAssignee : undefined,
     complaintNo: handleAction === "dispatch" ? handleComplaintNo : undefined,
@@ -373,15 +380,20 @@ export default function SentimentDetail() {
   };
 
   const confirmHandle = () => {
+    if (handleAction === "add_remark" && !handleRemark.trim()) {
+      toast({ title: "请输入备注内容", variant: "destructive" });
+      return;
+    }
     const record = createRecord();
-    const newStatus = actionToStatus(handleAction);
+    const keepStatus = handleAction === "add_remark";
+    const newStatus = keepStatus ? undefined : actionToStatus(handleAction);
     if (handleDialogType === "event") {
       setMergedEvents(prev => prev.map(e =>
-        e.id === handleTargetId ? { ...e, handleStatus: newStatus, handleRecords: [...(e.handleRecords || []), record] } : e
+        e.id === handleTargetId ? { ...e, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...(e.handleRecords || []), record] } : e
       ));
     } else {
       setItems(prev => prev.map(i =>
-        i.id === handleTargetId ? { ...i, handleStatus: newStatus, handleRecords: [...(i.handleRecords || []), record] } : i
+        i.id === handleTargetId ? { ...i, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...(i.handleRecords || []), record] } : i
       ));
     }
     setHandleDialogOpen(false);
@@ -389,16 +401,21 @@ export default function SentimentDetail() {
   };
 
   const confirmBatchHandle = () => {
+    if (handleAction === "add_remark" && !handleRemark.trim()) {
+      toast({ title: "请输入备注内容", variant: "destructive" });
+      return;
+    }
     const record = createRecord();
-    const newStatus = actionToStatus(handleAction);
+    const keepStatus = handleAction === "add_remark";
+    const newStatus = keepStatus ? undefined : actionToStatus(handleAction);
     if (batchHandleType === "event") {
       setMergedEvents(prev => prev.map(e =>
-        selectedEventIds.includes(e.id) ? { ...e, handleStatus: newStatus, handleRecords: [...(e.handleRecords || []), record] } : e
+        selectedEventIds.includes(e.id) ? { ...e, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...(e.handleRecords || []), record] } : e
       ));
       setSelectedEventIds([]);
     } else {
       setItems(prev => prev.map(i =>
-        selectedIds.includes(i.id) ? { ...i, handleStatus: newStatus, handleRecords: [...(i.handleRecords || []), record] } : i
+        selectedIds.includes(i.id) ? { ...i, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...(i.handleRecords || []), record] } : i
       ));
       setSelectedIds([]);
     }
@@ -656,99 +673,123 @@ export default function SentimentDetail() {
     return r.action;
   };
 
-  const renderHandleForm = () => (
-    <div className="space-y-4 py-2">
-      <div>
-        <label className="text-xs font-medium text-foreground mb-2 block">处置方式</label>
-        <div className="grid grid-cols-3 gap-2">
-          {([
-            { value: "silent" as HandleAction, label: "静默", icon: XCircle, desc: "无需人工处理" },
-            { value: "dispatch" as HandleAction, label: "分派客服", icon: ClipboardList, desc: "分派给客服跟进" },
-            { value: "escalate" as HandleAction, label: "升级处理", icon: ArrowUpRight, desc: "升级到上级指定人" },
-          ]).map(opt => (
-            <label
-              key={opt.value}
-              className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                handleAction === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"
-              }`}
-            >
-              <input type="radio" className="sr-only" checked={handleAction === opt.value} onChange={() => setHandleAction(opt.value)} />
-              <div className="flex items-center gap-1.5">
-                <opt.icon className="w-3.5 h-3.5" />
-                <span className="text-xs font-medium text-foreground">{opt.label}</span>
-              </div>
-              <div className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</div>
-            </label>
-          ))}
+  const renderHandleForm = (isBatch = false) => {
+    const currentStatus = isBatch ? "pending" : getTargetStatus();
+    const isClosed = currentStatus === "closed";
+    const isPending = currentStatus === "pending";
+
+    const allActions: { value: HandleAction; label: string; icon: typeof XCircle; desc: string; show: boolean }[] = [
+      { value: "silent", label: "静默", icon: XCircle, desc: "无需人工处理", show: !isClosed },
+      { value: "dispatch", label: "分派客服", icon: ClipboardList, desc: "分派给客服跟进", show: !isClosed },
+      { value: "escalate", label: "升级处理", icon: ArrowUpRight, desc: "升级到上级指定人", show: !isClosed },
+      { value: "close", label: "完结", icon: CheckCircle2, desc: "标记为已完结", show: !isClosed && !isPending },
+      { value: "reopen", label: "重新打开", icon: History, desc: "重新打开处理流程", show: isClosed },
+      { value: "add_remark", label: "追加备注", icon: MessageSquarePlus, desc: "补充处理说明", show: true },
+    ];
+    const visibleActions = allActions.filter(a => a.show);
+    const cols = visibleActions.length <= 3 ? 3 : visibleActions.length <= 4 ? 2 : 3;
+
+    return (
+      <div className="space-y-4 py-2">
+        <div>
+          <label className="text-xs font-medium text-foreground mb-2 block">处置方式</label>
+          <div className={`grid gap-2`} style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+            {visibleActions.map(opt => (
+              <label
+                key={opt.value}
+                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                  handleAction === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"
+                }`}
+              >
+                <input type="radio" className="sr-only" checked={handleAction === opt.value} onChange={() => setHandleAction(opt.value)} />
+                <div className="flex items-center gap-1.5">
+                  <opt.icon className="w-3.5 h-3.5" />
+                  <span className="text-xs font-medium text-foreground">{opt.label}</span>
+                </div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</div>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
-      {handleAction === "dispatch" && (
-        <div className="space-y-3">
+        {handleAction === "dispatch" && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">分派给</label>
+              <select
+                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                value={handleAssignee}
+                onChange={e => setHandleAssignee(e.target.value)}
+              >
+                <option value="">请选择客服</option>
+                {CS_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">投诉单号（可选）</label>
+              <input
+                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                value={handleComplaintNo}
+                onChange={e => setHandleComplaintNo(e.target.value)}
+                placeholder="如有投诉单号请输入"
+              />
+            </div>
+          </div>
+        )}
+        {handleAction === "escalate" && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">升级角色</label>
+              <div className="flex gap-2 mt-1">
+                {ESCALATE_ROLES.map(role => (
+                  <label
+                    key={role.value}
+                    className={`flex-1 p-2 rounded-md border text-center text-xs cursor-pointer transition-colors ${
+                      handleEscalateRole === role.value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"
+                    }`}
+                  >
+                    <input type="radio" className="sr-only" checked={handleEscalateRole === role.value} onChange={() => { setHandleEscalateRole(role.value); setHandleEscalateTarget(""); }} />
+                    {role.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">指定处理人</label>
+              <select
+                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                value={handleEscalateTarget}
+                onChange={e => setHandleEscalateTarget(e.target.value)}
+              >
+                <option value="">请选择处理人</option>
+                {(ESCALATE_PERSONS[handleEscalateRole] || []).map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+        )}
+        {handleAction === "add_remark" && (
           <div>
-            <label className="text-xs text-muted-foreground">分派给</label>
-            <select
+            <label className="text-xs text-muted-foreground">操作人</label>
+            <input
               className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
               value={handleAssignee}
               onChange={e => setHandleAssignee(e.target.value)}
-            >
-              <option value="">请选择客服</option>
-              {CS_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">投诉单号（可选）</label>
-            <input
-              className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-              value={handleComplaintNo}
-              onChange={e => setHandleComplaintNo(e.target.value)}
-              placeholder="如有投诉单号请输入"
+              placeholder="请输入姓名或工号（留空则默认当前用户）"
             />
           </div>
+        )}
+        <div>
+          <label className="text-xs text-muted-foreground">{handleAction === "add_remark" ? "备注内容 *" : "备注"}</label>
+          <textarea
+            className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
+            rows={handleAction === "add_remark" ? 4 : 2}
+            value={handleRemark}
+            onChange={e => setHandleRemark(e.target.value)}
+            placeholder={handleAction === "add_remark" ? "请输入处理进展、反馈结果或补充说明..." : "可选填备注..."}
+          />
         </div>
-      )}
-      {handleAction === "escalate" && (
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-muted-foreground">升级角色</label>
-            <div className="flex gap-2 mt-1">
-              {ESCALATE_ROLES.map(role => (
-                <label
-                  key={role.value}
-                  className={`flex-1 p-2 rounded-md border text-center text-xs cursor-pointer transition-colors ${
-                    handleEscalateRole === role.value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"
-                  }`}
-                >
-                  <input type="radio" className="sr-only" checked={handleEscalateRole === role.value} onChange={() => { setHandleEscalateRole(role.value); setHandleEscalateTarget(""); }} />
-                  {role.label}
-                </label>
-              ))}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-muted-foreground">指定处理人</label>
-            <select
-              className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-              value={handleEscalateTarget}
-              onChange={e => setHandleEscalateTarget(e.target.value)}
-            >
-              <option value="">请选择处理人</option>
-              {(ESCALATE_PERSONS[handleEscalateRole] || []).map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-        </div>
-      )}
-      <div>
-        <label className="text-xs text-muted-foreground">备注</label>
-        <textarea
-          className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
-          rows={2}
-          value={handleRemark}
-          onChange={e => setHandleRemark(e.target.value)}
-          placeholder="可选填备注..."
-        />
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderStatusBadge = (status: HandleStatus | undefined) => {
     const s = status || "pending";
@@ -986,24 +1027,8 @@ export default function SentimentDetail() {
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          {(event.handleStatus === "closed") ? (
-                            <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); handleReopen("event", event.id); }}>
-                              <History className="w-3 h-3" /> 重新打开
-                            </Button>
-                          ) : (
-                            <>
-                              <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openHandleDialog("event", event.id); }}>
-                                <ClipboardList className="w-3 h-3" /> 处置
-                              </Button>
-                              {(event.handleStatus !== "pending") && (
-                                <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); handleClose("event", event.id); }}>
-                                  <CheckCircle2 className="w-3 h-3" /> 完结
-                                </Button>
-                              )}
-                            </>
-                          )}
-                          <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openRemarkDialog("event", event.id); }}>
-                            <MessageSquarePlus className="w-3 h-3" /> 追加备注
+                          <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openHandleDialog("event", event.id); }}>
+                            <ClipboardList className="w-3 h-3" /> 处置
                           </Button>
                           <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); navigate(`/sentiment/event-detail?id=${event.id}`); }}>
                             <ExternalLink className="w-3 h-3" /> 详情
@@ -1268,27 +1293,9 @@ export default function SentimentDetail() {
                           <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
                         ) : (
                           <>
-                            {item.handleStatus === "closed" ? (
-                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => handleReopen("article", item.id)}>
-                                <History className="w-3 h-3" /> 重新打开
-                              </Button>
-                            ) : (
-                              <>
-                                <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
-                                  <ClipboardList className="w-3 h-3" /> 处置
-                                </Button>
-                                {item.handleStatus !== "pending" && (
-                                  <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => handleClose("article", item.id)}>
-                                    <CheckCircle2 className="w-3 h-3" /> 完结
-                                  </Button>
-                                )}
-                              </>
-                            )}
-                            {(item.handleRecords || []).length > 0 && (
-                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openRemarkDialog("article", item.id)}>
-                                <MessageSquarePlus className="w-3 h-3" /> 追加备注
-                              </Button>
-                            )}
+                            <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
+                              <ClipboardList className="w-3 h-3" /> 处置
+                            </Button>
                             <button
                               className="text-muted-foreground hover:text-destructive"
                               title="标记为噪音"
@@ -1443,7 +1450,7 @@ export default function SentimentDetail() {
               <ClipboardList className="w-4 h-4 text-primary" /> 批量处置（{batchHandleType === "event" ? `${selectedEventIds.length} 个事件` : `${selectedIds.length} 条文章`}）
             </DialogTitle>
           </DialogHeader>
-          {renderHandleForm()}
+          {renderHandleForm(true)}
           <DialogFooter>
             <Button variant="outline" onClick={() => setBatchHandleDialogOpen(false)}>取消</Button>
             <Button onClick={confirmBatchHandle}>确认批量处置</Button>
@@ -1542,41 +1549,6 @@ export default function SentimentDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* Remark Dialog */}
-      <Dialog open={remarkDialogOpen} onOpenChange={setRemarkDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <MessageSquarePlus className="w-4 h-4 text-primary" /> 追加处理备注
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-xs text-muted-foreground">操作人</label>
-              <input
-                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-                value={remarkOperator}
-                onChange={e => setRemarkOperator(e.target.value)}
-                placeholder="请输入您的姓名或工号"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">备注内容 <span className="text-destructive">*</span></label>
-              <textarea
-                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
-                rows={4}
-                value={remarkText}
-                onChange={e => setRemarkText(e.target.value)}
-                placeholder="请输入处理进展、反馈结果或补充说明..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRemarkDialogOpen(false)}>取消</Button>
-            <Button onClick={confirmAddRemark}>提交备注</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
