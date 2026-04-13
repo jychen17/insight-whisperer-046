@@ -266,7 +266,8 @@ export default function SentimentDetail() {
       </div>
       )}
 
-      {/* Toolbar: merge, noise, filter */}
+      {/* Toolbar: merge, noise, filter - show on sentiment/all tabs */}
+      {mainTab !== "events" && (
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <select className="px-2 py-1 border border-border rounded-md bg-card text-foreground">
@@ -301,7 +302,6 @@ export default function SentimentDetail() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Noise filter tabs */}
           <div className="flex rounded-md border border-border overflow-hidden text-xs">
             {([["normal", "有效舆情"], ["noise", "噪音帖"], ["all", "全部"]] as const).map(([key, label]) => (
               <button
@@ -317,6 +317,7 @@ export default function SentimentDetail() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Merged Events Section */}
       {mergedEvents.length > 0 && showNoiseFilter !== "noise" && (
