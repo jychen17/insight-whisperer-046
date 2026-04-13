@@ -619,6 +619,7 @@ export default function EventDetail() {
                 <Button variant="outline" className="gap-1 text-amber-600 border-amber-500/30 hover:bg-amber-500/10" onClick={() => setHandleStep(3)}>
                   <ArrowUpRight className="w-3 h-3" /> 处理不了，升级
                 </Button>
+                <Button variant="outline" onClick={() => confirmWithAction("close")}>完结</Button>
                 <Button onClick={() => confirmWithAction("dispatch")}>确认分派客服</Button>
               </>
             )}
