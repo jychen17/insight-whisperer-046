@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe } from "lucide-react";
+import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -67,6 +68,7 @@ interface MergedEvent {
   totalLikes?: number;
   totalComments?: number;
   totalShares?: number;
+  totalCollects?: number;
 }
 
 const initialItems: SentimentItem[] = [
@@ -123,8 +125,8 @@ const initialItems: SentimentItem[] = [
 ];
 
 export default function SentimentDetail() {
+  const navigate = useNavigate();
   const [mainTab, setMainTab] = useState<"sentiment" | "all">("sentiment");
-  // Sub-view under sentiment tab: events (default) or articles
   const [sentimentView, setSentimentView] = useState<"events" | "articles">("events");
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const [items, setItems] = useState<SentimentItem[]>(initialItems);
@@ -143,12 +145,17 @@ export default function SentimentDetail() {
   const [clusterSimilarity, setClusterSimilarity] = useState(0.7);
   const [isClustering, setIsClustering] = useState(false);
   const [clusterProgress, setClusterProgress] = useState(0);
-  const [eventSortBy, setEventSortBy] = useState<"importance" | "time" | "count">("importance");
+  const [eventSortBy, setEventSortBy] = useState<string>("firstTime_desc");
   const [eventSearchQuery, setEventSearchQuery] = useState("");
+  const [hasAutoClustered, setHasAutoClustered] = useState(false);
 
   // Event filter states
   const [eventFilterImportance, setEventFilterImportance] = useState<"all" | "high" | "medium" | "low">("all");
   const [eventFilterPlatform, setEventFilterPlatform] = useState("全部");
+  const [eventFilterFirstDateStart, setEventFilterFirstDateStart] = useState("");
+  const [eventFilterFirstDateEnd, setEventFilterFirstDateEnd] = useState("");
+  const [eventFilterLatestDateStart, setEventFilterLatestDateStart] = useState("");
+  const [eventFilterLatestDateEnd, setEventFilterLatestDateEnd] = useState("");
 
   const displayItems = useMemo(() => {
     const filtered = items.filter(item => {
