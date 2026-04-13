@@ -606,15 +606,24 @@ export default function SentimentDetail() {
   const speedColor = { high: "text-destructive", medium: "text-amber-600", low: "text-muted-foreground" };
 
   /* ── Handle processing dialog content (shared between single & batch) ── */
+  const renderRecordDesc = (r: HandleRecord) => {
+    if (r.action === "silent") return "静默处理";
+    if (r.action === "dispatch") return `分派客服: ${r.assignee || "-"}${r.complaintNo ? `，投诉单号: ${r.complaintNo}` : ""}`;
+    if (r.action === "escalate") return `升级到${r.escalateRole || ""}: ${r.escalateTarget}`;
+    if (r.action === "close") return "标记完结";
+    if (r.action === "reopen") return "重新打开";
+    return r.action;
+  };
+
   const renderHandleForm = () => (
     <div className="space-y-4 py-2">
       <div>
         <label className="text-xs font-medium text-foreground mb-2 block">处置方式</label>
         <div className="grid grid-cols-3 gap-2">
           {([
-            { value: "ignore" as HandleAction, label: "忽略/静默", icon: XCircle, desc: "无需处理" },
-            { value: "complaint" as HandleAction, label: "录入投诉单号", icon: ClipboardList, desc: "需要跟进处理" },
-            { value: "escalate" as HandleAction, label: "升级处理", icon: ArrowUpRight, desc: "升级到公关/业务线" },
+            { value: "silent" as HandleAction, label: "静默", icon: XCircle, desc: "无需人工处理" },
+            { value: "dispatch" as HandleAction, label: "分派客服", icon: ClipboardList, desc: "分派给客服跟进" },
+            { value: "escalate" as HandleAction, label: "升级处理", icon: ArrowUpRight, desc: "升级到上级指定人" },
           ]).map(opt => (
             <label
               key={opt.value}
@@ -632,31 +641,59 @@ export default function SentimentDetail() {
           ))}
         </div>
       </div>
-      {handleAction === "complaint" && (
-        <div>
-          <label className="text-xs text-muted-foreground">投诉单号</label>
-          <input
-            className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-            value={handleComplaintNo}
-            onChange={e => setHandleComplaintNo(e.target.value)}
-            placeholder="请输入投诉单号"
-          />
+      {handleAction === "dispatch" && (
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">分派给</label>
+            <select
+              className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+              value={handleAssignee}
+              onChange={e => setHandleAssignee(e.target.value)}
+            >
+              <option value="">请选择客服</option>
+              {CS_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">投诉单号（可选）</label>
+            <input
+              className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+              value={handleComplaintNo}
+              onChange={e => setHandleComplaintNo(e.target.value)}
+              placeholder="如有投诉单号请输入"
+            />
+          </div>
         </div>
       )}
       {handleAction === "escalate" && (
-        <div>
-          <label className="text-xs text-muted-foreground">升级目标</label>
-          <select
-            className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-            value={handleEscalateTarget}
-            onChange={e => setHandleEscalateTarget(e.target.value)}
-          >
-            <option>公关部</option>
-            <option>品牌部</option>
-            <option>客服中心</option>
-            <option>法务部</option>
-            <option>业务线负责人</option>
-          </select>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">升级角色</label>
+            <div className="flex gap-2 mt-1">
+              {ESCALATE_ROLES.map(role => (
+                <label
+                  key={role.value}
+                  className={`flex-1 p-2 rounded-md border text-center text-xs cursor-pointer transition-colors ${
+                    handleEscalateRole === role.value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"
+                  }`}
+                >
+                  <input type="radio" className="sr-only" checked={handleEscalateRole === role.value} onChange={() => { setHandleEscalateRole(role.value); setHandleEscalateTarget(""); }} />
+                  {role.label}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">指定处理人</label>
+            <select
+              className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+              value={handleEscalateTarget}
+              onChange={e => setHandleEscalateTarget(e.target.value)}
+            >
+              <option value="">请选择处理人</option>
+              {(ESCALATE_PERSONS[handleEscalateRole] || []).map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
         </div>
       )}
       <div>
@@ -773,10 +810,10 @@ export default function SentimentDetail() {
                 >
                   <option value="all">全部</option>
                   <option value="pending">待处理</option>
-                  <option value="ignored">已忽略</option>
-                  <option value="processing">处理中</option>
+                  <option value="silent">已静默</option>
+                  <option value="dispatched">已分派客服</option>
                   <option value="escalated">已升级</option>
-                  <option value="closed">已关闭</option>
+                  <option value="closed">已完结</option>
                 </select>
               </div>
               <div>
@@ -908,9 +945,22 @@ export default function SentimentDetail() {
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openHandleDialog("event", event.id); }}>
-                            <ClipboardList className="w-3 h-3" /> 处置
-                          </Button>
+                          {(event.handleStatus === "closed") ? (
+                            <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); handleReopen("event", event.id); }}>
+                              <History className="w-3 h-3" /> 重新打开
+                            </Button>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openHandleDialog("event", event.id); }}>
+                                <ClipboardList className="w-3 h-3" /> 处置
+                              </Button>
+                              {(event.handleStatus !== "pending") && (
+                                <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); handleClose("event", event.id); }}>
+                                  <CheckCircle2 className="w-3 h-3" /> 完结
+                                </Button>
+                              )}
+                            </>
+                          )}
                           <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); navigate(`/sentiment/event-detail?id=${event.id}`); }}>
                             <ExternalLink className="w-3 h-3" /> 详情
                           </Button>
