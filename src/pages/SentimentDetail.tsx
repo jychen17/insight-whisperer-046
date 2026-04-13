@@ -24,26 +24,42 @@ const NOISE_CATEGORIES = [
 ];
 
 /* ── Processing types ── */
-export type HandleAction = "ignore" | "complaint" | "escalate";
+export type HandleAction = "silent" | "dispatch" | "escalate" | "close" | "reopen";
 export interface HandleRecord {
   id: string;
   action: HandleAction;
   operator: string;
   time: string;
+  assignee?: string;
   complaintNo?: string;
   escalateTarget?: string;
+  escalateRole?: string;
   remark?: string;
 }
 
-export type HandleStatus = "pending" | "ignored" | "processing" | "escalated" | "closed";
+export type HandleStatus = "pending" | "silent" | "dispatched" | "escalated" | "closed";
 
 const HANDLE_STATUS_MAP: Record<HandleStatus, { label: string; color: string }> = {
   pending: { label: "待处理", color: "bg-amber-500/10 text-amber-600" },
-  ignored: { label: "已忽略", color: "bg-muted text-muted-foreground" },
-  processing: { label: "处理中", color: "bg-primary/10 text-primary" },
+  silent: { label: "已静默", color: "bg-muted text-muted-foreground" },
+  dispatched: { label: "已分派客服", color: "bg-primary/10 text-primary" },
   escalated: { label: "已升级", color: "bg-destructive/10 text-destructive" },
-  closed: { label: "已关闭", color: "bg-emerald-500/10 text-emerald-600" },
+  closed: { label: "已完结", color: "bg-emerald-500/10 text-emerald-600" },
 };
+
+const ESCALATE_ROLES = [
+  { value: "cs_supervisor", label: "客服主管" },
+  { value: "business", label: "业务负责人" },
+  { value: "pr", label: "公关" },
+];
+
+const ESCALATE_PERSONS: Record<string, string[]> = {
+  cs_supervisor: ["张经理", "李主管", "王组长"],
+  business: ["赵总监", "刘经理", "陈总"],
+  pr: ["孙总监", "周经理", "吴主管"],
+};
+
+const CS_AGENTS = ["客服A-小张", "客服B-小李", "客服C-小王", "客服D-小赵"];
 
 export interface SentimentItem {
   id: number;
