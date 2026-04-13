@@ -1224,9 +1224,22 @@ export default function SentimentDetail() {
                           <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
                         ) : (
                           <>
-                            <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
-                              <ClipboardList className="w-3 h-3" /> 处置
-                            </Button>
+                            {item.handleStatus === "closed" ? (
+                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => handleReopen("article", item.id)}>
+                                <History className="w-3 h-3" /> 重新打开
+                              </Button>
+                            ) : (
+                              <>
+                                <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
+                                  <ClipboardList className="w-3 h-3" /> 处置
+                                </Button>
+                                {item.handleStatus !== "pending" && (
+                                  <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => handleClose("article", item.id)}>
+                                    <CheckCircle2 className="w-3 h-3" /> 完结
+                                  </Button>
+                                )}
+                              </>
+                            )}
                             <button
                               className="text-muted-foreground hover:text-destructive"
                               title="标记为噪音"
