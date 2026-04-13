@@ -325,6 +325,44 @@ export default function SentimentDetail() {
     }, 2000);
   };
 
+  // Auto-cluster on first load
+  useEffect(() => {
+    if (!hasAutoClustered && mergedEvents.length === 0) {
+      setHasAutoClustered(true);
+      // Run auto cluster immediately (simulate)
+      const availableItems = items.filter(i => !i.isNoise && !i.mergedEventId);
+      const groups: Record<string, number[]> = {};
+      availableItems.forEach(item => {
+        const key = item.issueType;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item.id);
+      });
+      const newEvents: MergedEvent[] = [];
+      const updatedItems = [...items];
+      const methodLabel = clusterMethod === "text_similarity" ? "文本相似度" : clusterMethod === "title_same" ? "标题相同" : "正文相同";
+      Object.entries(groups).forEach(([key, ids]) => {
+        if (ids.length < 2) return;
+        const eid = `auto-${Date.now()}-${key}`;
+        const posts = updatedItems.filter(i => ids.includes(i.id));
+        const meta = buildEventMeta(posts, methodLabel);
+        newEvents.push({
+          id: eid, title: `${key} - 自动聚类事件`, postIds: ids,
+          createdAt: new Date().toLocaleString("zh-CN"),
+          summary: `通过${methodLabel}在${clusterTimeWindow}h内自动聚类，合并了 ${ids.length} 条舆情`,
+          ...meta,
+        });
+        ids.forEach(id => {
+          const idx = updatedItems.findIndex(i => i.id === id);
+          if (idx >= 0) updatedItems[idx] = { ...updatedItems[idx], mergedEventId: eid };
+        });
+      });
+      if (newEvents.length > 0) {
+        setItems(updatedItems);
+        setMergedEvents(newEvents);
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Determine if we show articles view
   const showArticles = mainTab === "all" || (mainTab === "sentiment" && sentimentView === "articles");
   const showEvents = mainTab === "sentiment" && sentimentView === "events";
@@ -341,15 +379,31 @@ export default function SentimentDetail() {
     if (eventFilterPlatform !== "全部") {
       evts = evts.filter(e => e.keyPlatforms?.includes(eventFilterPlatform));
     }
+    if (eventFilterFirstDateStart) {
+      evts = evts.filter(e => (e.firstTime || "") >= eventFilterFirstDateStart);
+    }
+    if (eventFilterFirstDateEnd) {
+      evts = evts.filter(e => (e.firstTime || "") <= eventFilterFirstDateEnd + " 23:59:59");
+    }
+    if (eventFilterLatestDateStart) {
+      evts = evts.filter(e => (e.latestTime || "") >= eventFilterLatestDateStart);
+    }
+    if (eventFilterLatestDateEnd) {
+      evts = evts.filter(e => (e.latestTime || "") <= eventFilterLatestDateEnd + " 23:59:59");
+    }
     return [...evts].sort((a, b) => {
-      if (eventSortBy === "importance") {
-        const order = { high: 3, medium: 2, low: 1 };
-        return (order[b.importance || "low"] || 0) - (order[a.importance || "low"] || 0);
+      switch (eventSortBy) {
+        case "firstTime_desc": return (b.firstTime || "").localeCompare(a.firstTime || "");
+        case "latestTime_desc": return (b.latestTime || "").localeCompare(a.latestTime || "");
+        case "count_desc": return b.postIds.length - a.postIds.length;
+        case "comments_desc": return (b.totalComments || 0) - (a.totalComments || 0);
+        case "likes_desc": return (b.totalLikes || 0) - (a.totalLikes || 0);
+        case "collects_desc": return (b.totalCollects || 0) - (a.totalCollects || 0);
+        case "shares_desc": return (b.totalShares || 0) - (a.totalShares || 0);
+        default: return 0;
       }
-      if (eventSortBy === "count") return b.postIds.length - a.postIds.length;
-      return 0;
     });
-  }, [mergedEvents, eventSearchQuery, eventFilterImportance, eventFilterPlatform, eventSortBy]);
+  }, [mergedEvents, eventSearchQuery, eventFilterImportance, eventFilterPlatform, eventSortBy, eventFilterFirstDateStart, eventFilterFirstDateEnd, eventFilterLatestDateStart, eventFilterLatestDateEnd]);
 
   const importanceBadgeMap = {
     high: <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-[10px] gap-0.5"><Flame className="w-2.5 h-2.5" />重大</Badge>,
