@@ -280,6 +280,9 @@ export default function EventDetail() {
               )}
             </>
           )}
+          <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openRemarkDialog("event")}>
+            <MessageSquarePlus className="w-3 h-3" /> 追加备注
+          </Button>
           <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => navigate(`/sentiment/event-alert?eventId=${eventId}`)}>
             <Bell className="w-3 h-3" /> 设置预警
           </Button>
@@ -441,6 +444,9 @@ export default function EventDetail() {
                         </>
                       )}
                     </div>
+                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openRemarkDialog("post", post.id)}>
+                      <MessageSquarePlus className="w-3 h-3" /> 备注
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -575,6 +581,42 @@ export default function EventDetail() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
             <Button onClick={confirmHandle}>确认处置</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remark Dialog */}
+      <Dialog open={remarkDialogOpen} onOpenChange={setRemarkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquarePlus className="w-4 h-4 text-primary" /> 追加处理备注
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs text-muted-foreground">操作人</label>
+              <input
+                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                value={remarkOperator}
+                onChange={e => setRemarkOperator(e.target.value)}
+                placeholder="请输入您的姓名或工号"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">备注内容 <span className="text-destructive">*</span></label>
+              <textarea
+                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
+                rows={4}
+                value={remarkText}
+                onChange={e => setRemarkText(e.target.value)}
+                placeholder="请输入处理进展、反馈结果或补充说明..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemarkDialogOpen(false)}>取消</Button>
+            <Button onClick={confirmAddRemark}>提交备注</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
