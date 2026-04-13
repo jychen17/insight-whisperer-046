@@ -42,6 +42,8 @@ interface AlertRule {
   conditions: RuleCondition[];
   pushTiming: PushTiming;
   scheduledInterval?: string;
+  scheduledTimeStart?: string;
+  scheduledTimeEnd?: string;
   channels: PushChannel[];
   eventScope: "current" | "all";
 }
