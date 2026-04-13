@@ -201,6 +201,68 @@ export default function SentimentDetail() {
 
   const getEventPosts = (eventId: string) => items.filter(i => i.mergedEventId === eventId);
 
+  // Simulated auto-clustering
+  const runAutoCluster = () => {
+    setIsClustering(true);
+    setClusterProgress(0);
+    const availableItems = items.filter(i => !i.isNoise && !i.mergedEventId);
+
+    // Simulate progress
+    const interval = setInterval(() => {
+      setClusterProgress(prev => {
+        if (prev >= 90) { clearInterval(interval); return 90; }
+        return prev + 15;
+      });
+    }, 300);
+
+    // Simulate clustering result after delay
+    setTimeout(() => {
+      clearInterval(interval);
+      setClusterProgress(100);
+
+      // Mock: group by issueType within time window as a simulation
+      const groups: Record<string, number[]> = {};
+      availableItems.forEach(item => {
+        const key = clusterMethod === "same_content" ? item.issueType : item.issueType;
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(item.id);
+      });
+
+      const newEvents: MergedEvent[] = [];
+      const updatedItems = [...items];
+
+      Object.entries(groups).forEach(([key, ids]) => {
+        if (ids.length < 2) return;
+        const eventId = `auto-${Date.now()}-${key}`;
+        const posts = updatedItems.filter(i => ids.includes(i.id));
+        newEvents.push({
+          id: eventId,
+          title: `${key} - 自动聚类事件`,
+          postIds: ids,
+          createdAt: new Date().toLocaleString("zh-CN"),
+          summary: `通过${clusterMethod === "text_similarity" ? "文本相似度" : "内容相同"}在${clusterTimeWindow}h内自动聚类，合并了 ${ids.length} 条舆情，涉及平台: ${[...new Set(posts.map(i => i.platform))].join("、")}`,
+        });
+        ids.forEach(id => {
+          const idx = updatedItems.findIndex(i => i.id === id);
+          if (idx >= 0) updatedItems[idx] = { ...updatedItems[idx], mergedEventId: eventId };
+        });
+      });
+
+      if (newEvents.length === 0) {
+        toast({ title: "未发现可聚类的舆情", description: "当前条件下无相似内容" });
+      } else {
+        setItems(updatedItems);
+        setMergedEvents(prev => [...prev, ...newEvents]);
+        toast({ title: "自动聚类完成", description: `生成了 ${newEvents.length} 个事件` });
+        setMainTab("events");
+      }
+
+      setIsClustering(false);
+      setAutoClusterOpen(false);
+      setClusterProgress(0);
+    }, 2000);
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
