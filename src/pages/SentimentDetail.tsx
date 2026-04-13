@@ -128,11 +128,15 @@ export default function SentimentDetail() {
   const [noiseCategory, setNoiseCategory] = useState("unrelated");
   const [noiseTargetIds, setNoiseTargetIds] = useState<number[]>([]);
   const [autoClusterOpen, setAutoClusterOpen] = useState(false);
-  const [clusterMethod, setClusterMethod] = useState<"text_similarity" | "same_content">("text_similarity");
+  const [clusterMethod, setClusterMethod] = useState<"text_similarity" | "title_same" | "content_same">("text_similarity");
   const [clusterTimeWindow, setClusterTimeWindow] = useState(24);
   const [clusterSimilarity, setClusterSimilarity] = useState(0.7);
   const [isClustering, setIsClustering] = useState(false);
   const [clusterProgress, setClusterProgress] = useState(0);
+  const [eventSortBy, setEventSortBy] = useState<"importance" | "time" | "count">("importance");
+  const [eventSearchQuery, setEventSearchQuery] = useState("");
+  const [showClusterConfig, setShowClusterConfig] = useState(false);
+  const [autoClusterEnabled, setAutoClusterEnabled] = useState(true);
 
   // Filtered items based on noise filter
   const displayItems = useMemo(() => {
