@@ -86,9 +86,6 @@ const CATEGORY_OPTIONS = ["票价吐槽", "辅营加购", "盲盒吐槽", "演�
 
 const channelTypes = [
   { type: "wechat" as const, label: "企业微信", icon: MessageCircle },
-  { type: "email" as const, label: "邮件", icon: Mail },
-  { type: "sms" as const, label: "短信", icon: Phone },
-  { type: "phone" as const, label: "电话", icon: Phone },
 ];
 
 /* ───────── default rules ───────── */
