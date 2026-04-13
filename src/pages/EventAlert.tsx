@@ -633,11 +633,10 @@ export default function EventAlert() {
             {/* Push timing */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-2 block">推送时机</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {([
                   { val: "realtime" as const, title: "实时推送", desc: "事件合并完成后立刻推送" },
                   { val: "scheduled" as const, title: "定时汇总", desc: "按时间段汇总推送" },
-                  { val: "incremental" as const, title: "增量推送", desc: "事件新增舆情时推送1次更新" },
                 ]).map(opt => (
                   <button
                     key={opt.val}
@@ -656,20 +655,58 @@ export default function EventAlert() {
                 ))}
               </div>
               {editingRule.pushTiming === "scheduled" && (
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-muted-foreground">汇总频率：</span>
-                  {(["hour", "day", "week"] as const).map(interval => (
-                    <button
-                      key={interval}
-                      onClick={() => setEditingRule(prev => ({ ...prev, scheduledInterval: interval }))}
-                      className={`px-3 py-1 text-xs rounded border ${editingRule.scheduledInterval === interval
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-foreground"
-                      }`}
-                    >
-                      {interval === "hour" ? "每小时" : interval === "day" ? "每天" : "每周"}
-                    </button>
-                  ))}
+                <div className="space-y-2 mt-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">汇总频率：</span>
+                    {(["hour", "day", "week"] as const).map(interval => (
+                      <button
+                        key={interval}
+                        onClick={() => setEditingRule(prev => ({ ...prev, scheduledInterval: interval }))}
+                        className={`px-3 py-1 text-xs rounded border ${editingRule.scheduledInterval === interval
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-foreground"
+                        }`}
+                      >
+                        {interval === "hour" ? "每小时" : interval === "day" ? "每天" : "每周"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">推送时间段：</span>
+                    <input
+                      type="time"
+                      className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                      value={editingRule.scheduledTimeStart || "08:00"}
+                      onChange={e => setEditingRule(prev => ({ ...prev, scheduledTimeStart: e.target.value }))}
+                    />
+                    <span className="text-xs text-muted-foreground">至</span>
+                    <input
+                      type="time"
+                      className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                      value={editingRule.scheduledTimeEnd || "20:00"}
+                      onChange={e => setEditingRule(prev => ({ ...prev, scheduledTimeEnd: e.target.value }))}
+                    />
+                    <span className="text-[10px] text-muted-foreground">（仅在此时间段内推送）</span>
+                  </div>
+                </div>
+              )}
+              {editingRule.pushTiming === "realtime" && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">推送时间段（可选）：</span>
+                  <input
+                    type="time"
+                    className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={editingRule.scheduledTimeStart || "00:00"}
+                    onChange={e => setEditingRule(prev => ({ ...prev, scheduledTimeStart: e.target.value }))}
+                  />
+                  <span className="text-xs text-muted-foreground">至</span>
+                  <input
+                    type="time"
+                    className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={editingRule.scheduledTimeEnd || "23:59"}
+                    onChange={e => setEditingRule(prev => ({ ...prev, scheduledTimeEnd: e.target.value }))}
+                  />
+                  <span className="text-[10px] text-muted-foreground">（仅在此时间段内推送）</span>
                 </div>
               )}
             </div>
