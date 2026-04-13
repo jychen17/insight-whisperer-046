@@ -882,7 +882,7 @@ export default function SentimentDetail() {
             )}
             <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
               <div>待处理舆情: <span className="text-foreground font-medium">{items.filter(i => !i.isNoise && !i.mergedEventId).length}</span> 条</div>
-              <div>聚类方式: <span className="text-foreground">{clusterMethod === "text_similarity" ? "文本相似度" : "内容相同"}</span></div>
+              <div>聚类方式: <span className="text-foreground">{clusterMethod === "text_similarity" ? "文本相似度" : clusterMethod === "title_same" ? "标题相同" : "正文相同"}</span></div>
               <div>时间窗口: <span className="text-foreground">{clusterTimeWindow} 小时内</span></div>
             </div>
             {isClustering && (
