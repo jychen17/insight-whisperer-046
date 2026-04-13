@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import {
-  ArrowLeft, Bell, Plus, Trash2, AlertTriangle, Mail, MessageCircle, Phone,
-  ChevronDown, ChevronUp, Settings2, Zap, Clock, RefreshCw, ExternalLink,
-  Flame, BarChart3, ThumbsUp, Link2
+  ArrowLeft, Bell, Plus, Trash2, MessageCircle,
+  ChevronDown, ChevronUp, Settings2, Zap, Clock, ExternalLink,
+  Flame, BarChart3, ThumbsUp
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
