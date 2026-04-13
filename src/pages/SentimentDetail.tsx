@@ -209,6 +209,7 @@ export default function SentimentDetail() {
   const [handleEscalateRole, setHandleEscalateRole] = useState("cs_supervisor");
   const [handleEscalateTarget, setHandleEscalateTarget] = useState("");
   const [handleRemark, setHandleRemark] = useState("");
+  const [handleStep, setHandleStep] = useState(1);
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
   const [batchHandleDialogOpen, setBatchHandleDialogOpen] = useState(false);
   const [batchHandleType, setBatchHandleType] = useState<"event" | "article">("article");
