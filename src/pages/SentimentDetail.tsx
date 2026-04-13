@@ -407,39 +407,189 @@ export default function SentimentDetail() {
 
       {/* Events Tab Content */}
       {mainTab === "events" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Cluster Config Bar */}
+          <div className="bg-card rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-primary" /> AI 智能聚类配置
+              </h2>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                  <input type="checkbox" checked={autoClusterEnabled} onChange={e => setAutoClusterEnabled(e.target.checked)} className="rounded" />
+                  自动聚类
+                </label>
+                <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setShowClusterConfig(!showClusterConfig)}>
+                  <Settings2 className="w-3 h-3" /> {showClusterConfig ? "收起配置" : "聚类设置"}
+                </Button>
+                <Button size="sm" className="h-7 text-xs gap-1" onClick={() => setAutoClusterOpen(true)}>
+                  <Zap className="w-3 h-3" /> 立即聚类
+                </Button>
+              </div>
+            </div>
+
+            {showClusterConfig && (
+              <div className="border-t border-border pt-3 space-y-3">
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 block">聚类方式</label>
+                    <div className="flex flex-col gap-1.5">
+                      {([
+                        { value: "text_similarity" as const, label: "文本相似度" },
+                        { value: "title_same" as const, label: "标题相同" },
+                        { value: "content_same" as const, label: "正文相同" },
+                      ]).map(opt => (
+                        <label key={opt.value} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-xs cursor-pointer transition-colors ${clusterMethod === opt.value ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted/30"}`}>
+                          <input type="radio" className="sr-only" checked={clusterMethod === opt.value} onChange={() => setClusterMethod(opt.value)} />
+                          {opt.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> 时间窗口
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[6, 12, 24, 48, 72].map(h => (
+                        <button key={h} onClick={() => setClusterTimeWindow(h)} className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${clusterTimeWindow === h ? "border-primary bg-primary/10 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"}`}>
+                          {h}h
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-1 mt-1.5">
+                      <span className="text-[11px] text-muted-foreground">自定义:</span>
+                      <input type="number" min={1} max={720} value={clusterTimeWindow} onChange={e => setClusterTimeWindow(Number(e.target.value) || 24)} className="w-14 px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground" />
+                      <span className="text-[11px] text-muted-foreground">小时</span>
+                    </div>
+                  </div>
+                  <div>
+                    {clusterMethod === "text_similarity" && (
+                      <>
+                        <label className="text-xs text-muted-foreground mb-1.5 block">
+                          相似度阈值: <span className="text-primary font-medium">{(clusterSimilarity * 100).toFixed(0)}%</span>
+                        </label>
+                        <input type="range" min={0.3} max={1} step={0.05} value={clusterSimilarity} onChange={e => setClusterSimilarity(Number(e.target.value))} className="w-full accent-primary" />
+                        <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                          <span>宽松 (30%)</span>
+                          <span>严格 (100%)</span>
+                        </div>
+                      </>
+                    )}
+                    <div className="bg-muted/30 rounded-md p-2.5 text-[11px] text-muted-foreground space-y-0.5 mt-2">
+                      <div>待处理: <span className="text-foreground font-medium">{items.filter(i => !i.isNoise && !i.mergedEventId).length}</span> 条</div>
+                      <div>已聚类: <span className="text-foreground font-medium">{items.filter(i => i.mergedEventId).length}</span> 条</div>
+                      <div>事件数: <span className="text-foreground font-medium">{mergedEvents.length}</span> 个</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Event Stats Summary */}
+          {mergedEvents.length > 0 && (
+            <div className="grid grid-cols-4 gap-3">
+              <div className="bg-card rounded-lg border border-border p-3 text-center">
+                <div className="text-lg font-semibold text-foreground">{mergedEvents.length}</div>
+                <div className="text-[11px] text-muted-foreground">合并事件</div>
+              </div>
+              <div className="bg-card rounded-lg border border-border p-3 text-center">
+                <div className="text-lg font-semibold text-destructive">{mergedEvents.filter(e => e.importance === "high").length}</div>
+                <div className="text-[11px] text-muted-foreground">高关注事件</div>
+              </div>
+              <div className="bg-card rounded-lg border border-border p-3 text-center">
+                <div className="text-lg font-semibold text-foreground">{items.filter(i => i.mergedEventId).length}</div>
+                <div className="text-[11px] text-muted-foreground">已合并舆情</div>
+              </div>
+              <div className="bg-card rounded-lg border border-border p-3 text-center">
+                <div className="text-lg font-semibold text-foreground">{mergedEvents.reduce((s, e) => s + (e.totalInteractions || 0), 0)}</div>
+                <div className="text-[11px] text-muted-foreground">总互动量</div>
+              </div>
+            </div>
+          )}
+
+          {/* Event List Header */}
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-              <Layers className="w-4 h-4 text-primary" /> 合并事件 ({mergedEvents.length})
-            </h2>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">共 {items.filter(i => i.mergedEventId).length} 条舆情已合并</span>
-              <Button size="sm" className="h-7 text-xs gap-1" onClick={() => setAutoClusterOpen(true)}>
-                <Sparkles className="w-3 h-3" /> 自动聚类
-              </Button>
+              <Layers className="w-4 h-4 text-primary" />
+              <h3 className="text-sm font-medium text-foreground">事件列表 ({mergedEvents.length})</h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  placeholder="搜索事件..."
+                  value={eventSearchQuery}
+                  onChange={e => setEventSearchQuery(e.target.value)}
+                  className="pl-7 pr-3 py-1 text-xs border border-border rounded-md bg-card text-foreground w-48"
+                />
+              </div>
+              <select
+                value={eventSortBy}
+                onChange={e => setEventSortBy(e.target.value as typeof eventSortBy)}
+                className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+              >
+                <option value="importance">按重要性排序</option>
+                <option value="time">按时间排序</option>
+                <option value="count">按舆情数量排序</option>
+              </select>
             </div>
           </div>
-          {mergedEvents.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground text-sm bg-card rounded-lg border border-border">
-              <Layers className="w-8 h-8 mx-auto mb-3 opacity-30" />
-              <p>暂无合并事件</p>
-              <p className="text-xs mt-1">在"舆情内容"中选择多条舆情后点击"合并为事件"</p>
-            </div>
-          ) : (
-            mergedEvents.map(event => {
+
+          {/* Event Cards */}
+          {(() => {
+            let filtered = mergedEvents.filter(e =>
+              !eventSearchQuery || e.title.includes(eventSearchQuery) || e.summary.includes(eventSearchQuery)
+            );
+            filtered = [...filtered].sort((a, b) => {
+              if (eventSortBy === "importance") {
+                const order = { high: 3, medium: 2, low: 1 };
+                return (order[b.importance || "low"] || 0) - (order[a.importance || "low"] || 0);
+              }
+              if (eventSortBy === "count") return b.postIds.length - a.postIds.length;
+              return 0;
+            });
+
+            if (filtered.length === 0) {
+              return (
+                <div className="text-center py-16 text-muted-foreground text-sm bg-card rounded-lg border border-border">
+                  <Layers className="w-8 h-8 mx-auto mb-3 opacity-30" />
+                  <p>{mergedEvents.length === 0 ? "暂无合并事件" : "未找到匹配的事件"}</p>
+                  <p className="text-xs mt-1">{mergedEvents.length === 0 ? "点击「立即聚类」自动合并相似舆情，或在「舆情内容」中手动选择合并" : "请调整搜索关键词"}</p>
+                  {mergedEvents.length === 0 && (
+                    <Button size="sm" className="mt-4 text-xs gap-1" onClick={() => setAutoClusterOpen(true)}>
+                      <Sparkles className="w-3 h-3" /> 立即聚类
+                    </Button>
+                  )}
+                </div>
+              );
+            }
+
+            return filtered.map(event => {
               const posts = getEventPosts(event.id);
               const isExpanded = expandedEventId === event.id;
+              const importanceColors = {
+                high: "border-destructive/40 bg-destructive/5",
+                medium: "border-amber-500/30 bg-amber-500/5",
+                low: "border-border",
+              };
+              const importanceBadge = {
+                high: <Badge className="bg-destructive/10 text-destructive border-0 text-[10px] gap-0.5"><Flame className="w-2.5 h-2.5" />高关注</Badge>,
+                medium: <Badge className="bg-amber-500/10 text-amber-600 border-0 text-[10px] gap-0.5"><Eye className="w-2.5 h-2.5" />中等</Badge>,
+                low: <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">低</Badge>,
+              };
               return (
-                <div key={event.id} className="bg-card rounded-lg border border-primary/30 overflow-hidden">
-                  <div
-                    className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                    onClick={() => setExpandedEventId(isExpanded ? null : event.id)}
-                  >
+                <div key={event.id} className={`bg-card rounded-lg border overflow-hidden ${importanceColors[event.importance || "low"]}`}>
+                  <div className="p-4 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setExpandedEventId(isExpanded ? null : event.id)}>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <Badge className="bg-primary/10 text-primary border-0 text-xs">事件</Badge>
+                      <div className="flex items-center gap-2">
+                        {importanceBadge[event.importance || "low"]}
+                        <Badge className="bg-primary/10 text-primary border-0 text-[10px]">事件</Badge>
                         <h3 className="text-sm font-medium text-foreground">{event.title}</h3>
-                        <span className="text-[11px] text-muted-foreground">包含 {posts.length} 条舆情</span>
+                        <span className="text-[11px] text-muted-foreground">({posts.length}条)</span>
+                        {event.trendDirection === "up" && <TrendingUp className="w-3.5 h-3.5 text-destructive" />}
+                        {event.clusterMethod && <Badge variant="outline" className="text-[10px] px-1.5 py-0">{event.clusterMethod}</Badge>}
                       </div>
                       <div className="flex items-center gap-2">
                         <Button size="sm" variant="ghost" className="h-6 text-[11px] text-destructive" onClick={(e) => { e.stopPropagation(); handleUnmerge(event.id); }}>
@@ -449,10 +599,11 @@ export default function SentimentDetail() {
                       </div>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1.5">{event.summary}</p>
-                    <div className="flex gap-3 mt-2 text-[11px] text-muted-foreground">
-                      <span>涉及平台: {[...new Set(posts.map(p => p.platform))].join("、")}</span>
-                      <span>总评论: {posts.reduce((s, p) => s + p.comments, 0)}</span>
-                      <span>创建时间: {event.createdAt}</span>
+                    <div className="flex gap-4 mt-2 text-[11px] text-muted-foreground">
+                      <span>平台: {(event.keyPlatforms || [...new Set(posts.map(p => p.platform))]).join("、")}</span>
+                      <span>互动量: {event.totalInteractions || posts.reduce((s, p) => s + p.comments + p.likes + p.shares, 0)}</span>
+                      <span>评论: {posts.reduce((s, p) => s + p.comments, 0)}</span>
+                      <span>创建: {event.createdAt}</span>
                     </div>
                   </div>
                   {isExpanded && (
@@ -465,7 +616,7 @@ export default function SentimentDetail() {
                             <TableHead className="text-xs">发布者</TableHead>
                             <TableHead className="text-xs">发布时间</TableHead>
                             <TableHead className="text-xs">情感</TableHead>
-                            <TableHead className="text-xs">评论</TableHead>
+                            <TableHead className="text-xs">互动量</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -476,7 +627,7 @@ export default function SentimentDetail() {
                               <TableCell className="text-xs">{post.author}</TableCell>
                               <TableCell className="text-xs">{post.publishTime}</TableCell>
                               <TableCell><Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{post.sentiment}</Badge></TableCell>
-                              <TableCell className="text-xs">{post.comments}</TableCell>
+                              <TableCell className="text-xs">{post.comments + post.likes + post.shares}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -485,8 +636,8 @@ export default function SentimentDetail() {
                   )}
                 </div>
               );
-            })
-          )}
+            });
+          })()}
         </div>
       )}
 
