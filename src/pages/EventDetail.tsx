@@ -92,6 +92,7 @@ export default function EventDetail() {
   const [handleTargetType, setHandleTargetType] = useState<"event" | "post">("event");
   const [handleTargetId, setHandleTargetId] = useState<number | null>(null);
   const [handleAction, setHandleAction] = useState<HandleAction>("silent");
+  const [handleStep, setHandleStep] = useState(1);
   const [handleAssignee, setHandleAssignee] = useState("");
   const [handleComplaintNo, setHandleComplaintNo] = useState("");
   const [handleEscalateRole, setHandleEscalateRole] = useState("cs_supervisor");
@@ -130,6 +131,11 @@ export default function EventDetail() {
     setHandleEscalateRole("cs_supervisor");
     setHandleEscalateTarget("");
     setHandleRemark("");
+    const status = type === "event" ? event.handleStatus : (event.posts.find(p => p.id === postId)?.handleStatus || "pending");
+    if (status === "closed" || status === "silent") setHandleStep(0);
+    else if (status === "dispatched") setHandleStep(2);
+    else if (status === "escalated") setHandleStep(4);
+    else setHandleStep(1);
     setHandleDialogOpen(true);
   };
 
@@ -142,25 +148,29 @@ export default function EventDetail() {
     return "pending";
   };
 
-  const confirmHandle = () => {
-    if (handleAction === "add_remark" && !handleRemark.trim()) {
-      toast({ title: "请输入备注内容", variant: "destructive" });
-      return;
+  const confirmWithAction = (action: HandleAction) => {
+    if (action === "dispatch" && !handleAssignee) {
+      toast({ title: "请选择客服", variant: "destructive" }); return;
+    }
+    if (action === "escalate" && !handleEscalateTarget) {
+      toast({ title: "请指定处理人", variant: "destructive" }); return;
+    }
+    if (action === "add_remark" && !handleRemark.trim()) {
+      toast({ title: "请输入处理说明", variant: "destructive" }); return;
     }
     const record: HandleRecord = {
       id: `rec-${Date.now()}`,
-      action: handleAction,
-      operator: handleAction === "add_remark" && handleAssignee ? handleAssignee : "当前用户",
+      action,
+      operator: (action === "add_remark" && handleAssignee) ? handleAssignee : "当前用户",
       time: new Date().toLocaleString("zh-CN"),
-      assignee: handleAction === "dispatch" ? handleAssignee : undefined,
-      complaintNo: handleAction === "dispatch" ? handleComplaintNo : undefined,
-      escalateTarget: handleAction === "escalate" ? handleEscalateTarget : undefined,
-      escalateRole: handleAction === "escalate" ? ESCALATE_ROLES.find(r => r.value === handleEscalateRole)?.label : undefined,
+      assignee: action === "dispatch" ? handleAssignee : undefined,
+      complaintNo: action === "dispatch" ? handleComplaintNo : undefined,
+      escalateTarget: action === "escalate" ? handleEscalateTarget : undefined,
+      escalateRole: action === "escalate" ? ESCALATE_ROLES.find(r => r.value === handleEscalateRole)?.label : undefined,
       remark: handleRemark || undefined,
     };
-    const keepStatus = handleAction === "add_remark";
-    const newStatus = keepStatus ? undefined : actionToStatus(handleAction);
-
+    const keepStatus = action === "add_remark";
+    const newStatus = keepStatus ? undefined : actionToStatus(action);
     if (handleTargetType === "event") {
       setEvent(prev => ({ ...prev, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...prev.handleRecords, record] }));
     } else {
@@ -173,27 +183,6 @@ export default function EventDetail() {
     }
     setHandleDialogOpen(false);
     toast({ title: "处理成功" });
-  };
-
-  const handleReopen = (type: "event" | "post", postId?: number) => {
-    const record: HandleRecord = {
-      id: `rec-${Date.now()}`,
-      action: "reopen",
-      operator: "当前用户",
-      time: new Date().toLocaleString("zh-CN"),
-      remark: "重新打开处理",
-    };
-    if (type === "event") {
-      setEvent(prev => ({ ...prev, handleStatus: "pending" as HandleStatus, handleRecords: [...prev.handleRecords, record] }));
-    } else {
-      setEvent(prev => ({
-        ...prev,
-        posts: prev.posts.map(p =>
-          p.id === postId ? { ...p, handleStatus: "pending" as HandleStatus, handleRecords: [...p.handleRecords, record] } : p
-        ),
-      }));
-    }
-    toast({ title: "已重新打开" });
   };
 
   const handleCloseItem = (type: "event" | "post", postId?: number) => {
@@ -460,93 +449,192 @@ export default function EventDetail() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-primary" /> {handleTargetType === "event" ? "事件处置" : "文章处置"}
+              <ClipboardList className="w-4 h-4 text-primary" />
+              {handleStep === 0 ? "重新打开" : handleStep === 4 ? "处理说明" : handleTargetType === "event" ? "事件处置" : "文章处置"}
             </DialogTitle>
           </DialogHeader>
-          {(() => {
-            const currentStatus = getTargetStatus();
-            const isClosed = currentStatus === "closed";
-            const isPending = currentStatus === "pending";
-            const allActions: { value: HandleAction; label: string; icon: typeof XCircle; desc: string; show: boolean }[] = [
-              { value: "silent", label: "静默", icon: XCircle, desc: "无需人工处理", show: !isClosed },
-              { value: "dispatch", label: "分派客服", icon: ClipboardList, desc: "分派给客服跟进", show: !isClosed },
-              { value: "escalate", label: "升级处理", icon: ArrowUpRight, desc: "升级到上级指定人", show: !isClosed },
-              { value: "close", label: "完结", icon: CheckCircle2, desc: "标记为已完结", show: !isClosed && !isPending },
-              { value: "reopen", label: "重新打开", icon: History, desc: "重新打开处理流程", show: isClosed },
-              { value: "add_remark", label: "追加备注", icon: MessageSquarePlus, desc: "补充处理说明", show: true },
-            ];
-            const visibleActions = allActions.filter(a => a.show);
-            const cols = visibleActions.length <= 3 ? 3 : visibleActions.length <= 4 ? 2 : 3;
-            return (
-              <div className="space-y-4 py-2">
+
+          {/* Step bar */}
+          {handleStep >= 1 && handleStep <= 3 && (
+            <div className="flex items-center gap-2">
+              <div className={`flex items-center gap-1.5 ${1 <= handleStep ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${1 <= handleStep ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>1</div>
+                <span className="text-xs font-medium">处置类型</span>
+              </div>
+              <div className={`h-px flex-1 ${2 <= handleStep ? "bg-primary" : "bg-border"}`} />
+              <div className={`flex items-center gap-1.5 ${2 <= handleStep ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${2 <= handleStep ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>2</div>
+                <span className="text-xs font-medium">客服处理</span>
+              </div>
+              <div className={`h-px flex-1 ${3 <= handleStep ? "bg-primary" : "bg-border"}`} />
+              <div className={`flex items-center gap-1.5 ${3 <= handleStep ? "text-primary" : "text-muted-foreground"}`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${3 <= handleStep ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>3</div>
+                <span className="text-xs font-medium">升级处理</span>
+              </div>
+            </div>
+          )}
+
+          {/* Step 0: Reopen */}
+          {handleStep === 0 && (
+            <div className="space-y-4 py-2">
+              <div className="bg-muted/30 rounded-lg p-6 text-center space-y-2">
+                <History className="w-8 h-8 mx-auto text-muted-foreground" />
+                <p className="text-sm text-foreground">当前状态：<span className="font-semibold">{HANDLE_STATUS_MAP[getTargetStatus()].label}</span></p>
+                <p className="text-xs text-muted-foreground">重新打开后将恢复为「待处理」状态，可重新进入处置流程</p>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">备注（可选）</label>
+                <textarea className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none" rows={2} value={handleRemark} onChange={e => setHandleRemark(e.target.value)} placeholder="说明重新打开的原因..." />
+              </div>
+            </div>
+          )}
+
+          {/* Step 1: 处置类型 */}
+          {handleStep === 1 && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${handleAction === "silent" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/50 hover:bg-muted/20"}`}
+                  onClick={() => setHandleAction("silent")}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <XCircle className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium text-foreground">无需处理</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">标记为静默，不做人工介入</p>
+                </div>
+                <div
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${handleAction === "dispatch" ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/50 hover:bg-muted/20"}`}
+                  onClick={() => setHandleAction("dispatch")}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <ClipboardList className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">需要处理</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">分派客服跟进处理</p>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">备注（可选）</label>
+                <textarea className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none" rows={2} value={handleRemark} onChange={e => setHandleRemark(e.target.value)} placeholder="可选填备注..." />
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: 客服处理 */}
+          {handleStep === 2 && (
+            <div className="space-y-4 py-2">
+              <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-medium text-foreground mb-2 block">处置方式</label>
-                  <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
-                    {visibleActions.map(opt => (
-                      <label key={opt.value} className={`p-3 rounded-lg border cursor-pointer transition-colors ${handleAction === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"}`}>
-                        <input type="radio" className="sr-only" checked={handleAction === opt.value} onChange={() => setHandleAction(opt.value)} />
-                        <div className="flex items-center gap-1.5">
-                          <opt.icon className="w-3.5 h-3.5" />
-                          <span className="text-xs font-medium text-foreground">{opt.label}</span>
-                        </div>
-                        <div className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</div>
+                  <label className="text-xs font-medium text-foreground">分派给 <span className="text-destructive">*</span></label>
+                  <select className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleAssignee} onChange={e => setHandleAssignee(e.target.value)}>
+                    <option value="">请选择客服</option>
+                    {CS_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-foreground">投诉单号 <span className="text-muted-foreground font-normal">（可选）</span></label>
+                  <input className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleComplaintNo} onChange={e => setHandleComplaintNo(e.target.value)} placeholder="如有投诉单号请输入" />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">备注（可选）</label>
+                  <textarea className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none" rows={2} value={handleRemark} onChange={e => setHandleRemark(e.target.value)} placeholder="可选填备注..." />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: 升级处理 */}
+          {handleStep === 3 && (
+            <div className="space-y-4 py-2">
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                <ArrowUpRight className="w-4 h-4 shrink-0" />
+                客服无法处理，升级到上级指定负责人
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-foreground">升级角色 <span className="text-destructive">*</span></label>
+                  <div className="flex gap-2 mt-1">
+                    {ESCALATE_ROLES.map(role => (
+                      <label key={role.value} className={`flex-1 p-2.5 rounded-md border text-center text-xs cursor-pointer transition-colors ${handleEscalateRole === role.value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"}`}>
+                        <input type="radio" className="sr-only" checked={handleEscalateRole === role.value} onChange={() => { setHandleEscalateRole(role.value); setHandleEscalateTarget(""); }} />
+                        {role.label}
                       </label>
                     ))}
                   </div>
                 </div>
-                {handleAction === "dispatch" && (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs text-muted-foreground">分派给</label>
-                      <select className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleAssignee} onChange={e => setHandleAssignee(e.target.value)}>
-                        <option value="">请选择客服</option>
-                        {CS_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">投诉单号（可选）</label>
-                      <input className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleComplaintNo} onChange={e => setHandleComplaintNo(e.target.value)} placeholder="如有投诉单号请输入" />
-                    </div>
-                  </div>
-                )}
-                {handleAction === "escalate" && (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="text-xs text-muted-foreground">升级角色</label>
-                      <div className="flex gap-2 mt-1">
-                        {ESCALATE_ROLES.map(role => (
-                          <label key={role.value} className={`flex-1 p-2 rounded-md border text-center text-xs cursor-pointer transition-colors ${handleEscalateRole === role.value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"}`}>
-                            <input type="radio" className="sr-only" checked={handleEscalateRole === role.value} onChange={() => { setHandleEscalateRole(role.value); setHandleEscalateTarget(""); }} />
-                            {role.label}
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">指定处理人</label>
-                      <select className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleEscalateTarget} onChange={e => setHandleEscalateTarget(e.target.value)}>
-                        <option value="">请选择处理人</option>
-                        {(ESCALATE_PERSONS[handleEscalateRole] || []).map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                )}
-                {handleAction === "add_remark" && (
-                  <div>
-                    <label className="text-xs text-muted-foreground">操作人</label>
-                    <input className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleAssignee} onChange={e => setHandleAssignee(e.target.value)} placeholder="请输入姓名或工号（留空则默认当前用户）" />
-                  </div>
-                )}
                 <div>
-                  <label className="text-xs text-muted-foreground">{handleAction === "add_remark" ? "备注内容 *" : "备注"}</label>
-                  <textarea className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none" rows={handleAction === "add_remark" ? 4 : 2} value={handleRemark} onChange={e => setHandleRemark(e.target.value)} placeholder={handleAction === "add_remark" ? "请输入处理进展、反馈结果或补充说明..." : "可选填备注..."} />
+                  <label className="text-xs font-medium text-foreground">指定处理人 <span className="text-destructive">*</span></label>
+                  <select className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleEscalateTarget} onChange={e => setHandleEscalateTarget(e.target.value)}>
+                    <option value="">请选择处理人</option>
+                    {(ESCALATE_PERSONS[handleEscalateRole] || []).map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">备注（可选）</label>
+                  <textarea className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none" rows={2} value={handleRemark} onChange={e => setHandleRemark(e.target.value)} placeholder="说明升级原因..." />
                 </div>
               </div>
-            );
-          })()}
+            </div>
+          )}
+
+          {/* Step 4: 被升级人处理说明 */}
+          {handleStep === 4 && (
+            <div className="space-y-4 py-2">
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-foreground flex items-center gap-2">
+                <User className="w-4 h-4 text-primary shrink-0" />
+                <span>当前事件/文章已升级，请填写处理说明</span>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-foreground">操作人</label>
+                <input className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground" value={handleAssignee} onChange={e => setHandleAssignee(e.target.value)} placeholder="请输入姓名或工号" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-foreground">处理说明 <span className="text-destructive">*</span></label>
+                <textarea className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none" rows={4} value={handleRemark} onChange={e => setHandleRemark(e.target.value)} placeholder="请输入处理进展、反馈结果或补充说明..." />
+              </div>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
-            <Button onClick={confirmHandle}>确认处置</Button>
+            {handleStep === 0 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
+                <Button onClick={() => confirmWithAction("reopen")}>确认重新打开</Button>
+              </>
+            )}
+            {handleStep === 1 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
+                {handleAction === "dispatch" ? (
+                  <Button onClick={() => setHandleStep(2)}>下一步 →</Button>
+                ) : (
+                  <Button onClick={() => confirmWithAction("silent")}>确认静默</Button>
+                )}
+              </>
+            )}
+            {handleStep === 2 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleStep(1)}>← 上一步</Button>
+                <Button variant="outline" className="gap-1 text-amber-600 border-amber-500/30 hover:bg-amber-500/10" onClick={() => setHandleStep(3)}>
+                  <ArrowUpRight className="w-3 h-3" /> 处理不了，升级
+                </Button>
+                <Button onClick={() => confirmWithAction("dispatch")}>确认分派客服</Button>
+              </>
+            )}
+            {handleStep === 3 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleStep(2)}>← 上一步</Button>
+                <Button onClick={() => confirmWithAction("escalate")}>确认升级</Button>
+              </>
+            )}
+            {handleStep === 4 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
+                <Button variant="outline" onClick={() => confirmWithAction("close")}>完结</Button>
+                <Button onClick={() => confirmWithAction("add_remark")}>提交处理说明</Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
