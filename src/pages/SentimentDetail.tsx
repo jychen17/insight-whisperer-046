@@ -1027,24 +1027,8 @@ export default function SentimentDetail() {
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          {(event.handleStatus === "closed") ? (
-                            <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); handleReopen("event", event.id); }}>
-                              <History className="w-3 h-3" /> 重新打开
-                            </Button>
-                          ) : (
-                            <>
-                              <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openHandleDialog("event", event.id); }}>
-                                <ClipboardList className="w-3 h-3" /> 处置
-                              </Button>
-                              {(event.handleStatus !== "pending") && (
-                                <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); handleClose("event", event.id); }}>
-                                  <CheckCircle2 className="w-3 h-3" /> 完结
-                                </Button>
-                              )}
-                            </>
-                          )}
-                          <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openRemarkDialog("event", event.id); }}>
-                            <MessageSquarePlus className="w-3 h-3" /> 追加备注
+                          <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openHandleDialog("event", event.id); }}>
+                            <ClipboardList className="w-3 h-3" /> 处置
                           </Button>
                           <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); navigate(`/sentiment/event-detail?id=${event.id}`); }}>
                             <ExternalLink className="w-3 h-3" /> 详情
