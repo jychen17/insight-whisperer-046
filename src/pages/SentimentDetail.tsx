@@ -351,7 +351,7 @@ export default function SentimentDetail() {
   const createRecord = (): HandleRecord => ({
     id: `rec-${Date.now()}`,
     action: handleAction,
-    operator: "当前用户",
+    operator: handleAction === "add_remark" && handleAssignee ? handleAssignee : "当前用户",
     time: new Date().toLocaleString("zh-CN"),
     assignee: handleAction === "dispatch" ? handleAssignee : undefined,
     complaintNo: handleAction === "dispatch" ? handleComplaintNo : undefined,
