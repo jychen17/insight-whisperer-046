@@ -212,6 +212,12 @@ export default function SentimentDetail() {
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
   const [batchHandleDialogOpen, setBatchHandleDialogOpen] = useState(false);
   const [batchHandleType, setBatchHandleType] = useState<"event" | "article">("article");
+  // Remark dialog states
+  const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
+  const [remarkDialogType, setRemarkDialogType] = useState<"event" | "article">("article");
+  const [remarkTargetId, setRemarkTargetId] = useState<string | number | null>(null);
+  const [remarkOperator, setRemarkOperator] = useState("");
+  const [remarkText, setRemarkText] = useState("");
   // Handle filter for events
   const [eventFilterHandleStatus, setEventFilterHandleStatus] = useState<"all" | HandleStatus>("all");
 
@@ -362,6 +368,7 @@ export default function SentimentDetail() {
     if (action === "escalate") return "升级处理";
     if (action === "close") return "完结";
     if (action === "reopen") return "重新打开";
+    if (action === "add_remark") return "追加备注";
     return "";
   };
 
