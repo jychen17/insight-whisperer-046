@@ -1450,7 +1450,7 @@ export default function SentimentDetail() {
               <ClipboardList className="w-4 h-4 text-primary" /> 批量处置（{batchHandleType === "event" ? `${selectedEventIds.length} 个事件` : `${selectedIds.length} 条文章`}）
             </DialogTitle>
           </DialogHeader>
-          {renderHandleForm()}
+          {renderHandleForm(true)}
           <DialogFooter>
             <Button variant="outline" onClick={() => setBatchHandleDialogOpen(false)}>取消</Button>
             <Button onClick={confirmBatchHandle}>确认批量处置</Button>
