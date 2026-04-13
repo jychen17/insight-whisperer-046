@@ -634,6 +634,106 @@ export default function SentimentDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Auto Cluster Dialog */}
+      <Dialog open={autoClusterOpen} onOpenChange={v => { if (!isClustering) setAutoClusterOpen(v); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> 自动聚类合并
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5 py-2">
+            <div>
+              <label className="text-xs font-medium text-foreground mb-2 block">聚类方式</label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { value: "text_similarity" as const, label: "文本相似度", desc: "基于标题和正文语义相似度聚类" },
+                  { value: "same_content" as const, label: "内容相同", desc: "标题或正文完全匹配的内容归并" },
+                ]).map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                      clusterMethod === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"
+                    }`}
+                  >
+                    <input type="radio" className="sr-only" checked={clusterMethod === opt.value} onChange={() => setClusterMethod(opt.value)} />
+                    <div className="text-xs font-medium text-foreground">{opt.label}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</div>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-foreground mb-2 flex items-center gap-1">
+                <Clock className="w-3 h-3" /> 时间窗口
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[6, 12, 24, 48, 72].map(h => (
+                  <button
+                    key={h}
+                    onClick={() => setClusterTimeWindow(h)}
+                    className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                      clusterTimeWindow === h ? "border-primary bg-primary/10 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"
+                    }`}
+                  >{h}小时</button>
+                ))}
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={1}
+                    max={720}
+                    value={clusterTimeWindow}
+                    onChange={e => setClusterTimeWindow(Number(e.target.value) || 24)}
+                    className="w-16 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                  />
+                  <span className="text-xs text-muted-foreground">h</span>
+                </div>
+              </div>
+            </div>
+            {clusterMethod === "text_similarity" && (
+              <div>
+                <label className="text-xs font-medium text-foreground mb-2 block">
+                  相似度阈值: <span className="text-primary">{(clusterSimilarity * 100).toFixed(0)}%</span>
+                </label>
+                <input
+                  type="range"
+                  min={0.3}
+                  max={1}
+                  step={0.05}
+                  value={clusterSimilarity}
+                  onChange={e => setClusterSimilarity(Number(e.target.value))}
+                  className="w-full accent-primary"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
+                  <span>宽松 (30%)</span>
+                  <span>严格 (100%)</span>
+                </div>
+              </div>
+            )}
+            <div className="bg-muted/30 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+              <div>待处理舆情: <span className="text-foreground font-medium">{items.filter(i => !i.isNoise && !i.mergedEventId).length}</span> 条</div>
+              <div>聚类方式: <span className="text-foreground">{clusterMethod === "text_similarity" ? "文本相似度" : "内容相同"}</span></div>
+              <div>时间窗口: <span className="text-foreground">{clusterTimeWindow} 小时内</span></div>
+            </div>
+            {isClustering && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">正在聚类分析...</span>
+                  <span className="text-primary font-medium">{clusterProgress}%</span>
+                </div>
+                <Progress value={clusterProgress} className="h-1.5" />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAutoClusterOpen(false)} disabled={isClustering}>取消</Button>
+            <Button onClick={runAutoCluster} disabled={isClustering}>
+              {isClustering ? "聚类中..." : "开始聚类"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
