@@ -30,7 +30,7 @@ interface PushChannel {
 }
 
 type TriggerDimension = "single" | "event";
-type PushTiming = "realtime" | "scheduled" | "incremental";
+type PushTiming = "realtime" | "scheduled";
 type ConditionLogic = "none" | "any" | "all";
 
 interface AlertRule {
