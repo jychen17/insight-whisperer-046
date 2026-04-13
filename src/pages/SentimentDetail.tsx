@@ -239,17 +239,25 @@ export default function SentimentDetail() {
 
       const newEvents: MergedEvent[] = [];
       const updatedItems = [...items];
+      const methodLabel = clusterMethod === "text_similarity" ? "文本相似度" : clusterMethod === "title_same" ? "标题相同" : "正文相同";
 
       Object.entries(groups).forEach(([key, ids]) => {
         if (ids.length < 2) return;
         const eventId = `auto-${Date.now()}-${key}`;
         const posts = updatedItems.filter(i => ids.includes(i.id));
+        const totalInteractions = posts.reduce((s, p) => s + p.comments + p.likes + p.shares, 0);
+        const importance: "high" | "medium" | "low" = totalInteractions > 50 ? "high" : totalInteractions > 10 ? "medium" : "low";
         newEvents.push({
           id: eventId,
           title: `${key} - 自动聚类事件`,
           postIds: ids,
           createdAt: new Date().toLocaleString("zh-CN"),
-          summary: `通过${clusterMethod === "text_similarity" ? "文本相似度" : "内容相同"}在${clusterTimeWindow}h内自动聚类，合并了 ${ids.length} 条舆情，涉及平台: ${[...new Set(posts.map(i => i.platform))].join("、")}`,
+          summary: `通过${methodLabel}在${clusterTimeWindow}h内自动聚类，合并了 ${ids.length} 条舆情，涉及平台: ${[...new Set(posts.map(i => i.platform))].join("、")}`,
+          clusterMethod: methodLabel,
+          importance,
+          trendDirection: posts.some(p => p.speed === "高") ? "up" : "stable",
+          totalInteractions,
+          keyPlatforms: [...new Set(posts.map(i => i.platform))],
         });
         ids.forEach(id => {
           const idx = updatedItems.findIndex(i => i.id === id);
