@@ -54,6 +54,11 @@ interface MergedEvent {
   postIds: number[];
   createdAt: string;
   summary: string;
+  clusterMethod?: string;
+  importance?: "high" | "medium" | "low";
+  trendDirection?: "up" | "down" | "stable";
+  totalInteractions?: number;
+  keyPlatforms?: string[];
 }
 
 const initialItems: SentimentItem[] = [
