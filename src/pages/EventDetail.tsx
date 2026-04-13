@@ -264,24 +264,8 @@ export default function EventDetail() {
           {renderStatusBadge(event.handleStatus)}
         </div>
         <div className="flex items-center gap-2">
-          {event.handleStatus === "closed" ? (
-            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => handleReopen("event")}>
-              <History className="w-3 h-3" /> 重新打开
-            </Button>
-          ) : (
-            <>
-              <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openHandle("event")}>
-                <ClipboardList className="w-3 h-3" /> 处置事件
-              </Button>
-              {event.handleStatus !== "pending" && (
-                <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => handleCloseItem("event")}>
-                  <CheckCircle2 className="w-3 h-3" /> 完结
-                </Button>
-              )}
-            </>
-          )}
-          <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openRemarkDialog("event")}>
-            <MessageSquarePlus className="w-3 h-3" /> 追加备注
+          <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openHandle("event")}>
+            <ClipboardList className="w-3 h-3" /> 处置事件
           </Button>
           <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => navigate(`/sentiment/event-alert?eventId=${eventId}`)}>
             <Bell className="w-3 h-3" /> 设置预警
@@ -426,26 +410,8 @@ export default function EventDetail() {
                   <TableCell className="text-xs">{post.comments}</TableCell>
                   <TableCell className="text-xs">{post.likes}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-1">
-                      {post.handleStatus === "closed" ? (
-                        <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => handleReopen("post", post.id)}>
-                          <History className="w-3 h-3" /> 重新打开
-                        </Button>
-                      ) : (
-                        <>
-                          <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandle("post", post.id)}>
-                            <ClipboardList className="w-3 h-3" /> 处置
-                          </Button>
-                          {post.handleStatus !== "pending" && (
-                            <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => handleCloseItem("post", post.id)}>
-                              <CheckCircle2 className="w-3 h-3" /> 完结
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openRemarkDialog("post", post.id)}>
-                      <MessageSquarePlus className="w-3 h-3" /> 备注
+                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandle("post", post.id)}>
+                      <ClipboardList className="w-3 h-3" /> 处置
                     </Button>
                   </TableCell>
                 </TableRow>
