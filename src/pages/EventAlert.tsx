@@ -207,6 +207,8 @@ export default function EventAlert() {
     conditions: [{ field: "event_risk", operator: "=", value: "重大" }],
     pushTiming: "realtime",
     scheduledInterval: "day",
+    scheduledTimeStart: "08:00",
+    scheduledTimeEnd: "20:00",
     channels: [{ type: "wechat", personal: true, group: false, personalTargets: [], groupWebhook: "" }],
     eventScope: eventId ? "current" : "all",
   });
