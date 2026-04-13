@@ -402,6 +402,7 @@ export default function EventAlert() {
                         <span className="text-muted-foreground">推送时机</span>
                         <p className="text-foreground mt-0.5 flex items-center gap-1">{timingIcons[rule.pushTiming]} {timingLabels[rule.pushTiming]}
                           {rule.pushTiming === "scheduled" && rule.scheduledInterval && <span className="text-muted-foreground ml-1">({rule.scheduledInterval === "hour" ? "每小时" : rule.scheduledInterval === "day" ? "每天" : "每周"})</span>}
+                          {rule.scheduledTimeStart && rule.scheduledTimeEnd && <span className="text-muted-foreground ml-1">| 推送时段 {rule.scheduledTimeStart}-{rule.scheduledTimeEnd}</span>}
                         </p>
                       </div>
                     </div>
