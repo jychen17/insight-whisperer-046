@@ -232,7 +232,7 @@ export default function SentimentDetail() {
       // Mock: group by issueType within time window as a simulation
       const groups: Record<string, number[]> = {};
       availableItems.forEach(item => {
-        const key = clusterMethod === "same_content" ? item.issueType : item.issueType;
+        const key = clusterMethod === "content_same" ? item.issueType : clusterMethod === "title_same" ? item.issueType : item.issueType;
         if (!groups[key]) groups[key] = [];
         groups[key].push(item.id);
       });
