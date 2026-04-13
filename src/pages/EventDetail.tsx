@@ -143,10 +143,14 @@ export default function EventDetail() {
   };
 
   const confirmHandle = () => {
+    if (handleAction === "add_remark" && !handleRemark.trim()) {
+      toast({ title: "请输入备注内容", variant: "destructive" });
+      return;
+    }
     const record: HandleRecord = {
       id: `rec-${Date.now()}`,
       action: handleAction,
-      operator: "当前用户",
+      operator: handleAction === "add_remark" && handleAssignee ? handleAssignee : "当前用户",
       time: new Date().toLocaleString("zh-CN"),
       assignee: handleAction === "dispatch" ? handleAssignee : undefined,
       complaintNo: handleAction === "dispatch" ? handleComplaintNo : undefined,
@@ -154,15 +158,16 @@ export default function EventDetail() {
       escalateRole: handleAction === "escalate" ? ESCALATE_ROLES.find(r => r.value === handleEscalateRole)?.label : undefined,
       remark: handleRemark || undefined,
     };
-    const newStatus = actionToStatus(handleAction);
+    const keepStatus = handleAction === "add_remark";
+    const newStatus = keepStatus ? undefined : actionToStatus(handleAction);
 
     if (handleTargetType === "event") {
-      setEvent(prev => ({ ...prev, handleStatus: newStatus, handleRecords: [...prev.handleRecords, record] }));
+      setEvent(prev => ({ ...prev, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...prev.handleRecords, record] }));
     } else {
       setEvent(prev => ({
         ...prev,
         posts: prev.posts.map(p =>
-          p.id === handleTargetId ? { ...p, handleStatus: newStatus, handleRecords: [...p.handleRecords, record] } : p
+          p.id === handleTargetId ? { ...p, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...p.handleRecords, record] } : p
         ),
       }));
     }
