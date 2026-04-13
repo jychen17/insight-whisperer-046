@@ -109,6 +109,7 @@ const initialItems: SentimentItem[] = [
 ];
 
 export default function SentimentDetail() {
+  const [mainTab, setMainTab] = useState<"sentiment" | "all" | "events">("sentiment");
   const [viewMode, setViewMode] = useState<"card" | "list">("card");
   const [items, setItems] = useState<SentimentItem[]>(initialItems);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
