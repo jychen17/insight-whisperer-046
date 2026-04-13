@@ -399,8 +399,8 @@ export default function SentimentDetail() {
         </div>
       )}
 
-      {/* Cards / List */}
-      {displayItems.unmerged.length === 0 && showNoiseFilter === "noise" && items.filter(i => i.isNoise).length === 0 ? (
+      {/* Cards / List - show on sentiment/all tabs */}
+      {mainTab !== "events" && (displayItems.unmerged.length === 0 && showNoiseFilter === "noise" && items.filter(i => i.isNoise).length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">暂无噪音帖</div>
       ) : displayItems.unmerged.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">暂无数据</div>
