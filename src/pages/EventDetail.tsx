@@ -3,11 +3,37 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   ArrowLeft, Flame, Eye, Globe, ThumbsUp, MessageCircle, Share2, Bookmark,
-  TrendingUp, TrendingDown, Clock, BarChart3, AlertTriangle, Bell
+  Clock, BarChart3, Bell, ClipboardList, XCircle, ArrowUpRight, History, User, ExternalLink
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import type { HandleAction, HandleRecord, HandleStatus } from "./SentimentDetail";
+
+const HANDLE_STATUS_MAP: Record<HandleStatus, { label: string; color: string }> = {
+  pending: { label: "待处理", color: "bg-amber-500/10 text-amber-600" },
+  ignored: { label: "已忽略", color: "bg-muted text-muted-foreground" },
+  processing: { label: "处理中", color: "bg-primary/10 text-primary" },
+  escalated: { label: "已升级", color: "bg-destructive/10 text-destructive" },
+  closed: { label: "已关闭", color: "bg-emerald-500/10 text-emerald-600" },
+};
+
+interface PostItem {
+  id: number;
+  title: string;
+  platform: string;
+  author: string;
+  publishTime: string;
+  sentiment: string;
+  comments: number;
+  likes: number;
+  shares: number;
+  collects: number;
+  handleStatus: HandleStatus;
+  handleRecords: HandleRecord[];
+}
 
 const mockEvent = {
   id: "evt-1",
@@ -24,11 +50,16 @@ const mockEvent = {
   totalCollects: 2,
   keyPlatforms: ["小红书", "黑猫投诉APP", "抖音"],
   summary: "多条舆情涉及OTA平台机票退改及价格问题，用户情绪较为激烈，已引发社交媒体广泛讨论。",
+  handleStatus: "processing" as HandleStatus,
+  handleRecords: [
+    { id: "rec-1", action: "complaint" as HandleAction, operator: "张三", time: "2026-03-30 09:15:00", complaintNo: "CMP-20260330-001", remark: "已录入投诉系统" },
+    { id: "rec-2", action: "escalate" as HandleAction, operator: "李四", time: "2026-03-30 10:30:00", escalateTarget: "公关部", remark: "事件影响面较大，升级处理" },
+  ] as HandleRecord[],
   posts: [
-    { id: 1, title: "骂机票 ✈", platform: "小红书", author: "蔡尔朗朗朗", publishTime: "2026-03-29 21:33:04", sentiment: "负向情感-客户投诉", comments: 53, likes: 0, shares: 0, collects: 0 },
-    { id: 2, title: "同程旅行隐瞒机票全损规则，2232元仅退83元", platform: "黑猫投诉APP", author: "匿名", publishTime: "2026-03-29 21:34:41", sentiment: "负向情感-客户投诉", comments: 0, likes: 0, shares: 0, collects: 0 },
-    { id: 3, title: "避雷❌长沙雅致酒店（IFS国金中心旗舰店）", platform: "小红书", author: "舒马曦", publishTime: "2026-03-29 16:32:49", sentiment: "负向情感-客户投诉", comments: 2, likes: 0, shares: 0, collects: 0 },
-  ],
+    { id: 1, title: "骂机票 ✈", platform: "小红书", author: "蔡尔朗朗朗", publishTime: "2026-03-29 21:33:04", sentiment: "负向情感-客户投诉", comments: 53, likes: 0, shares: 0, collects: 0, handleStatus: "processing" as HandleStatus, handleRecords: [{ id: "r1", action: "complaint" as HandleAction, operator: "张三", time: "2026-03-30 09:20:00", complaintNo: "CMP-20260330-002" }] },
+    { id: 2, title: "同程旅行隐瞒机票全损规则，2232元仅退83元", platform: "黑猫投诉APP", author: "匿名", publishTime: "2026-03-29 21:34:41", sentiment: "负向情感-客户投诉", comments: 0, likes: 0, shares: 0, collects: 0, handleStatus: "pending" as HandleStatus, handleRecords: [] },
+    { id: 3, title: "避雷❌长沙雅致酒店（IFS国金中心旗舰店）", platform: "小红书", author: "舒马曦", publishTime: "2026-03-29 16:32:49", sentiment: "负向情感-客户投诉", comments: 2, likes: 0, shares: 0, collects: 0, handleStatus: "ignored" as HandleStatus, handleRecords: [{ id: "r2", action: "ignore" as HandleAction, operator: "王五", time: "2026-03-30 08:00:00", remark: "非核心业务" }] },
+  ] as PostItem[],
   timeline: [
     { time: "2026-03-29 16:32", desc: "首条舆情发布于小红书" },
     { time: "2026-03-29 21:33", desc: "第二条舆情发布，评论量迅速上升" },
@@ -42,13 +73,74 @@ export default function EventDetail() {
   const [params] = useSearchParams();
   const eventId = params.get("id") || mockEvent.id;
 
-  const event = mockEvent;
+  const [event, setEvent] = useState(mockEvent);
+  const [handleDialogOpen, setHandleDialogOpen] = useState(false);
+  const [handleTargetType, setHandleTargetType] = useState<"event" | "post">("event");
+  const [handleTargetId, setHandleTargetId] = useState<number | null>(null);
+  const [handleAction, setHandleAction] = useState<HandleAction>("ignore");
+  const [handleComplaintNo, setHandleComplaintNo] = useState("");
+  const [handleEscalateTarget, setHandleEscalateTarget] = useState("公关部");
+  const [handleRemark, setHandleRemark] = useState("");
+
   const importanceBadge = event.importance === "high"
     ? <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs gap-1"><Flame className="w-3 h-3" />重大</Badge>
     : <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs gap-1"><Eye className="w-3 h-3" />一般</Badge>;
 
   const speedLabel: Record<string, string> = { high: "高", medium: "中", low: "低" };
   const speedColor: Record<string, string> = { high: "text-destructive", medium: "text-amber-600", low: "text-muted-foreground" };
+
+  const renderStatusBadge = (status: HandleStatus) => {
+    const info = HANDLE_STATUS_MAP[status];
+    return <Badge className={`${info.color} border-0 text-[10px]`}>{info.label}</Badge>;
+  };
+
+  const openHandle = (type: "event" | "post", postId?: number) => {
+    setHandleTargetType(type);
+    setHandleTargetId(postId || null);
+    setHandleAction("ignore");
+    setHandleComplaintNo("");
+    setHandleEscalateTarget("公关部");
+    setHandleRemark("");
+    setHandleDialogOpen(true);
+  };
+
+  const actionToStatus = (action: HandleAction): HandleStatus => {
+    if (action === "ignore") return "ignored";
+    if (action === "complaint") return "processing";
+    return "escalated";
+  };
+
+  const confirmHandle = () => {
+    const record: HandleRecord = {
+      id: `rec-${Date.now()}`,
+      action: handleAction,
+      operator: "当前用户",
+      time: new Date().toLocaleString("zh-CN"),
+      complaintNo: handleAction === "complaint" ? handleComplaintNo : undefined,
+      escalateTarget: handleAction === "escalate" ? handleEscalateTarget : undefined,
+      remark: handleRemark || undefined,
+    };
+    const newStatus = actionToStatus(handleAction);
+
+    if (handleTargetType === "event") {
+      setEvent(prev => ({ ...prev, handleStatus: newStatus, handleRecords: [...prev.handleRecords, record] }));
+    } else {
+      setEvent(prev => ({
+        ...prev,
+        posts: prev.posts.map(p =>
+          p.id === handleTargetId ? { ...p, handleStatus: newStatus, handleRecords: [...p.handleRecords, record] } : p
+        ),
+      }));
+    }
+    setHandleDialogOpen(false);
+    toast({ title: "处理成功" });
+  };
+
+  const renderActionDesc = (r: HandleRecord) => {
+    if (r.action === "ignore") return "忽略/静默";
+    if (r.action === "complaint") return `录入投诉单号: ${r.complaintNo}`;
+    return `升级到: ${r.escalateTarget}`;
+  };
 
   return (
     <div className="space-y-5">
@@ -60,8 +152,12 @@ export default function EventDetail() {
           </Button>
           <h1 className="text-xl font-semibold text-foreground">事件详情</h1>
           {importanceBadge}
+          {renderStatusBadge(event.handleStatus)}
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openHandle("event")}>
+            <ClipboardList className="w-3 h-3" /> 处置事件
+          </Button>
           <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => navigate(`/sentiment/event-alert?eventId=${eventId}`)}>
             <Bell className="w-3 h-3" /> 设置预警
           </Button>
@@ -144,6 +240,37 @@ export default function EventDetail() {
         </CardContent>
       </Card>
 
+      {/* Event Processing Records */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><History className="w-4 h-4" /> 事件处理记录</CardTitle></CardHeader>
+        <CardContent>
+          {event.handleRecords.length === 0 ? (
+            <p className="text-sm text-muted-foreground">暂无处理记录</p>
+          ) : (
+            <div className="space-y-3">
+              {event.handleRecords.map((r, idx) => (
+                <div key={r.id} className="flex gap-3 items-start">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-2.5 h-2.5 rounded-full ${idx === 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
+                    {idx < event.handleRecords.length - 1 && <div className="w-px h-8 bg-border" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-foreground">{r.operator}</span>
+                      <span className="text-[11px] text-muted-foreground">{r.time}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      操作: <span className="text-foreground">{renderActionDesc(r)}</span>
+                      {r.remark && <span className="ml-2">备注: {r.remark}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Post list */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">事件内文章列表 ({event.posts.length})</CardTitle></CardHeader>
@@ -156,26 +283,136 @@ export default function EventDetail() {
                 <TableHead className="text-xs">发布者</TableHead>
                 <TableHead className="text-xs">发布时间</TableHead>
                 <TableHead className="text-xs">情感</TableHead>
+                <TableHead className="text-xs">处理状态</TableHead>
                 <TableHead className="text-xs">评论</TableHead>
                 <TableHead className="text-xs">点赞</TableHead>
+                <TableHead className="text-xs">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {event.posts.map(post => (
                 <TableRow key={post.id}>
-                  <TableCell className="text-xs font-medium max-w-[300px] truncate">{post.title}</TableCell>
+                  <TableCell className="text-xs font-medium max-w-[250px] truncate">{post.title}</TableCell>
                   <TableCell className="text-xs">{post.platform}</TableCell>
                   <TableCell className="text-xs">{post.author}</TableCell>
                   <TableCell className="text-xs">{post.publishTime}</TableCell>
                   <TableCell><Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{post.sentiment}</Badge></TableCell>
+                  <TableCell>{renderStatusBadge(post.handleStatus)}</TableCell>
                   <TableCell className="text-xs">{post.comments}</TableCell>
                   <TableCell className="text-xs">{post.likes}</TableCell>
+                  <TableCell>
+                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandle("post", post.id)}>
+                      <ClipboardList className="w-3 h-3" /> 处置
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
+      {/* Per-post processing records */}
+      {event.posts.filter(p => p.handleRecords.length > 0).map(post => (
+        <Card key={`records-${post.id}`}>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <History className="w-4 h-4" /> 文章处理记录 - {post.title.slice(0, 20)}{post.title.length > 20 ? "..." : ""}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {post.handleRecords.map(r => (
+                <div key={r.id} className="flex items-center gap-3 text-xs">
+                  <User className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <span className="font-medium text-foreground">{r.operator}</span>
+                  <span className="text-muted-foreground">{r.time}</span>
+                  <span className="text-foreground">{renderActionDesc(r)}</span>
+                  {r.remark && <span className="text-muted-foreground">（{r.remark}）</span>}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      {/* Handle Dialog */}
+      <Dialog open={handleDialogOpen} onOpenChange={setHandleDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="w-4 h-4 text-primary" /> {handleTargetType === "event" ? "事件处置" : "文章处置"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-medium text-foreground mb-2 block">处置方式</label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { value: "ignore" as HandleAction, label: "忽略/静默", icon: XCircle, desc: "无需处理" },
+                  { value: "complaint" as HandleAction, label: "录入投诉单号", icon: ClipboardList, desc: "需要跟进处理" },
+                  { value: "escalate" as HandleAction, label: "升级处理", icon: ArrowUpRight, desc: "升级到公关/业务线" },
+                ]).map(opt => (
+                  <label
+                    key={opt.value}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                      handleAction === opt.value ? "border-primary bg-primary/5" : "border-border hover:bg-muted/30"
+                    }`}
+                  >
+                    <input type="radio" className="sr-only" checked={handleAction === opt.value} onChange={() => setHandleAction(opt.value)} />
+                    <div className="flex items-center gap-1.5">
+                      <opt.icon className="w-3.5 h-3.5" />
+                      <span className="text-xs font-medium text-foreground">{opt.label}</span>
+                    </div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</div>
+                  </label>
+                ))}
+              </div>
+            </div>
+            {handleAction === "complaint" && (
+              <div>
+                <label className="text-xs text-muted-foreground">投诉单号</label>
+                <input
+                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                  value={handleComplaintNo}
+                  onChange={e => setHandleComplaintNo(e.target.value)}
+                  placeholder="请输入投诉单号"
+                />
+              </div>
+            )}
+            {handleAction === "escalate" && (
+              <div>
+                <label className="text-xs text-muted-foreground">升级目标</label>
+                <select
+                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                  value={handleEscalateTarget}
+                  onChange={e => setHandleEscalateTarget(e.target.value)}
+                >
+                  <option>公关部</option>
+                  <option>品牌部</option>
+                  <option>客服中心</option>
+                  <option>法务部</option>
+                  <option>业务线负责人</option>
+                </select>
+              </div>
+            )}
+            <div>
+              <label className="text-xs text-muted-foreground">备注</label>
+              <textarea
+                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
+                rows={2}
+                value={handleRemark}
+                onChange={e => setHandleRemark(e.target.value)}
+                placeholder="可选填备注..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
+            <Button onClick={confirmHandle}>确认处置</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
