@@ -15,6 +15,8 @@ import PlaceholderPage from "@/components/PlaceholderPage";
 import ThemeList from "@/pages/ThemeList";
 import ThemeSettings from "@/pages/ThemeSettings";
 import ThemeDetail from "@/pages/ThemeDetail";
+import EventDetail from "@/pages/EventDetail";
+import EventAlert from "@/pages/EventAlert";
 import NotFound from "./pages/NotFound.tsx";
 import AIChatBot from "@/components/AIChatBot";
 // 数据中心
@@ -45,6 +47,8 @@ const App = () => (
             {/* 洞察主题 - 舆情 */}
             <Route path="/sentiment/overview" element={<SentimentOverview />} />
             <Route path="/sentiment/detail" element={<SentimentDetail />} />
+            <Route path="/sentiment/event-detail" element={<EventDetail />} />
+            <Route path="/sentiment/event-alert" element={<EventAlert />} />
             {/* 洞察主题 - 行业资讯 */}
             <Route path="/industry/overview" element={<IndustryOverview />} />
             <Route path="/industry/detail" element={<PlaceholderPage title="行业资讯列表" />} />
