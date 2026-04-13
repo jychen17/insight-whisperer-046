@@ -380,15 +380,20 @@ export default function SentimentDetail() {
   };
 
   const confirmHandle = () => {
+    if (handleAction === "add_remark" && !handleRemark.trim()) {
+      toast({ title: "请输入备注内容", variant: "destructive" });
+      return;
+    }
     const record = createRecord();
-    const newStatus = actionToStatus(handleAction);
+    const keepStatus = handleAction === "add_remark";
+    const newStatus = keepStatus ? undefined : actionToStatus(handleAction);
     if (handleDialogType === "event") {
       setMergedEvents(prev => prev.map(e =>
-        e.id === handleTargetId ? { ...e, handleStatus: newStatus, handleRecords: [...(e.handleRecords || []), record] } : e
+        e.id === handleTargetId ? { ...e, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...(e.handleRecords || []), record] } : e
       ));
     } else {
       setItems(prev => prev.map(i =>
-        i.id === handleTargetId ? { ...i, handleStatus: newStatus, handleRecords: [...(i.handleRecords || []), record] } : i
+        i.id === handleTargetId ? { ...i, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...(i.handleRecords || []), record] } : i
       ));
     }
     setHandleDialogOpen(false);
@@ -396,16 +401,21 @@ export default function SentimentDetail() {
   };
 
   const confirmBatchHandle = () => {
+    if (handleAction === "add_remark" && !handleRemark.trim()) {
+      toast({ title: "请输入备注内容", variant: "destructive" });
+      return;
+    }
     const record = createRecord();
-    const newStatus = actionToStatus(handleAction);
+    const keepStatus = handleAction === "add_remark";
+    const newStatus = keepStatus ? undefined : actionToStatus(handleAction);
     if (batchHandleType === "event") {
       setMergedEvents(prev => prev.map(e =>
-        selectedEventIds.includes(e.id) ? { ...e, handleStatus: newStatus, handleRecords: [...(e.handleRecords || []), record] } : e
+        selectedEventIds.includes(e.id) ? { ...e, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...(e.handleRecords || []), record] } : e
       ));
       setSelectedEventIds([]);
     } else {
       setItems(prev => prev.map(i =>
-        selectedIds.includes(i.id) ? { ...i, handleStatus: newStatus, handleRecords: [...(i.handleRecords || []), record] } : i
+        selectedIds.includes(i.id) ? { ...i, ...(newStatus ? { handleStatus: newStatus } : {}), handleRecords: [...(i.handleRecords || []), record] } : i
       ));
       setSelectedIds([]);
     }
