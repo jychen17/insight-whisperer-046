@@ -983,7 +983,7 @@ export default function SentimentDetail() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-primary" /> 智能聚类合并
+              <Settings2 className="w-4 h-4 text-primary" /> 聚类设置
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-5 py-2">
