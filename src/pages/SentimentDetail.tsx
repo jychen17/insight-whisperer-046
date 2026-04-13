@@ -478,6 +478,7 @@ export default function SentimentDetail() {
           ))}
         </div>
       )}
+      }
 
       {/* Merge Dialog */}
       <Dialog open={mergeDialogOpen} onOpenChange={setMergeDialogOpen}>
