@@ -319,72 +319,83 @@ export default function SentimentDetail() {
       </div>
       )}
 
-      {/* Merged Events Section */}
-      {mergedEvents.length > 0 && showNoiseFilter !== "noise" && (
+      {/* Events Tab Content */}
+      {mainTab === "events" && (
         <div className="space-y-3">
-          <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Layers className="w-4 h-4 text-primary" /> 合并事件 ({mergedEvents.length})
-          </h2>
-          {mergedEvents.map(event => {
-            const posts = getEventPosts(event.id);
-            const isExpanded = expandedEventId === event.id;
-            return (
-              <div key={event.id} className="bg-card rounded-lg border border-primary/30 overflow-hidden">
-                <div
-                  className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
-                  onClick={() => setExpandedEventId(isExpanded ? null : event.id)}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Badge className="bg-primary/10 text-primary border-0 text-xs">事件</Badge>
-                      <h3 className="text-sm font-medium text-foreground">{event.title}</h3>
-                      <span className="text-[11px] text-muted-foreground">包含 {posts.length} 条舆情</span>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+              <Layers className="w-4 h-4 text-primary" /> 合并事件 ({mergedEvents.length})
+            </h2>
+            <span className="text-xs text-muted-foreground">共 {items.filter(i => i.mergedEventId).length} 条舆情已合并</span>
+          </div>
+          {mergedEvents.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground text-sm bg-card rounded-lg border border-border">
+              <Layers className="w-8 h-8 mx-auto mb-3 opacity-30" />
+              <p>暂无合并事件</p>
+              <p className="text-xs mt-1">在"舆情内容"中选择多条舆情后点击"合并为事件"</p>
+            </div>
+          ) : (
+            mergedEvents.map(event => {
+              const posts = getEventPosts(event.id);
+              const isExpanded = expandedEventId === event.id;
+              return (
+                <div key={event.id} className="bg-card rounded-lg border border-primary/30 overflow-hidden">
+                  <div
+                    className="p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                    onClick={() => setExpandedEventId(isExpanded ? null : event.id)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Badge className="bg-primary/10 text-primary border-0 text-xs">事件</Badge>
+                        <h3 className="text-sm font-medium text-foreground">{event.title}</h3>
+                        <span className="text-[11px] text-muted-foreground">包含 {posts.length} 条舆情</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button size="sm" variant="ghost" className="h-6 text-[11px] text-destructive" onClick={(e) => { e.stopPropagation(); handleUnmerge(event.id); }}>
+                          拆分
+                        </Button>
+                        {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Button size="sm" variant="ghost" className="h-6 text-[11px] text-destructive" onClick={(e) => { e.stopPropagation(); handleUnmerge(event.id); }}>
-                        拆分
-                      </Button>
-                      {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+                    <p className="text-xs text-muted-foreground mt-1.5">{event.summary}</p>
+                    <div className="flex gap-3 mt-2 text-[11px] text-muted-foreground">
+                      <span>涉及平台: {[...new Set(posts.map(p => p.platform))].join("、")}</span>
+                      <span>总评论: {posts.reduce((s, p) => s + p.comments, 0)}</span>
+                      <span>创建时间: {event.createdAt}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1.5">{event.summary}</p>
-                  <div className="flex gap-3 mt-2 text-[11px] text-muted-foreground">
-                    <span>涉及平台: {[...new Set(posts.map(p => p.platform))].join("、")}</span>
-                    <span>总评论: {posts.reduce((s, p) => s + p.comments, 0)}</span>
-                    <span>创建时间: {event.createdAt}</span>
-                  </div>
-                </div>
-                {isExpanded && (
-                  <div className="border-t border-border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="text-xs">标题</TableHead>
-                          <TableHead className="text-xs">平台</TableHead>
-                          <TableHead className="text-xs">发布者</TableHead>
-                          <TableHead className="text-xs">发布时间</TableHead>
-                          <TableHead className="text-xs">情感</TableHead>
-                          <TableHead className="text-xs">评论</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {posts.map(post => (
-                          <TableRow key={post.id}>
-                            <TableCell className="text-xs font-medium">{post.title}</TableCell>
-                            <TableCell className="text-xs">{post.platform}</TableCell>
-                            <TableCell className="text-xs">{post.author}</TableCell>
-                            <TableCell className="text-xs">{post.publishTime}</TableCell>
-                            <TableCell><Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{post.sentiment}</Badge></TableCell>
-                            <TableCell className="text-xs">{post.comments}</TableCell>
+                  {isExpanded && (
+                    <div className="border-t border-border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">标题</TableHead>
+                            <TableHead className="text-xs">平台</TableHead>
+                            <TableHead className="text-xs">发布者</TableHead>
+                            <TableHead className="text-xs">发布时间</TableHead>
+                            <TableHead className="text-xs">情感</TableHead>
+                            <TableHead className="text-xs">评论</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                        </TableHeader>
+                        <TableBody>
+                          {posts.map(post => (
+                            <TableRow key={post.id}>
+                              <TableCell className="text-xs font-medium">{post.title}</TableCell>
+                              <TableCell className="text-xs">{post.platform}</TableCell>
+                              <TableCell className="text-xs">{post.author}</TableCell>
+                              <TableCell className="text-xs">{post.publishTime}</TableCell>
+                              <TableCell><Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{post.sentiment}</Badge></TableCell>
+                              <TableCell className="text-xs">{post.comments}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       )}
 
