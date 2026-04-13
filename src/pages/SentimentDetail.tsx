@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink, FileText, CheckCircle2, XCircle, ArrowUpRight, ClipboardList, History, User } from "lucide-react";
+import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink, FileText, CheckCircle2, XCircle, ArrowUpRight, ClipboardList, History, User, MessageSquarePlus } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -1002,6 +1002,9 @@ export default function SentimentDetail() {
                               )}
                             </>
                           )}
+                          <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openRemarkDialog("event", event.id); }}>
+                            <MessageSquarePlus className="w-3 h-3" /> 追加备注
+                          </Button>
                           <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); navigate(`/sentiment/event-detail?id=${event.id}`); }}>
                             <ExternalLink className="w-3 h-3" /> 详情
                           </Button>
@@ -1280,6 +1283,11 @@ export default function SentimentDetail() {
                                   </Button>
                                 )}
                               </>
+                            )}
+                            {(item.handleRecords || []).length > 0 && (
+                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openRemarkDialog("article", item.id)}>
+                                <MessageSquarePlus className="w-3 h-3" /> 追加备注
+                              </Button>
                             )}
                             <button
                               className="text-muted-foreground hover:text-destructive"
