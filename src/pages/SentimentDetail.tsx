@@ -326,9 +326,11 @@ export default function SentimentDetail() {
   const openHandleDialog = (type: "event" | "article", targetId: string | number) => {
     setHandleDialogType(type);
     setHandleTargetId(targetId);
-    setHandleAction("ignore");
+    setHandleAction("silent");
+    setHandleAssignee("");
     setHandleComplaintNo("");
-    setHandleEscalateTarget("公关部");
+    setHandleEscalateRole("cs_supervisor");
+    setHandleEscalateTarget("");
     setHandleRemark("");
     setHandleDialogOpen(true);
   };
@@ -338,15 +340,29 @@ export default function SentimentDetail() {
     action: handleAction,
     operator: "当前用户",
     time: new Date().toLocaleString("zh-CN"),
-    complaintNo: handleAction === "complaint" ? handleComplaintNo : undefined,
+    assignee: handleAction === "dispatch" ? handleAssignee : undefined,
+    complaintNo: handleAction === "dispatch" ? handleComplaintNo : undefined,
     escalateTarget: handleAction === "escalate" ? handleEscalateTarget : undefined,
+    escalateRole: handleAction === "escalate" ? ESCALATE_ROLES.find(r => r.value === handleEscalateRole)?.label : undefined,
     remark: handleRemark || undefined,
   });
 
   const actionToStatus = (action: HandleAction): HandleStatus => {
-    if (action === "ignore") return "ignored";
-    if (action === "complaint") return "processing";
-    return "escalated";
+    if (action === "silent") return "silent";
+    if (action === "dispatch") return "dispatched";
+    if (action === "escalate") return "escalated";
+    if (action === "close") return "closed";
+    if (action === "reopen") return "pending";
+    return "pending";
+  };
+
+  const actionLabel = (action: HandleAction): string => {
+    if (action === "silent") return "静默";
+    if (action === "dispatch") return "分派客服";
+    if (action === "escalate") return "升级处理";
+    if (action === "close") return "完结";
+    if (action === "reopen") return "重新打开";
+    return "";
   };
 
   const confirmHandle = () => {
@@ -362,7 +378,7 @@ export default function SentimentDetail() {
       ));
     }
     setHandleDialogOpen(false);
-    toast({ title: "处理成功", description: `已${handleAction === "ignore" ? "忽略" : handleAction === "complaint" ? "录入投诉单号" : "升级处理"}` });
+    toast({ title: "处理成功", description: `已${actionLabel(handleAction)}` });
   };
 
   const confirmBatchHandle = () => {
@@ -385,11 +401,53 @@ export default function SentimentDetail() {
 
   const openBatchHandle = (type: "event" | "article") => {
     setBatchHandleType(type);
-    setHandleAction("ignore");
+    setHandleAction("silent");
+    setHandleAssignee("");
     setHandleComplaintNo("");
-    setHandleEscalateTarget("公关部");
+    setHandleEscalateRole("cs_supervisor");
+    setHandleEscalateTarget("");
     setHandleRemark("");
     setBatchHandleDialogOpen(true);
+  };
+
+  const handleReopen = (type: "event" | "article", targetId: string | number) => {
+    const record: HandleRecord = {
+      id: `rec-${Date.now()}`,
+      action: "reopen",
+      operator: "当前用户",
+      time: new Date().toLocaleString("zh-CN"),
+      remark: "重新打开处理",
+    };
+    if (type === "event") {
+      setMergedEvents(prev => prev.map(e =>
+        e.id === targetId ? { ...e, handleStatus: "pending" as HandleStatus, handleRecords: [...(e.handleRecords || []), record] } : e
+      ));
+    } else {
+      setItems(prev => prev.map(i =>
+        i.id === targetId ? { ...i, handleStatus: "pending" as HandleStatus, handleRecords: [...(i.handleRecords || []), record] } : i
+      ));
+    }
+    toast({ title: "已重新打开" });
+  };
+
+  const handleClose = (type: "event" | "article", targetId: string | number) => {
+    const record: HandleRecord = {
+      id: `rec-${Date.now()}`,
+      action: "close",
+      operator: "当前用户",
+      time: new Date().toLocaleString("zh-CN"),
+      remark: "标记完结",
+    };
+    if (type === "event") {
+      setMergedEvents(prev => prev.map(e =>
+        e.id === targetId ? { ...e, handleStatus: "closed" as HandleStatus, handleRecords: [...(e.handleRecords || []), record] } : e
+      ));
+    } else {
+      setItems(prev => prev.map(i =>
+        i.id === targetId ? { ...i, handleStatus: "closed" as HandleStatus, handleRecords: [...(i.handleRecords || []), record] } : i
+      ));
+    }
+    toast({ title: "已完结" });
   };
 
   const runAutoCluster = () => {
