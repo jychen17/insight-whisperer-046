@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   ArrowLeft, Flame, Eye, Globe, ThumbsUp, MessageCircle, Share2, Bookmark,
-  Clock, BarChart3, Bell, ClipboardList, XCircle, ArrowUpRight, History, User, ExternalLink, CheckCircle2
+  Clock, BarChart3, Bell, ClipboardList, XCircle, ArrowUpRight, History, User, ExternalLink, CheckCircle2, MessageSquarePlus
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { HandleAction, HandleRecord, HandleStatus } from "./SentimentDetail";
@@ -97,6 +97,12 @@ export default function EventDetail() {
   const [handleEscalateRole, setHandleEscalateRole] = useState("cs_supervisor");
   const [handleEscalateTarget, setHandleEscalateTarget] = useState("");
   const [handleRemark, setHandleRemark] = useState("");
+  // Remark dialog
+  const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
+  const [remarkTargetType, setRemarkTargetType] = useState<"event" | "post">("event");
+  const [remarkTargetId, setRemarkTargetId] = useState<number | null>(null);
+  const [remarkOperator, setRemarkOperator] = useState("");
+  const [remarkText, setRemarkText] = useState("");
 
   const importanceBadge = event.importance === "high"
     ? <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs gap-1"><Flame className="w-3 h-3" />重大</Badge>
@@ -207,7 +213,42 @@ export default function EventDetail() {
     if (r.action === "escalate") return `升级到${r.escalateRole || ""}: ${r.escalateTarget}`;
     if (r.action === "close") return "标记完结";
     if (r.action === "reopen") return "重新打开";
+    if (r.action === "add_remark") return "追加备注";
     return r.action;
+  };
+
+  const openRemarkDialog = (type: "event" | "post", postId?: number) => {
+    setRemarkTargetType(type);
+    setRemarkTargetId(postId || null);
+    setRemarkOperator("");
+    setRemarkText("");
+    setRemarkDialogOpen(true);
+  };
+
+  const confirmAddRemark = () => {
+    if (!remarkText.trim()) {
+      toast({ title: "请输入备注内容", variant: "destructive" });
+      return;
+    }
+    const record: HandleRecord = {
+      id: `rec-${Date.now()}`,
+      action: "add_remark",
+      operator: remarkOperator || "当前用户",
+      time: new Date().toLocaleString("zh-CN"),
+      remark: remarkText,
+    };
+    if (remarkTargetType === "event") {
+      setEvent(prev => ({ ...prev, handleRecords: [...prev.handleRecords, record] }));
+    } else {
+      setEvent(prev => ({
+        ...prev,
+        posts: prev.posts.map(p =>
+          p.id === remarkTargetId ? { ...p, handleRecords: [...p.handleRecords, record] } : p
+        ),
+      }));
+    }
+    setRemarkDialogOpen(false);
+    toast({ title: "备注已添加" });
   };
 
   return (
@@ -239,6 +280,9 @@ export default function EventDetail() {
               )}
             </>
           )}
+          <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openRemarkDialog("event")}>
+            <MessageSquarePlus className="w-3 h-3" /> 追加备注
+          </Button>
           <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => navigate(`/sentiment/event-alert?eventId=${eventId}`)}>
             <Bell className="w-3 h-3" /> 设置预警
           </Button>
@@ -400,6 +444,9 @@ export default function EventDetail() {
                         </>
                       )}
                     </div>
+                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openRemarkDialog("post", post.id)}>
+                      <MessageSquarePlus className="w-3 h-3" /> 备注
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -534,6 +581,42 @@ export default function EventDetail() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
             <Button onClick={confirmHandle}>确认处置</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remark Dialog */}
+      <Dialog open={remarkDialogOpen} onOpenChange={setRemarkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquarePlus className="w-4 h-4 text-primary" /> 追加处理备注
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs text-muted-foreground">操作人</label>
+              <input
+                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                value={remarkOperator}
+                onChange={e => setRemarkOperator(e.target.value)}
+                placeholder="请输入您的姓名或工号"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">备注内容 <span className="text-destructive">*</span></label>
+              <textarea
+                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
+                rows={4}
+                value={remarkText}
+                onChange={e => setRemarkText(e.target.value)}
+                placeholder="请输入处理进展、反馈结果或补充说明..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemarkDialogOpen(false)}>取消</Button>
+            <Button onClick={confirmAddRemark}>提交备注</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

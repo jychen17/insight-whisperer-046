@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink, FileText, CheckCircle2, XCircle, ArrowUpRight, ClipboardList, History, User } from "lucide-react";
+import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink, FileText, CheckCircle2, XCircle, ArrowUpRight, ClipboardList, History, User, MessageSquarePlus } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
@@ -24,7 +24,7 @@ const NOISE_CATEGORIES = [
 ];
 
 /* ── Processing types ── */
-export type HandleAction = "silent" | "dispatch" | "escalate" | "close" | "reopen";
+export type HandleAction = "silent" | "dispatch" | "escalate" | "close" | "reopen" | "add_remark";
 export interface HandleRecord {
   id: string;
   action: HandleAction;
@@ -212,6 +212,12 @@ export default function SentimentDetail() {
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
   const [batchHandleDialogOpen, setBatchHandleDialogOpen] = useState(false);
   const [batchHandleType, setBatchHandleType] = useState<"event" | "article">("article");
+  // Remark dialog states
+  const [remarkDialogOpen, setRemarkDialogOpen] = useState(false);
+  const [remarkDialogType, setRemarkDialogType] = useState<"event" | "article">("article");
+  const [remarkTargetId, setRemarkTargetId] = useState<string | number | null>(null);
+  const [remarkOperator, setRemarkOperator] = useState("");
+  const [remarkText, setRemarkText] = useState("");
   // Handle filter for events
   const [eventFilterHandleStatus, setEventFilterHandleStatus] = useState<"all" | HandleStatus>("all");
 
@@ -362,6 +368,7 @@ export default function SentimentDetail() {
     if (action === "escalate") return "升级处理";
     if (action === "close") return "完结";
     if (action === "reopen") return "重新打开";
+    if (action === "add_remark") return "追加备注";
     return "";
   };
 
@@ -448,6 +455,39 @@ export default function SentimentDetail() {
       ));
     }
     toast({ title: "已完结" });
+  };
+
+  const openRemarkDialog = (type: "event" | "article", targetId: string | number) => {
+    setRemarkDialogType(type);
+    setRemarkTargetId(targetId);
+    setRemarkOperator("");
+    setRemarkText("");
+    setRemarkDialogOpen(true);
+  };
+
+  const confirmAddRemark = () => {
+    if (!remarkText.trim()) {
+      toast({ title: "请输入备注内容", variant: "destructive" });
+      return;
+    }
+    const record: HandleRecord = {
+      id: `rec-${Date.now()}`,
+      action: "add_remark",
+      operator: remarkOperator || "当前用户",
+      time: new Date().toLocaleString("zh-CN"),
+      remark: remarkText,
+    };
+    if (remarkDialogType === "event") {
+      setMergedEvents(prev => prev.map(e =>
+        e.id === remarkTargetId ? { ...e, handleRecords: [...(e.handleRecords || []), record] } : e
+      ));
+    } else {
+      setItems(prev => prev.map(i =>
+        i.id === remarkTargetId ? { ...i, handleRecords: [...(i.handleRecords || []), record] } : i
+      ));
+    }
+    setRemarkDialogOpen(false);
+    toast({ title: "备注已添加" });
   };
 
   const runAutoCluster = () => {
@@ -612,6 +652,7 @@ export default function SentimentDetail() {
     if (r.action === "escalate") return `升级到${r.escalateRole || ""}: ${r.escalateTarget}`;
     if (r.action === "close") return "标记完结";
     if (r.action === "reopen") return "重新打开";
+    if (r.action === "add_remark") return "追加备注";
     return r.action;
   };
 
@@ -961,6 +1002,9 @@ export default function SentimentDetail() {
                               )}
                             </>
                           )}
+                          <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openRemarkDialog("event", event.id); }}>
+                            <MessageSquarePlus className="w-3 h-3" /> 追加备注
+                          </Button>
                           <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); navigate(`/sentiment/event-detail?id=${event.id}`); }}>
                             <ExternalLink className="w-3 h-3" /> 详情
                           </Button>
@@ -1240,6 +1284,11 @@ export default function SentimentDetail() {
                                 )}
                               </>
                             )}
+                            {(item.handleRecords || []).length > 0 && (
+                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openRemarkDialog("article", item.id)}>
+                                <MessageSquarePlus className="w-3 h-3" /> 追加备注
+                              </Button>
+                            )}
                             <button
                               className="text-muted-foreground hover:text-destructive"
                               title="标记为噪音"
@@ -1489,6 +1538,42 @@ export default function SentimentDetail() {
             <Button onClick={() => { runAutoCluster(); }} disabled={isClustering}>
               {isClustering ? "聚类中..." : "保存并重新聚类"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Remark Dialog */}
+      <Dialog open={remarkDialogOpen} onOpenChange={setRemarkDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquarePlus className="w-4 h-4 text-primary" /> 追加处理备注
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs text-muted-foreground">操作人</label>
+              <input
+                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                value={remarkOperator}
+                onChange={e => setRemarkOperator(e.target.value)}
+                placeholder="请输入您的姓名或工号"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">备注内容 <span className="text-destructive">*</span></label>
+              <textarea
+                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground resize-none"
+                rows={4}
+                value={remarkText}
+                onChange={e => setRemarkText(e.target.value)}
+                placeholder="请输入处理进展、反馈结果或补充说明..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemarkDialogOpen(false)}>取消</Button>
+            <Button onClick={confirmAddRemark}>提交备注</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
