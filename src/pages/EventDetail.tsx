@@ -7,18 +7,32 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   ArrowLeft, Flame, Eye, Globe, ThumbsUp, MessageCircle, Share2, Bookmark,
-  Clock, BarChart3, Bell, ClipboardList, XCircle, ArrowUpRight, History, User, ExternalLink
+  Clock, BarChart3, Bell, ClipboardList, XCircle, ArrowUpRight, History, User, ExternalLink, CheckCircle2
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { HandleAction, HandleRecord, HandleStatus } from "./SentimentDetail";
 
 const HANDLE_STATUS_MAP: Record<HandleStatus, { label: string; color: string }> = {
   pending: { label: "待处理", color: "bg-amber-500/10 text-amber-600" },
-  ignored: { label: "已忽略", color: "bg-muted text-muted-foreground" },
-  processing: { label: "处理中", color: "bg-primary/10 text-primary" },
+  silent: { label: "已静默", color: "bg-muted text-muted-foreground" },
+  dispatched: { label: "已分派客服", color: "bg-primary/10 text-primary" },
   escalated: { label: "已升级", color: "bg-destructive/10 text-destructive" },
-  closed: { label: "已关闭", color: "bg-emerald-500/10 text-emerald-600" },
+  closed: { label: "已完结", color: "bg-emerald-500/10 text-emerald-600" },
 };
+
+const ESCALATE_ROLES = [
+  { value: "cs_supervisor", label: "客服主管" },
+  { value: "business", label: "业务负责人" },
+  { value: "pr", label: "公关" },
+];
+
+const ESCALATE_PERSONS: Record<string, string[]> = {
+  cs_supervisor: ["张经理", "李主管", "王组长"],
+  business: ["赵总监", "刘经理", "陈总"],
+  pr: ["孙总监", "周经理", "吴主管"],
+};
+
+const CS_AGENTS = ["客服A-小张", "客服B-小李", "客服C-小王", "客服D-小赵"];
 
 interface PostItem {
   id: number;
@@ -50,15 +64,15 @@ const mockEvent = {
   totalCollects: 2,
   keyPlatforms: ["小红书", "黑猫投诉APP", "抖音"],
   summary: "多条舆情涉及OTA平台机票退改及价格问题，用户情绪较为激烈，已引发社交媒体广泛讨论。",
-  handleStatus: "processing" as HandleStatus,
+  handleStatus: "dispatched" as HandleStatus,
   handleRecords: [
-    { id: "rec-1", action: "complaint" as HandleAction, operator: "张三", time: "2026-03-30 09:15:00", complaintNo: "CMP-20260330-001", remark: "已录入投诉系统" },
-    { id: "rec-2", action: "escalate" as HandleAction, operator: "李四", time: "2026-03-30 10:30:00", escalateTarget: "公关部", remark: "事件影响面较大，升级处理" },
+    { id: "rec-1", action: "dispatch" as HandleAction, operator: "张三", time: "2026-03-30 09:15:00", assignee: "客服A-小张", complaintNo: "CMP-20260330-001", remark: "已分派客服跟进" },
+    { id: "rec-2", action: "escalate" as HandleAction, operator: "客服A-小张", time: "2026-03-30 10:30:00", escalateTarget: "孙总监", escalateRole: "公关", remark: "事件影响面较大，升级处理" },
   ] as HandleRecord[],
   posts: [
-    { id: 1, title: "骂机票 ✈", platform: "小红书", author: "蔡尔朗朗朗", publishTime: "2026-03-29 21:33:04", sentiment: "负向情感-客户投诉", comments: 53, likes: 0, shares: 0, collects: 0, handleStatus: "processing" as HandleStatus, handleRecords: [{ id: "r1", action: "complaint" as HandleAction, operator: "张三", time: "2026-03-30 09:20:00", complaintNo: "CMP-20260330-002" }] },
+    { id: 1, title: "骂机票 ✈", platform: "小红书", author: "蔡尔朗朗朗", publishTime: "2026-03-29 21:33:04", sentiment: "负向情感-客户投诉", comments: 53, likes: 0, shares: 0, collects: 0, handleStatus: "dispatched" as HandleStatus, handleRecords: [{ id: "r1", action: "dispatch" as HandleAction, operator: "张三", time: "2026-03-30 09:20:00", assignee: "客服B-小李", complaintNo: "CMP-20260330-002" }] },
     { id: 2, title: "同程旅行隐瞒机票全损规则，2232元仅退83元", platform: "黑猫投诉APP", author: "匿名", publishTime: "2026-03-29 21:34:41", sentiment: "负向情感-客户投诉", comments: 0, likes: 0, shares: 0, collects: 0, handleStatus: "pending" as HandleStatus, handleRecords: [] },
-    { id: 3, title: "避雷❌长沙雅致酒店（IFS国金中心旗舰店）", platform: "小红书", author: "舒马曦", publishTime: "2026-03-29 16:32:49", sentiment: "负向情感-客户投诉", comments: 2, likes: 0, shares: 0, collects: 0, handleStatus: "ignored" as HandleStatus, handleRecords: [{ id: "r2", action: "ignore" as HandleAction, operator: "王五", time: "2026-03-30 08:00:00", remark: "非核心业务" }] },
+    { id: 3, title: "避雷❌长沙雅致酒店（IFS国金中心旗舰店）", platform: "小红书", author: "舒马曦", publishTime: "2026-03-29 16:32:49", sentiment: "负向情感-客户投诉", comments: 2, likes: 0, shares: 0, collects: 0, handleStatus: "silent" as HandleStatus, handleRecords: [{ id: "r2", action: "silent" as HandleAction, operator: "王五", time: "2026-03-30 08:00:00", remark: "非核心业务" }] },
   ] as PostItem[],
   timeline: [
     { time: "2026-03-29 16:32", desc: "首条舆情发布于小红书" },
@@ -77,9 +91,11 @@ export default function EventDetail() {
   const [handleDialogOpen, setHandleDialogOpen] = useState(false);
   const [handleTargetType, setHandleTargetType] = useState<"event" | "post">("event");
   const [handleTargetId, setHandleTargetId] = useState<number | null>(null);
-  const [handleAction, setHandleAction] = useState<HandleAction>("ignore");
+  const [handleAction, setHandleAction] = useState<HandleAction>("silent");
+  const [handleAssignee, setHandleAssignee] = useState("");
   const [handleComplaintNo, setHandleComplaintNo] = useState("");
-  const [handleEscalateTarget, setHandleEscalateTarget] = useState("公关部");
+  const [handleEscalateRole, setHandleEscalateRole] = useState("cs_supervisor");
+  const [handleEscalateTarget, setHandleEscalateTarget] = useState("");
   const [handleRemark, setHandleRemark] = useState("");
 
   const importanceBadge = event.importance === "high"
@@ -97,17 +113,22 @@ export default function EventDetail() {
   const openHandle = (type: "event" | "post", postId?: number) => {
     setHandleTargetType(type);
     setHandleTargetId(postId || null);
-    setHandleAction("ignore");
+    setHandleAction("silent");
+    setHandleAssignee("");
     setHandleComplaintNo("");
-    setHandleEscalateTarget("公关部");
+    setHandleEscalateRole("cs_supervisor");
+    setHandleEscalateTarget("");
     setHandleRemark("");
     setHandleDialogOpen(true);
   };
 
   const actionToStatus = (action: HandleAction): HandleStatus => {
-    if (action === "ignore") return "ignored";
-    if (action === "complaint") return "processing";
-    return "escalated";
+    if (action === "silent") return "silent";
+    if (action === "dispatch") return "dispatched";
+    if (action === "escalate") return "escalated";
+    if (action === "close") return "closed";
+    if (action === "reopen") return "pending";
+    return "pending";
   };
 
   const confirmHandle = () => {
@@ -116,8 +137,10 @@ export default function EventDetail() {
       action: handleAction,
       operator: "当前用户",
       time: new Date().toLocaleString("zh-CN"),
-      complaintNo: handleAction === "complaint" ? handleComplaintNo : undefined,
+      assignee: handleAction === "dispatch" ? handleAssignee : undefined,
+      complaintNo: handleAction === "dispatch" ? handleComplaintNo : undefined,
       escalateTarget: handleAction === "escalate" ? handleEscalateTarget : undefined,
+      escalateRole: handleAction === "escalate" ? ESCALATE_ROLES.find(r => r.value === handleEscalateRole)?.label : undefined,
       remark: handleRemark || undefined,
     };
     const newStatus = actionToStatus(handleAction);
@@ -136,10 +159,55 @@ export default function EventDetail() {
     toast({ title: "处理成功" });
   };
 
-  const renderActionDesc = (r: HandleRecord) => {
-    if (r.action === "ignore") return "忽略/静默";
-    if (r.action === "complaint") return `录入投诉单号: ${r.complaintNo}`;
-    return `升级到: ${r.escalateTarget}`;
+  const handleReopen = (type: "event" | "post", postId?: number) => {
+    const record: HandleRecord = {
+      id: `rec-${Date.now()}`,
+      action: "reopen",
+      operator: "当前用户",
+      time: new Date().toLocaleString("zh-CN"),
+      remark: "重新打开处理",
+    };
+    if (type === "event") {
+      setEvent(prev => ({ ...prev, handleStatus: "pending" as HandleStatus, handleRecords: [...prev.handleRecords, record] }));
+    } else {
+      setEvent(prev => ({
+        ...prev,
+        posts: prev.posts.map(p =>
+          p.id === postId ? { ...p, handleStatus: "pending" as HandleStatus, handleRecords: [...p.handleRecords, record] } : p
+        ),
+      }));
+    }
+    toast({ title: "已重新打开" });
+  };
+
+  const handleCloseItem = (type: "event" | "post", postId?: number) => {
+    const record: HandleRecord = {
+      id: `rec-${Date.now()}`,
+      action: "close",
+      operator: "当前用户",
+      time: new Date().toLocaleString("zh-CN"),
+      remark: "标记完结",
+    };
+    if (type === "event") {
+      setEvent(prev => ({ ...prev, handleStatus: "closed" as HandleStatus, handleRecords: [...prev.handleRecords, record] }));
+    } else {
+      setEvent(prev => ({
+        ...prev,
+        posts: prev.posts.map(p =>
+          p.id === postId ? { ...p, handleStatus: "closed" as HandleStatus, handleRecords: [...p.handleRecords, record] } : p
+        ),
+      }));
+    }
+    toast({ title: "已完结" });
+  };
+
+  const renderRecordDesc = (r: HandleRecord) => {
+    if (r.action === "silent") return "静默处理";
+    if (r.action === "dispatch") return `分派客服: ${r.assignee || "-"}${r.complaintNo ? `，投诉单号: ${r.complaintNo}` : ""}`;
+    if (r.action === "escalate") return `升级到${r.escalateRole || ""}: ${r.escalateTarget}`;
+    if (r.action === "close") return "标记完结";
+    if (r.action === "reopen") return "重新打开";
+    return r.action;
   };
 
   return (
@@ -155,9 +223,22 @@ export default function EventDetail() {
           {renderStatusBadge(event.handleStatus)}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openHandle("event")}>
-            <ClipboardList className="w-3 h-3" /> 处置事件
-          </Button>
+          {event.handleStatus === "closed" ? (
+            <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => handleReopen("event")}>
+              <History className="w-3 h-3" /> 重新打开
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => openHandle("event")}>
+                <ClipboardList className="w-3 h-3" /> 处置事件
+              </Button>
+              {event.handleStatus !== "pending" && (
+                <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => handleCloseItem("event")}>
+                  <CheckCircle2 className="w-3 h-3" /> 完结
+                </Button>
+              )}
+            </>
+          )}
           <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => navigate(`/sentiment/event-alert?eventId=${eventId}`)}>
             <Bell className="w-3 h-3" /> 设置预警
           </Button>
@@ -260,7 +341,7 @@ export default function EventDetail() {
                       <span className="text-[11px] text-muted-foreground">{r.time}</span>
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5">
-                      操作: <span className="text-foreground">{renderActionDesc(r)}</span>
+                      操作: <span className="text-foreground">{renderRecordDesc(r)}</span>
                       {r.remark && <span className="ml-2">备注: {r.remark}</span>}
                     </div>
                   </div>
@@ -301,9 +382,24 @@ export default function EventDetail() {
                   <TableCell className="text-xs">{post.comments}</TableCell>
                   <TableCell className="text-xs">{post.likes}</TableCell>
                   <TableCell>
-                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandle("post", post.id)}>
-                      <ClipboardList className="w-3 h-3" /> 处置
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {post.handleStatus === "closed" ? (
+                        <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => handleReopen("post", post.id)}>
+                          <History className="w-3 h-3" /> 重新打开
+                        </Button>
+                      ) : (
+                        <>
+                          <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandle("post", post.id)}>
+                            <ClipboardList className="w-3 h-3" /> 处置
+                          </Button>
+                          {post.handleStatus !== "pending" && (
+                            <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => handleCloseItem("post", post.id)}>
+                              <CheckCircle2 className="w-3 h-3" /> 完结
+                            </Button>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -327,7 +423,7 @@ export default function EventDetail() {
                   <User className="w-3 h-3 text-muted-foreground shrink-0" />
                   <span className="font-medium text-foreground">{r.operator}</span>
                   <span className="text-muted-foreground">{r.time}</span>
-                  <span className="text-foreground">{renderActionDesc(r)}</span>
+                  <span className="text-foreground">{renderRecordDesc(r)}</span>
                   {r.remark && <span className="text-muted-foreground">（{r.remark}）</span>}
                 </div>
               ))}
@@ -349,9 +445,9 @@ export default function EventDetail() {
               <label className="text-xs font-medium text-foreground mb-2 block">处置方式</label>
               <div className="grid grid-cols-3 gap-2">
                 {([
-                  { value: "ignore" as HandleAction, label: "忽略/静默", icon: XCircle, desc: "无需处理" },
-                  { value: "complaint" as HandleAction, label: "录入投诉单号", icon: ClipboardList, desc: "需要跟进处理" },
-                  { value: "escalate" as HandleAction, label: "升级处理", icon: ArrowUpRight, desc: "升级到公关/业务线" },
+                  { value: "silent" as HandleAction, label: "静默", icon: XCircle, desc: "无需人工处理" },
+                  { value: "dispatch" as HandleAction, label: "分派客服", icon: ClipboardList, desc: "分派给客服跟进" },
+                  { value: "escalate" as HandleAction, label: "升级处理", icon: ArrowUpRight, desc: "升级到上级指定人" },
                 ]).map(opt => (
                   <label
                     key={opt.value}
@@ -369,31 +465,59 @@ export default function EventDetail() {
                 ))}
               </div>
             </div>
-            {handleAction === "complaint" && (
-              <div>
-                <label className="text-xs text-muted-foreground">投诉单号</label>
-                <input
-                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-                  value={handleComplaintNo}
-                  onChange={e => setHandleComplaintNo(e.target.value)}
-                  placeholder="请输入投诉单号"
-                />
+            {handleAction === "dispatch" && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">分派给</label>
+                  <select
+                    className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                    value={handleAssignee}
+                    onChange={e => setHandleAssignee(e.target.value)}
+                  >
+                    <option value="">请选择客服</option>
+                    {CS_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">投诉单号（可选）</label>
+                  <input
+                    className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                    value={handleComplaintNo}
+                    onChange={e => setHandleComplaintNo(e.target.value)}
+                    placeholder="如有投诉单号请输入"
+                  />
+                </div>
               </div>
             )}
             {handleAction === "escalate" && (
-              <div>
-                <label className="text-xs text-muted-foreground">升级目标</label>
-                <select
-                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-                  value={handleEscalateTarget}
-                  onChange={e => setHandleEscalateTarget(e.target.value)}
-                >
-                  <option>公关部</option>
-                  <option>品牌部</option>
-                  <option>客服中心</option>
-                  <option>法务部</option>
-                  <option>业务线负责人</option>
-                </select>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">升级角色</label>
+                  <div className="flex gap-2 mt-1">
+                    {ESCALATE_ROLES.map(role => (
+                      <label
+                        key={role.value}
+                        className={`flex-1 p-2 rounded-md border text-center text-xs cursor-pointer transition-colors ${
+                          handleEscalateRole === role.value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"
+                        }`}
+                      >
+                        <input type="radio" className="sr-only" checked={handleEscalateRole === role.value} onChange={() => { setHandleEscalateRole(role.value); setHandleEscalateTarget(""); }} />
+                        {role.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">指定处理人</label>
+                  <select
+                    className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                    value={handleEscalateTarget}
+                    onChange={e => setHandleEscalateTarget(e.target.value)}
+                  >
+                    <option value="">请选择处理人</option>
+                    {(ESCALATE_PERSONS[handleEscalateRole] || []).map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
               </div>
             )}
             <div>
