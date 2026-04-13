@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import {
-  ArrowLeft, Bell, Plus, Trash2, AlertTriangle, Mail, MessageCircle, Phone,
-  ChevronDown, ChevronUp, Settings2, Zap, Clock, RefreshCw, ExternalLink,
-  Flame, BarChart3, ThumbsUp, Link2
+  ArrowLeft, Bell, Plus, Trash2, MessageCircle,
+  ChevronDown, ChevronUp, Settings2, Zap, Clock, ExternalLink,
+  Flame, BarChart3, ThumbsUp
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
@@ -22,7 +22,7 @@ interface RuleCondition {
 }
 
 interface PushChannel {
-  type: "wechat" | "email" | "sms" | "phone";
+  type: "wechat";
   personal: boolean;
   group: boolean;
   personalTargets: string[];
@@ -30,7 +30,7 @@ interface PushChannel {
 }
 
 type TriggerDimension = "single" | "event";
-type PushTiming = "realtime" | "scheduled" | "incremental";
+type PushTiming = "realtime" | "scheduled";
 type ConditionLogic = "none" | "any" | "all";
 
 interface AlertRule {
@@ -42,6 +42,8 @@ interface AlertRule {
   conditions: RuleCondition[];
   pushTiming: PushTiming;
   scheduledInterval?: string;
+  scheduledTimeStart?: string;
+  scheduledTimeEnd?: string;
   channels: PushChannel[];
   eventScope: "current" | "all";
 }
@@ -84,9 +86,6 @@ const CATEGORY_OPTIONS = ["票价吐槽", "辅营加购", "盲盒吐槽", "演�
 
 const channelTypes = [
   { type: "wechat" as const, label: "企业微信", icon: MessageCircle },
-  { type: "email" as const, label: "邮件", icon: Mail },
-  { type: "sms" as const, label: "短信", icon: Phone },
-  { type: "phone" as const, label: "电话", icon: Phone },
 ];
 
 /* ───────── default rules ───────── */
@@ -119,7 +118,7 @@ const defaultRules: AlertRule[] = [
       { field: "event_comments", operator: ">=", value: "100" },
       { field: "event_likes", operator: ">=", value: "200" },
     ],
-    pushTiming: "incremental",
+    pushTiming: "realtime",
     channels: [
       { type: "wechat", personal: true, group: false, personalTargets: [], groupWebhook: "" },
     ],
@@ -136,8 +135,10 @@ const defaultRules: AlertRule[] = [
     ],
     pushTiming: "scheduled",
     scheduledInterval: "day",
+    scheduledTimeStart: "08:00",
+    scheduledTimeEnd: "20:00",
     channels: [
-      { type: "email", personal: true, group: false, personalTargets: [], groupWebhook: "" },
+      { type: "wechat", personal: true, group: false, personalTargets: [], groupWebhook: "" },
     ],
     eventScope: "all",
   },
@@ -178,11 +179,10 @@ function formatConditionDisplay(c: RuleCondition, dimension: TriggerDimension) {
   return `${label} ${opLabel} ${c.value}`;
 }
 
-const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", scheduled: "定时汇总", incremental: "增量推送" };
+const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", scheduled: "定时汇总" };
 const timingIcons: Record<PushTiming, React.ReactNode> = {
   realtime: <Zap className="w-3 h-3" />,
   scheduled: <Clock className="w-3 h-3" />,
-  incremental: <RefreshCw className="w-3 h-3" />,
 };
 const logicLabels: Record<ConditionLogic, string> = { none: "不配置", any: "满足任一条件", all: "满足所有条件" };
 
@@ -207,6 +207,8 @@ export default function EventAlert() {
     conditions: [{ field: "event_risk", operator: "=", value: "重大" }],
     pushTiming: "realtime",
     scheduledInterval: "day",
+    scheduledTimeStart: "08:00",
+    scheduledTimeEnd: "20:00",
     channels: [{ type: "wechat", personal: true, group: false, personalTargets: [], groupWebhook: "" }],
     eventScope: eventId ? "current" : "all",
   });
@@ -402,6 +404,7 @@ export default function EventAlert() {
                         <span className="text-muted-foreground">推送时机</span>
                         <p className="text-foreground mt-0.5 flex items-center gap-1">{timingIcons[rule.pushTiming]} {timingLabels[rule.pushTiming]}
                           {rule.pushTiming === "scheduled" && rule.scheduledInterval && <span className="text-muted-foreground ml-1">({rule.scheduledInterval === "hour" ? "每小时" : rule.scheduledInterval === "day" ? "每天" : "每周"})</span>}
+                          {rule.scheduledTimeStart && rule.scheduledTimeEnd && <span className="text-muted-foreground ml-1">| 推送时段 {rule.scheduledTimeStart}-{rule.scheduledTimeEnd}</span>}
                         </p>
                       </div>
                     </div>
@@ -633,11 +636,10 @@ export default function EventAlert() {
             {/* Push timing */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-2 block">推送时机</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 {([
                   { val: "realtime" as const, title: "实时推送", desc: "事件合并完成后立刻推送" },
                   { val: "scheduled" as const, title: "定时汇总", desc: "按时间段汇总推送" },
-                  { val: "incremental" as const, title: "增量推送", desc: "事件新增舆情时推送1次更新" },
                 ]).map(opt => (
                   <button
                     key={opt.val}
@@ -656,20 +658,58 @@ export default function EventAlert() {
                 ))}
               </div>
               {editingRule.pushTiming === "scheduled" && (
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-xs text-muted-foreground">汇总频率：</span>
-                  {(["hour", "day", "week"] as const).map(interval => (
-                    <button
-                      key={interval}
-                      onClick={() => setEditingRule(prev => ({ ...prev, scheduledInterval: interval }))}
-                      className={`px-3 py-1 text-xs rounded border ${editingRule.scheduledInterval === interval
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border text-foreground"
-                      }`}
-                    >
-                      {interval === "hour" ? "每小时" : interval === "day" ? "每天" : "每周"}
-                    </button>
-                  ))}
+                <div className="space-y-2 mt-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">汇总频率：</span>
+                    {(["hour", "day", "week"] as const).map(interval => (
+                      <button
+                        key={interval}
+                        onClick={() => setEditingRule(prev => ({ ...prev, scheduledInterval: interval }))}
+                        className={`px-3 py-1 text-xs rounded border ${editingRule.scheduledInterval === interval
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border text-foreground"
+                        }`}
+                      >
+                        {interval === "hour" ? "每小时" : interval === "day" ? "每天" : "每周"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">推送时间段：</span>
+                    <input
+                      type="time"
+                      className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                      value={editingRule.scheduledTimeStart || "08:00"}
+                      onChange={e => setEditingRule(prev => ({ ...prev, scheduledTimeStart: e.target.value }))}
+                    />
+                    <span className="text-xs text-muted-foreground">至</span>
+                    <input
+                      type="time"
+                      className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                      value={editingRule.scheduledTimeEnd || "20:00"}
+                      onChange={e => setEditingRule(prev => ({ ...prev, scheduledTimeEnd: e.target.value }))}
+                    />
+                    <span className="text-[10px] text-muted-foreground">（仅在此时间段内推送）</span>
+                  </div>
+                </div>
+              )}
+              {editingRule.pushTiming === "realtime" && (
+                <div className="mt-3 flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">推送时间段（可选）：</span>
+                  <input
+                    type="time"
+                    className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={editingRule.scheduledTimeStart || "00:00"}
+                    onChange={e => setEditingRule(prev => ({ ...prev, scheduledTimeStart: e.target.value }))}
+                  />
+                  <span className="text-xs text-muted-foreground">至</span>
+                  <input
+                    type="time"
+                    className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={editingRule.scheduledTimeEnd || "23:59"}
+                    onChange={e => setEditingRule(prev => ({ ...prev, scheduledTimeEnd: e.target.value }))}
+                  />
+                  <span className="text-[10px] text-muted-foreground">（仅在此时间段内推送）</span>
                 </div>
               )}
             </div>
