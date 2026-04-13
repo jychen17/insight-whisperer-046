@@ -221,7 +221,8 @@ export default function SentimentDetail() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Filters - show on sentiment/all tabs */}
+      {mainTab !== "events" && (
       <div className="bg-card rounded-lg border border-border p-4 space-y-3">
         <div className="grid grid-cols-6 gap-3">
           <div>
@@ -263,6 +264,7 @@ export default function SentimentDetail() {
           <button className="px-4 py-1.5 text-xs gradient-primary text-primary-foreground rounded-md font-medium">查询</button>
         </div>
       </div>
+      )}
 
       {/* Toolbar: merge, noise, filter */}
       <div className="flex items-center justify-between">
