@@ -122,6 +122,12 @@ export default function SentimentDetail() {
   const [noiseDialogOpen, setNoiseDialogOpen] = useState(false);
   const [noiseCategory, setNoiseCategory] = useState("unrelated");
   const [noiseTargetIds, setNoiseTargetIds] = useState<number[]>([]);
+  const [autoClusterOpen, setAutoClusterOpen] = useState(false);
+  const [clusterMethod, setClusterMethod] = useState<"text_similarity" | "same_content">("text_similarity");
+  const [clusterTimeWindow, setClusterTimeWindow] = useState(24);
+  const [clusterSimilarity, setClusterSimilarity] = useState(0.7);
+  const [isClustering, setIsClustering] = useState(false);
+  const [clusterProgress, setClusterProgress] = useState(0);
 
   // Filtered items based on noise filter
   const displayItems = useMemo(() => {
