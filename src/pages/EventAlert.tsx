@@ -179,11 +179,10 @@ function formatConditionDisplay(c: RuleCondition, dimension: TriggerDimension) {
   return `${label} ${opLabel} ${c.value}`;
 }
 
-const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", scheduled: "定时汇总", incremental: "增量推送" };
+const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", scheduled: "定时汇总" };
 const timingIcons: Record<PushTiming, React.ReactNode> = {
   realtime: <Zap className="w-3 h-3" />,
   scheduled: <Clock className="w-3 h-3" />,
-  incremental: <RefreshCw className="w-3 h-3" />,
 };
 const logicLabels: Record<ConditionLogic, string> = { none: "不配置", any: "满足任一条件", all: "满足所有条件" };
 
