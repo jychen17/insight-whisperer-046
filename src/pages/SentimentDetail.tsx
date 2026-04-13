@@ -24,26 +24,42 @@ const NOISE_CATEGORIES = [
 ];
 
 /* ── Processing types ── */
-export type HandleAction = "ignore" | "complaint" | "escalate";
+export type HandleAction = "silent" | "dispatch" | "escalate" | "close" | "reopen";
 export interface HandleRecord {
   id: string;
   action: HandleAction;
   operator: string;
   time: string;
+  assignee?: string;
   complaintNo?: string;
   escalateTarget?: string;
+  escalateRole?: string;
   remark?: string;
 }
 
-export type HandleStatus = "pending" | "ignored" | "processing" | "escalated" | "closed";
+export type HandleStatus = "pending" | "silent" | "dispatched" | "escalated" | "closed";
 
 const HANDLE_STATUS_MAP: Record<HandleStatus, { label: string; color: string }> = {
   pending: { label: "待处理", color: "bg-amber-500/10 text-amber-600" },
-  ignored: { label: "已忽略", color: "bg-muted text-muted-foreground" },
-  processing: { label: "处理中", color: "bg-primary/10 text-primary" },
+  silent: { label: "已静默", color: "bg-muted text-muted-foreground" },
+  dispatched: { label: "已分派客服", color: "bg-primary/10 text-primary" },
   escalated: { label: "已升级", color: "bg-destructive/10 text-destructive" },
-  closed: { label: "已关闭", color: "bg-emerald-500/10 text-emerald-600" },
+  closed: { label: "已完结", color: "bg-emerald-500/10 text-emerald-600" },
 };
+
+const ESCALATE_ROLES = [
+  { value: "cs_supervisor", label: "客服主管" },
+  { value: "business", label: "业务负责人" },
+  { value: "pr", label: "公关" },
+];
+
+const ESCALATE_PERSONS: Record<string, string[]> = {
+  cs_supervisor: ["张经理", "李主管", "王组长"],
+  business: ["赵总监", "刘经理", "陈总"],
+  pr: ["孙总监", "周经理", "吴主管"],
+};
+
+const CS_AGENTS = ["客服A-小张", "客服B-小李", "客服C-小王", "客服D-小赵"];
 
 export interface SentimentItem {
   id: number;
@@ -137,7 +153,7 @@ const initialItems: SentimentItem[] = [
     business: "同程旅行-国内酒店", sentiment: "中性", issueType: "其他",
     summary: "租房广告内容，与企业舆情无关",
     comments: 1, likes: 3, collects: 2, shares: 0,
-    isNoise: true, noiseCategory: "rental_ad", handleStatus: "ignored", handleRecords: [],
+    isNoise: true, noiseCategory: "rental_ad", handleStatus: "silent", handleRecords: [],
   },
   {
     id: 6, title: "招聘旅游顾问 底薪6000+提成", platform: "抖音", author: "HR小王",
@@ -146,7 +162,7 @@ const initialItems: SentimentItem[] = [
     business: "同程旅行-人资", sentiment: "中性", issueType: "其他",
     summary: "招聘广告内容，与企业舆情无关",
     comments: 0, likes: 5, collects: 1, shares: 0,
-    isNoise: true, noiseCategory: "recruitment", handleStatus: "ignored", handleRecords: [],
+    isNoise: true, noiseCategory: "recruitment", handleStatus: "silent", handleRecords: [],
   },
 ];
 
@@ -187,9 +203,11 @@ export default function SentimentDetail() {
   const [handleDialogOpen, setHandleDialogOpen] = useState(false);
   const [handleDialogType, setHandleDialogType] = useState<"event" | "article">("article");
   const [handleTargetId, setHandleTargetId] = useState<string | number | null>(null);
-  const [handleAction, setHandleAction] = useState<HandleAction>("ignore");
+  const [handleAction, setHandleAction] = useState<HandleAction>("silent");
+  const [handleAssignee, setHandleAssignee] = useState("");
   const [handleComplaintNo, setHandleComplaintNo] = useState("");
-  const [handleEscalateTarget, setHandleEscalateTarget] = useState("公关部");
+  const [handleEscalateRole, setHandleEscalateRole] = useState("cs_supervisor");
+  const [handleEscalateTarget, setHandleEscalateTarget] = useState("");
   const [handleRemark, setHandleRemark] = useState("");
   const [selectedEventIds, setSelectedEventIds] = useState<string[]>([]);
   const [batchHandleDialogOpen, setBatchHandleDialogOpen] = useState(false);
@@ -308,9 +326,11 @@ export default function SentimentDetail() {
   const openHandleDialog = (type: "event" | "article", targetId: string | number) => {
     setHandleDialogType(type);
     setHandleTargetId(targetId);
-    setHandleAction("ignore");
+    setHandleAction("silent");
+    setHandleAssignee("");
     setHandleComplaintNo("");
-    setHandleEscalateTarget("公关部");
+    setHandleEscalateRole("cs_supervisor");
+    setHandleEscalateTarget("");
     setHandleRemark("");
     setHandleDialogOpen(true);
   };
@@ -320,15 +340,29 @@ export default function SentimentDetail() {
     action: handleAction,
     operator: "当前用户",
     time: new Date().toLocaleString("zh-CN"),
-    complaintNo: handleAction === "complaint" ? handleComplaintNo : undefined,
+    assignee: handleAction === "dispatch" ? handleAssignee : undefined,
+    complaintNo: handleAction === "dispatch" ? handleComplaintNo : undefined,
     escalateTarget: handleAction === "escalate" ? handleEscalateTarget : undefined,
+    escalateRole: handleAction === "escalate" ? ESCALATE_ROLES.find(r => r.value === handleEscalateRole)?.label : undefined,
     remark: handleRemark || undefined,
   });
 
   const actionToStatus = (action: HandleAction): HandleStatus => {
-    if (action === "ignore") return "ignored";
-    if (action === "complaint") return "processing";
-    return "escalated";
+    if (action === "silent") return "silent";
+    if (action === "dispatch") return "dispatched";
+    if (action === "escalate") return "escalated";
+    if (action === "close") return "closed";
+    if (action === "reopen") return "pending";
+    return "pending";
+  };
+
+  const actionLabel = (action: HandleAction): string => {
+    if (action === "silent") return "静默";
+    if (action === "dispatch") return "分派客服";
+    if (action === "escalate") return "升级处理";
+    if (action === "close") return "完结";
+    if (action === "reopen") return "重新打开";
+    return "";
   };
 
   const confirmHandle = () => {
@@ -344,7 +378,7 @@ export default function SentimentDetail() {
       ));
     }
     setHandleDialogOpen(false);
-    toast({ title: "处理成功", description: `已${handleAction === "ignore" ? "忽略" : handleAction === "complaint" ? "录入投诉单号" : "升级处理"}` });
+    toast({ title: "处理成功", description: `已${actionLabel(handleAction)}` });
   };
 
   const confirmBatchHandle = () => {
@@ -367,11 +401,53 @@ export default function SentimentDetail() {
 
   const openBatchHandle = (type: "event" | "article") => {
     setBatchHandleType(type);
-    setHandleAction("ignore");
+    setHandleAction("silent");
+    setHandleAssignee("");
     setHandleComplaintNo("");
-    setHandleEscalateTarget("公关部");
+    setHandleEscalateRole("cs_supervisor");
+    setHandleEscalateTarget("");
     setHandleRemark("");
     setBatchHandleDialogOpen(true);
+  };
+
+  const handleReopen = (type: "event" | "article", targetId: string | number) => {
+    const record: HandleRecord = {
+      id: `rec-${Date.now()}`,
+      action: "reopen",
+      operator: "当前用户",
+      time: new Date().toLocaleString("zh-CN"),
+      remark: "重新打开处理",
+    };
+    if (type === "event") {
+      setMergedEvents(prev => prev.map(e =>
+        e.id === targetId ? { ...e, handleStatus: "pending" as HandleStatus, handleRecords: [...(e.handleRecords || []), record] } : e
+      ));
+    } else {
+      setItems(prev => prev.map(i =>
+        i.id === targetId ? { ...i, handleStatus: "pending" as HandleStatus, handleRecords: [...(i.handleRecords || []), record] } : i
+      ));
+    }
+    toast({ title: "已重新打开" });
+  };
+
+  const handleClose = (type: "event" | "article", targetId: string | number) => {
+    const record: HandleRecord = {
+      id: `rec-${Date.now()}`,
+      action: "close",
+      operator: "当前用户",
+      time: new Date().toLocaleString("zh-CN"),
+      remark: "标记完结",
+    };
+    if (type === "event") {
+      setMergedEvents(prev => prev.map(e =>
+        e.id === targetId ? { ...e, handleStatus: "closed" as HandleStatus, handleRecords: [...(e.handleRecords || []), record] } : e
+      ));
+    } else {
+      setItems(prev => prev.map(i =>
+        i.id === targetId ? { ...i, handleStatus: "closed" as HandleStatus, handleRecords: [...(i.handleRecords || []), record] } : i
+      ));
+    }
+    toast({ title: "已完结" });
   };
 
   const runAutoCluster = () => {
@@ -530,15 +606,24 @@ export default function SentimentDetail() {
   const speedColor = { high: "text-destructive", medium: "text-amber-600", low: "text-muted-foreground" };
 
   /* ── Handle processing dialog content (shared between single & batch) ── */
+  const renderRecordDesc = (r: HandleRecord) => {
+    if (r.action === "silent") return "静默处理";
+    if (r.action === "dispatch") return `分派客服: ${r.assignee || "-"}${r.complaintNo ? `，投诉单号: ${r.complaintNo}` : ""}`;
+    if (r.action === "escalate") return `升级到${r.escalateRole || ""}: ${r.escalateTarget}`;
+    if (r.action === "close") return "标记完结";
+    if (r.action === "reopen") return "重新打开";
+    return r.action;
+  };
+
   const renderHandleForm = () => (
     <div className="space-y-4 py-2">
       <div>
         <label className="text-xs font-medium text-foreground mb-2 block">处置方式</label>
         <div className="grid grid-cols-3 gap-2">
           {([
-            { value: "ignore" as HandleAction, label: "忽略/静默", icon: XCircle, desc: "无需处理" },
-            { value: "complaint" as HandleAction, label: "录入投诉单号", icon: ClipboardList, desc: "需要跟进处理" },
-            { value: "escalate" as HandleAction, label: "升级处理", icon: ArrowUpRight, desc: "升级到公关/业务线" },
+            { value: "silent" as HandleAction, label: "静默", icon: XCircle, desc: "无需人工处理" },
+            { value: "dispatch" as HandleAction, label: "分派客服", icon: ClipboardList, desc: "分派给客服跟进" },
+            { value: "escalate" as HandleAction, label: "升级处理", icon: ArrowUpRight, desc: "升级到上级指定人" },
           ]).map(opt => (
             <label
               key={opt.value}
@@ -556,31 +641,59 @@ export default function SentimentDetail() {
           ))}
         </div>
       </div>
-      {handleAction === "complaint" && (
-        <div>
-          <label className="text-xs text-muted-foreground">投诉单号</label>
-          <input
-            className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-            value={handleComplaintNo}
-            onChange={e => setHandleComplaintNo(e.target.value)}
-            placeholder="请输入投诉单号"
-          />
+      {handleAction === "dispatch" && (
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">分派给</label>
+            <select
+              className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+              value={handleAssignee}
+              onChange={e => setHandleAssignee(e.target.value)}
+            >
+              <option value="">请选择客服</option>
+              {CS_AGENTS.map(a => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">投诉单号（可选）</label>
+            <input
+              className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+              value={handleComplaintNo}
+              onChange={e => setHandleComplaintNo(e.target.value)}
+              placeholder="如有投诉单号请输入"
+            />
+          </div>
         </div>
       )}
       {handleAction === "escalate" && (
-        <div>
-          <label className="text-xs text-muted-foreground">升级目标</label>
-          <select
-            className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-            value={handleEscalateTarget}
-            onChange={e => setHandleEscalateTarget(e.target.value)}
-          >
-            <option>公关部</option>
-            <option>品牌部</option>
-            <option>客服中心</option>
-            <option>法务部</option>
-            <option>业务线负责人</option>
-          </select>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground">升级角色</label>
+            <div className="flex gap-2 mt-1">
+              {ESCALATE_ROLES.map(role => (
+                <label
+                  key={role.value}
+                  className={`flex-1 p-2 rounded-md border text-center text-xs cursor-pointer transition-colors ${
+                    handleEscalateRole === role.value ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-foreground hover:bg-muted/30"
+                  }`}
+                >
+                  <input type="radio" className="sr-only" checked={handleEscalateRole === role.value} onChange={() => { setHandleEscalateRole(role.value); setHandleEscalateTarget(""); }} />
+                  {role.label}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground">指定处理人</label>
+            <select
+              className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+              value={handleEscalateTarget}
+              onChange={e => setHandleEscalateTarget(e.target.value)}
+            >
+              <option value="">请选择处理人</option>
+              {(ESCALATE_PERSONS[handleEscalateRole] || []).map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
         </div>
       )}
       <div>
@@ -697,10 +810,10 @@ export default function SentimentDetail() {
                 >
                   <option value="all">全部</option>
                   <option value="pending">待处理</option>
-                  <option value="ignored">已忽略</option>
-                  <option value="processing">处理中</option>
+                  <option value="silent">已静默</option>
+                  <option value="dispatched">已分派客服</option>
                   <option value="escalated">已升级</option>
-                  <option value="closed">已关闭</option>
+                  <option value="closed">已完结</option>
                 </select>
               </div>
               <div>
@@ -832,9 +945,22 @@ export default function SentimentDetail() {
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
-                          <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openHandleDialog("event", event.id); }}>
-                            <ClipboardList className="w-3 h-3" /> 处置
-                          </Button>
+                          {(event.handleStatus === "closed") ? (
+                            <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); handleReopen("event", event.id); }}>
+                              <History className="w-3 h-3" /> 重新打开
+                            </Button>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openHandleDialog("event", event.id); }}>
+                                <ClipboardList className="w-3 h-3" /> 处置
+                              </Button>
+                              {(event.handleStatus !== "pending") && (
+                                <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); handleClose("event", event.id); }}>
+                                  <CheckCircle2 className="w-3 h-3" /> 完结
+                                </Button>
+                              )}
+                            </>
+                          )}
                           <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); navigate(`/sentiment/event-detail?id=${event.id}`); }}>
                             <ExternalLink className="w-3 h-3" /> 详情
                           </Button>
@@ -903,7 +1029,7 @@ export default function SentimentDetail() {
                           </div>
                           {(event.handleRecords || []).slice(-1).map(r => (
                             <div key={r.id} className="text-[11px] text-muted-foreground">
-                              <span className="text-foreground">{r.operator}</span> 于 {r.time} {r.action === "ignore" ? "忽略了该事件" : r.action === "complaint" ? `录入投诉单号: ${r.complaintNo}` : `升级到: ${r.escalateTarget}`}
+                              <span className="text-foreground">{r.operator}</span> 于 {r.time} {renderRecordDesc(r)}
                               {r.remark && <span className="ml-1">（{r.remark}）</span>}
                             </div>
                           ))}
@@ -1098,9 +1224,22 @@ export default function SentimentDetail() {
                           <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
                         ) : (
                           <>
-                            <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
-                              <ClipboardList className="w-3 h-3" /> 处置
-                            </Button>
+                            {item.handleStatus === "closed" ? (
+                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => handleReopen("article", item.id)}>
+                                <History className="w-3 h-3" /> 重新打开
+                              </Button>
+                            ) : (
+                              <>
+                                <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
+                                  <ClipboardList className="w-3 h-3" /> 处置
+                                </Button>
+                                {item.handleStatus !== "pending" && (
+                                  <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => handleClose("article", item.id)}>
+                                    <CheckCircle2 className="w-3 h-3" /> 完结
+                                  </Button>
+                                )}
+                              </>
+                            )}
                             <button
                               className="text-muted-foreground hover:text-destructive"
                               title="标记为噪音"
@@ -1146,7 +1285,7 @@ export default function SentimentDetail() {
                         </div>
                         {(item.handleRecords || []).map(r => (
                           <div key={r.id} className="text-[11px] text-muted-foreground">
-                            <span className="text-foreground">{r.operator}</span> 于 {r.time} {r.action === "ignore" ? "忽略了该文章" : r.action === "complaint" ? `录入投诉单号: ${r.complaintNo}` : `升级到: ${r.escalateTarget}`}
+                            <span className="text-foreground">{r.operator}</span> 于 {r.time} {renderRecordDesc(r)}
                             {r.remark && <span className="ml-1">（{r.remark}）</span>}
                           </div>
                         ))}
