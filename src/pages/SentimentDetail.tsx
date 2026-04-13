@@ -1492,13 +1492,50 @@ export default function SentimentDetail() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <ClipboardList className="w-4 h-4 text-primary" /> {handleDialogType === "event" ? "事件处置" : "文章处置"}
+              <ClipboardList className="w-4 h-4 text-primary" />
+              {handleStep === 0 ? "重新打开" : handleStep === 4 ? "处理说明" : handleDialogType === "event" ? "事件处置" : "文章处置"}
             </DialogTitle>
           </DialogHeader>
           {renderHandleForm()}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
-            <Button onClick={confirmHandle}>确认处置</Button>
+            {handleStep === 0 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
+                <Button onClick={() => confirmWithAction("reopen")}>确认重新打开</Button>
+              </>
+            )}
+            {handleStep === 1 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
+                {handleAction === "dispatch" ? (
+                  <Button onClick={() => setHandleStep(2)}>下一步 →</Button>
+                ) : (
+                  <Button onClick={() => confirmWithAction("silent")}>确认静默</Button>
+                )}
+              </>
+            )}
+            {handleStep === 2 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleStep(1)}>← 上一步</Button>
+                <Button variant="outline" className="gap-1 text-amber-600 border-amber-500/30 hover:bg-amber-500/10" onClick={() => setHandleStep(3)}>
+                  <ArrowUpRight className="w-3 h-3" /> 处理不了，升级
+                </Button>
+                <Button onClick={() => confirmWithAction("dispatch")}>确认分派客服</Button>
+              </>
+            )}
+            {handleStep === 3 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleStep(2)}>← 上一步</Button>
+                <Button onClick={() => confirmWithAction("escalate")}>确认升级</Button>
+              </>
+            )}
+            {handleStep === 4 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleDialogOpen(false)}>取消</Button>
+                <Button variant="outline" onClick={() => confirmWithAction("close")}>完结</Button>
+                <Button onClick={() => confirmWithAction("add_remark")}>提交处理说明</Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1513,8 +1550,31 @@ export default function SentimentDetail() {
           </DialogHeader>
           {renderHandleForm(true)}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setBatchHandleDialogOpen(false)}>取消</Button>
-            <Button onClick={confirmBatchHandle}>确认批量处置</Button>
+            {handleStep === 1 && (
+              <>
+                <Button variant="outline" onClick={() => setBatchHandleDialogOpen(false)}>取消</Button>
+                {handleAction === "dispatch" ? (
+                  <Button onClick={() => setHandleStep(2)}>下一步 →</Button>
+                ) : (
+                  <Button onClick={() => confirmBatchWithAction("silent")}>确认静默</Button>
+                )}
+              </>
+            )}
+            {handleStep === 2 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleStep(1)}>← 上一步</Button>
+                <Button variant="outline" className="gap-1 text-amber-600 border-amber-500/30 hover:bg-amber-500/10" onClick={() => setHandleStep(3)}>
+                  <ArrowUpRight className="w-3 h-3" /> 处理不了，升级
+                </Button>
+                <Button onClick={() => confirmBatchWithAction("dispatch")}>确认分派客服</Button>
+              </>
+            )}
+            {handleStep === 3 && (
+              <>
+                <Button variant="outline" onClick={() => setHandleStep(2)}>← 上一步</Button>
+                <Button onClick={() => confirmBatchWithAction("escalate")}>确认升级</Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
