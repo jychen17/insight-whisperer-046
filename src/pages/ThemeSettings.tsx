@@ -62,9 +62,31 @@ export interface ThemeConfig {
   updatedAt: string;
 }
 
+export interface TaskParamConfig {
+  platform: string;
+  topics: string[];
+}
+
+export interface ExtendedParamConfig {
+  platform: string;
+  maxPages?: string;
+  maxFetchCount?: string;
+  sortBy?: string;
+}
+
 export interface DataSourceConfig {
   taskId: string;
   taskName: string;
+  taskType: string;
+  owner: string;
+  executionPeriodStart: string;
+  executionPeriodEnd: string;
+  scheduleMode: "interval" | "fixed";
+  scheduleTimeStart: number;
+  scheduleTimeEnd: number;
+  intervalHours: number;
+  taskParams: TaskParamConfig[];
+  extendedParams: ExtendedParamConfig[];
   platforms: string[];
   timeRange: string;
   enabled: boolean;
@@ -122,14 +144,21 @@ const FIELD_LABELS: Record<string, string> = Object.fromEntries(ALL_FIELDS.map(f
 
 const DISPLAY_POS_LABELS: Record<string, string> = { list: "列表", detail: "详情", both: "列表+详情" };
 
-// ── Mock Data ───────────────────────────────────────────────
+const defaultDS = (partial: Partial<DataSourceConfig> & { taskId: string; taskName: string; platforms: string[]; }): DataSourceConfig => ({
+  taskType: "话题", owner: "张三", executionPeriodStart: "2026-04-01", executionPeriodEnd: "2026-05-01",
+  scheduleMode: "interval", scheduleTimeStart: 0, scheduleTimeEnd: 23, intervalHours: 6,
+  taskParams: partial.platforms.map(p => ({ platform: p, topics: [] })),
+  extendedParams: partial.platforms.map(p => ({ platform: p })),
+  timeRange: "近7天", enabled: true,
+  ...partial,
+});
 
 const defaultThemes: ThemeConfig[] = [
   {
     id: "sentiment", name: "舆情主题", description: "品牌声誉风险监测与预警", owner: "张三",
     type: "builtin", status: "active", icon: "🛡️",
     dataSources: [
-      { taskId: "t1", taskName: "同程-万达", platforms: ["小红书", "微博", "抖音"], timeRange: "近7天", enabled: true,
+      defaultDS({ taskId: "t1", taskName: "同程-万达", platforms: ["小红书", "微博", "抖音"],
         conditionTree: {
           id: "root_t1", type: "group", logic: "AND", children: [
             { id: "c1_t1", type: "condition", field: "platform", operator: "equals", value: "小红书" },
@@ -140,8 +169,8 @@ const defaultThemes: ThemeConfig[] = [
             ]},
           ],
         },
-      },
-      { taskId: "t2", taskName: "同程-金服", platforms: ["微博", "黑猫投诉"], timeRange: "近7天", enabled: true,
+      }),
+      defaultDS({ taskId: "t2", taskName: "同程-金服", platforms: ["微博", "黑猫投诉"],
         conditionTree: {
           id: "root_t2", type: "group", logic: "AND", children: [
             { id: "c1_t2", type: "condition", field: "sentiment", operator: "equals", value: "负面" },
@@ -151,7 +180,7 @@ const defaultThemes: ThemeConfig[] = [
             ]},
           ],
         },
-      },
+      }),
     ],
     conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
@@ -186,9 +215,9 @@ const defaultThemes: ThemeConfig[] = [
   {
     id: "industry", name: "行业咨询主题", description: "行业动态、竞品动向、市场趋势监测", owner: "李四",
     type: "builtin", status: "active", icon: "🌐",
-    dataSources: [{ taskId: "t4", taskName: "OTA行业监控", platforms: ["微博", "抖音", "小红书", "百度"], timeRange: "近30天", enabled: true,
+    dataSources: [defaultDS({ taskId: "t4", taskName: "OTA行业监控", platforms: ["微博", "抖音", "小红书", "百度"],
       conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "topic", operator: "contains", value: "OTA" }] },
-    }],
+    })],
     conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
       { key: "platform", fieldType: "raw", displayPosition: "list", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["微博", "抖音", "小红书", "百度"] },
@@ -208,9 +237,9 @@ const defaultThemes: ThemeConfig[] = [
   {
     id: "hotspot", name: "热点洞察主题", description: "社媒热点发现、话题趋势追踪", owner: "王五",
     type: "builtin", status: "active", icon: "⚡",
-    dataSources: [{ taskId: "t5", taskName: "全平台热点", platforms: ["微博", "抖音", "小红书", "百度", "快手"], timeRange: "实时", enabled: true,
+    dataSources: [defaultDS({ taskId: "t5", taskName: "全平台热点", platforms: ["微博", "抖音", "小红书", "百度", "快手"],
       conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "topic", operator: "contains", value: "旅游" }] },
-    }],
+    })],
     conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
       { key: "platform", fieldType: "raw", displayPosition: "list", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["微博", "抖音", "小红书", "百度", "快手"] },
@@ -224,9 +253,9 @@ const defaultThemes: ThemeConfig[] = [
   {
     id: "experience", name: "产品体验主题", description: "用户反馈收集、产品问题洞察", owner: "赵六",
     type: "builtin", status: "active", icon: "💡",
-    dataSources: [{ taskId: "t6", taskName: "用户反馈监控", platforms: ["小红书", "黑猫投诉", "微博"], timeRange: "近7天", enabled: true,
+    dataSources: [defaultDS({ taskId: "t6", taskName: "用户反馈监控", platforms: ["小红书", "黑猫投诉", "微博"],
       conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "intent", operator: "equals", value: "用户反馈" }] },
-    }],
+    })],
     conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
       { key: "sentiment", fieldType: "ai", displayPosition: "both", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["正面", "负面", "中性"] },
