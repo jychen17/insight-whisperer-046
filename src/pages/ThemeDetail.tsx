@@ -4,15 +4,17 @@ import { Edit2, LayoutDashboard, GitMerge, Filter, Search, Layers, ChevronRight,
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ThemeFlowCanvas from "@/components/ThemeFlowCanvas";
-import ThemeConfigDialog from "@/components/ThemeConfigDialog";
+import ThemeConfigDialog, { mergeConditionTreeToText } from "@/components/ThemeConfigDialog";
 import type { ThemeConfig, DashboardWidget } from "@/pages/ThemeSettings";
 
 // Re-use labels from ThemeSettings
 const MERGE_TYPE_LABELS: Record<string, string> = { text_similarity: "文本相似度合并", field_group: "字段组合分组", time_window: "时间窗口聚合" };
 const FIELD_LABELS: Record<string, string> = {
-  title: "标题", content: "正文", platform: "平台", author: "作者", publishTime: "发布时间",
+  title: "标题", content: "正文", platform: "平台", author: "作者", publishTime: "发布时间", publish_time: "发布时间",
   sentiment: "情感倾向", topic: "话题分类", region: "地域", likes: "点赞数", comments: "评论数",
   shares: "转发数", readCount: "阅读量", heatScore: "热度指数", influenceScore: "影响力评分",
+  risk_level: "风险等级", intent: "用户意图", reads: "阅读数", heat_score: "热度指数",
+  risk_score: "风险分数", ferment_level: "发酵等级", sov: "SOV份额", nps: "NPS评分", growth_rate: "增长率",
 };
 const DISPLAY_POS_LABELS: Record<string, string> = { list: "仅列表", detail: "仅详情", both: "列表+详情" };
 
