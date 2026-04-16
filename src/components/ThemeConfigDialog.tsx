@@ -105,22 +105,85 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const handleSave = () => { if (validateStep(step)) onSave({ ...form, updatedAt: new Date().toISOString().slice(0, 10) }); };
 
   // ── Data Sources ──
-  const toggleTask = (task: typeof MOCK_TASKS[0]) => {
+  const addDataSource = () => {
+    const id = `ds_${Date.now()}`;
+    const newDs: DataSourceConfig = {
+      taskId: id, taskName: "", taskType: "话题", owner: "",
+      executionPeriodStart: new Date().toISOString().slice(0, 10),
+      executionPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
+      scheduleMode: "interval", scheduleTimeStart: 0, scheduleTimeEnd: 23, intervalHours: 6,
+      taskParams: [{ platform: "", topics: [] }],
+      extendedParams: [{ platform: "" }],
+      platforms: [], timeRange: "近7天", enabled: true,
+      conditionTree: { ...emptyConditionTree, id: `root_${id}` },
+    };
     setForm(f => {
-      const exists = f.dataSources.find(ds => ds.taskId === task.id);
-      if (exists) {
-        const newDS = f.dataSources.filter(ds => ds.taskId !== task.id);
-        // Reset active tab if removed
-        if (activeConditionDS === task.id && newDS.length > 0) {
-          setActiveConditionDS(newDS[0].taskId);
-        }
-        return { ...f, dataSources: newDS };
-      }
-      const newDs = { taskId: task.id, taskName: task.name, platforms: task.platforms, timeRange: "近7天", enabled: true, conditionTree: { ...emptyConditionTree, id: `root_${task.id}` } };
-      if (f.dataSources.length === 0) setActiveConditionDS(task.id);
+      if (f.dataSources.length === 0) setActiveConditionDS(id);
       return { ...f, dataSources: [...f.dataSources, newDs] };
     });
+    setEditingDS(id);
   };
+
+  const removeDataSource = (taskId: string) => {
+    setForm(f => {
+      const newDS = f.dataSources.filter(ds => ds.taskId !== taskId);
+      if (activeConditionDS === taskId && newDS.length > 0) setActiveConditionDS(newDS[0].taskId);
+      return { ...f, dataSources: newDS };
+    });
+    if (editingDS === taskId) setEditingDS(null);
+  };
+
+  const updateDataSource = (taskId: string, update: Partial<DataSourceConfig>) => {
+    setForm(f => ({
+      ...f,
+      dataSources: f.dataSources.map(ds => {
+        if (ds.taskId !== taskId) return ds;
+        const updated = { ...ds, ...update };
+        // Derive platforms from taskParams
+        updated.platforms = [...new Set(updated.taskParams.map(tp => tp.platform).filter(Boolean))];
+        return updated;
+      }),
+    }));
+  };
+
+  const addTaskParam = (taskId: string) => {
+    const ds = form.dataSources.find(d => d.taskId === taskId);
+    if (!ds) return;
+    updateDataSource(taskId, { taskParams: [...ds.taskParams, { platform: "", topics: [] }] });
+  };
+
+  const updateTaskParam = (taskId: string, idx: number, update: Partial<TaskParamConfig>) => {
+    const ds = form.dataSources.find(d => d.taskId === taskId);
+    if (!ds) return;
+    updateDataSource(taskId, { taskParams: ds.taskParams.map((tp, i) => i === idx ? { ...tp, ...update } : tp) });
+  };
+
+  const removeTaskParam = (taskId: string, idx: number) => {
+    const ds = form.dataSources.find(d => d.taskId === taskId);
+    if (!ds || ds.taskParams.length <= 1) return;
+    updateDataSource(taskId, { taskParams: ds.taskParams.filter((_, i) => i !== idx) });
+  };
+
+  const addExtendedParam = (taskId: string) => {
+    const ds = form.dataSources.find(d => d.taskId === taskId);
+    if (!ds) return;
+    updateDataSource(taskId, { extendedParams: [...ds.extendedParams, { platform: "" }] });
+  };
+
+  const updateExtendedParam = (taskId: string, idx: number, update: Partial<ExtendedParamConfig>) => {
+    const ds = form.dataSources.find(d => d.taskId === taskId);
+    if (!ds) return;
+    updateDataSource(taskId, { extendedParams: ds.extendedParams.map((ep, i) => i === idx ? { ...ep, ...update } : ep) });
+  };
+
+  const removeExtendedParam = (taskId: string, idx: number) => {
+    const ds = form.dataSources.find(d => d.taskId === taskId);
+    if (!ds || ds.extendedParams.length <= 1) return;
+    updateDataSource(taskId, { extendedParams: ds.extendedParams.filter((_, i) => i !== idx) });
+  };
+
+  const [editingDS, setEditingDS] = useState<string | null>(null);
+  const [topicInput, setTopicInput] = useState<Record<string, string>>({});
 
   // ── Condition Tree (per data source) ──
   const updateDSConditionTree = (taskId: string, tree: ConditionNode) => {
