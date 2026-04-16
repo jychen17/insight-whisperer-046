@@ -144,7 +144,14 @@ const FIELD_LABELS: Record<string, string> = Object.fromEntries(ALL_FIELDS.map(f
 
 const DISPLAY_POS_LABELS: Record<string, string> = { list: "列表", detail: "详情", both: "列表+详情" };
 
-// ── Mock Data ───────────────────────────────────────────────
+const defaultDS = (partial: Partial<DataSourceConfig> & { taskId: string; taskName: string; platforms: string[]; }): DataSourceConfig => ({
+  taskType: "话题", owner: "张三", executionPeriodStart: "2026-04-01", executionPeriodEnd: "2026-05-01",
+  scheduleMode: "interval", scheduleTimeStart: 0, scheduleTimeEnd: 23, intervalHours: 6,
+  taskParams: partial.platforms.map(p => ({ platform: p, topics: [] })),
+  extendedParams: partial.platforms.map(p => ({ platform: p })),
+  timeRange: "近7天", enabled: true,
+  ...partial,
+});
 
 const defaultThemes: ThemeConfig[] = [
   {
