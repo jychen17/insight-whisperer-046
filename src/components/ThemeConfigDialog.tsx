@@ -564,8 +564,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                                         );
                                       })}
                                     </div>
-                                    {tp.platforms.length > 0 && (
-                                      <p className="text-[10px] text-primary mt-1">已选 {tp.platforms.length} 个平台</p>
+                                    {(Array.isArray(tp.platforms) ? tp.platforms : []).length > 0 && (
+                                      <p className="text-[10px] text-primary mt-1">已选 {(Array.isArray(tp.platforms) ? tp.platforms : []).length} 个平台</p>
                                     )}
                                   </div>
 
