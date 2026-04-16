@@ -158,7 +158,7 @@ const defaultThemes: ThemeConfig[] = [
     id: "sentiment", name: "舆情主题", description: "品牌声誉风险监测与预警", owner: "张三",
     type: "builtin", status: "active", icon: "🛡️",
     dataSources: [
-      { taskId: "t1", taskName: "同程-万达", platforms: ["小红书", "微博", "抖音"], timeRange: "近7天", enabled: true,
+      defaultDS({ taskId: "t1", taskName: "同程-万达", platforms: ["小红书", "微博", "抖音"],
         conditionTree: {
           id: "root_t1", type: "group", logic: "AND", children: [
             { id: "c1_t1", type: "condition", field: "platform", operator: "equals", value: "小红书" },
@@ -169,8 +169,8 @@ const defaultThemes: ThemeConfig[] = [
             ]},
           ],
         },
-      },
-      { taskId: "t2", taskName: "同程-金服", platforms: ["微博", "黑猫投诉"], timeRange: "近7天", enabled: true,
+      }),
+      defaultDS({ taskId: "t2", taskName: "同程-金服", platforms: ["微博", "黑猫投诉"],
         conditionTree: {
           id: "root_t2", type: "group", logic: "AND", children: [
             { id: "c1_t2", type: "condition", field: "sentiment", operator: "equals", value: "负面" },
@@ -180,7 +180,7 @@ const defaultThemes: ThemeConfig[] = [
             ]},
           ],
         },
-      },
+      }),
     ],
     conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
