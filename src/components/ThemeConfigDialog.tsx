@@ -289,7 +289,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   if (!open) return null;
 
   const sortedMergeNodes = [...(form.mergeNodes || [])].sort((a, b) => a.order - b.order);
-  const filteredTasks = MOCK_TASKS.filter(t => !dsSearch || t.name.includes(dsSearch) || t.platforms.some(p => p.includes(dsSearch)));
+  
 
   const fieldsByType = { ai: ALL_FIELDS.filter(f => f.fieldType === "ai"), raw: ALL_FIELDS.filter(f => f.fieldType === "raw"), calc: ALL_FIELDS.filter(f => f.fieldType === "calc") };
   const filteredFields = (fields: typeof ALL_FIELDS) => fields.filter(f => !fieldSearch || f.label.includes(fieldSearch) || f.key.includes(fieldSearch));
