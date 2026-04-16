@@ -141,6 +141,11 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
       dataSources: f.dataSources.map(ds => {
         if (ds.taskId !== taskId) return ds;
         const updated = { ...ds, ...update };
+        // Normalize taskParams: ensure platforms is always an array
+        updated.taskParams = updated.taskParams.map(tp => ({
+          ...tp,
+          platforms: Array.isArray(tp.platforms) ? tp.platforms : ((tp as any).platform ? [(tp as any).platform] : []),
+        }));
         // Derive platforms from taskParams
         updated.platforms = [...new Set(updated.taskParams.flatMap(tp => tp.platforms).filter(Boolean))];
         return updated;
@@ -321,9 +326,10 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     const ds = form.dataSources.find(d => d.taskId === taskId);
     if (!ds) return;
     const tp = ds.taskParams[tpIdx];
-    const platforms = tp.platforms.includes(platform)
-      ? tp.platforms.filter(p => p !== platform)
-      : [...tp.platforms, platform];
+    const currentPlatforms = Array.isArray(tp.platforms) ? tp.platforms : ((tp as any).platform ? [(tp as any).platform] : []);
+    const platforms = currentPlatforms.includes(platform)
+      ? currentPlatforms.filter(p => p !== platform)
+      : [...currentPlatforms, platform];
     updateTaskParam(taskId, tpIdx, { platforms });
   };
 
@@ -547,7 +553,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                                     <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 发布平台（多选）</label>
                                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                                       {PLATFORM_OPTIONS.map(p => {
-                                        const selected = tp.platforms.includes(p);
+                                        const selected = (Array.isArray(tp.platforms) ? tp.platforms : []).includes(p);
                                         return (
                                           <button key={p} onClick={() => toggleTaskParamPlatform(ds.taskId, tpIdx, p)}
                                             className={`px-2 py-1 text-[10px] rounded-md border transition-colors ${
@@ -558,8 +564,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                                         );
                                       })}
                                     </div>
-                                    {tp.platforms.length > 0 && (
-                                      <p className="text-[10px] text-primary mt-1">已选 {tp.platforms.length} 个平台</p>
+                                    {(Array.isArray(tp.platforms) ? tp.platforms : []).length > 0 && (
+                                      <p className="text-[10px] text-primary mt-1">已选 {(Array.isArray(tp.platforms) ? tp.platforms : []).length} 个平台</p>
                                     )}
                                   </div>
 
