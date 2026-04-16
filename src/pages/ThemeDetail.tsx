@@ -324,16 +324,22 @@ export default function ThemeDetail() {
                 <div className="flex items-center gap-2">
                   <GitMerge className="w-4 h-4 text-primary" />
                   <span className="text-xs font-medium text-foreground">{node.name}</span>
-                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">字段分组合并</Badge>
+                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">
+                    {node.mergeConditionTree && (node.mergeConditionTree.children || []).length > 0
+                      ? mergeConditionTreeToText(node.mergeConditionTree)
+                      : "字段分组合并"}
+                  </Badge>
                 </div>
                 <span className="text-[10px] text-muted-foreground">
-                  {(node.mergeConditions || []).map(mc => {
-                    const fl = FIELD_LABELS[mc.field] || mc.field;
-                    if (mc.operator === "similarity_gte") return `${fl}≥${mc.value}%`;
-                    if (mc.operator === "time_within") return `${mc.value}h窗口`;
-                    if (mc.operator === "equals") return `${fl}相同`;
-                    return `${fl}包含${mc.value}`;
-                  }).join(" + ")}
+                  {node.mergeConditionTree && (node.mergeConditionTree.children || []).length > 0
+                    ? mergeConditionTreeToText(node.mergeConditionTree)
+                    : (node.mergeConditions || []).map(mc => {
+                        const fl = FIELD_LABELS[mc.field] || mc.field;
+                        if (mc.operator === "similarity_gte") return `${fl}≥${mc.value}%`;
+                        if (mc.operator === "time_within") return `${mc.value}h窗口`;
+                        if (mc.operator === "equals") return `${fl}相同`;
+                        return `${fl}包含${mc.value}`;
+                      }).join(" + ")}
                   {nodeIndex > 0 && " · 基于上一级合并结果"}
                 </span>
               </div>
