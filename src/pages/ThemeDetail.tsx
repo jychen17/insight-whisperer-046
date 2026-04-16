@@ -4,15 +4,17 @@ import { Edit2, LayoutDashboard, GitMerge, Filter, Search, Layers, ChevronRight,
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ThemeFlowCanvas from "@/components/ThemeFlowCanvas";
-import ThemeConfigDialog from "@/components/ThemeConfigDialog";
+import ThemeConfigDialog, { mergeConditionTreeToText } from "@/components/ThemeConfigDialog";
 import type { ThemeConfig, DashboardWidget } from "@/pages/ThemeSettings";
 
 // Re-use labels from ThemeSettings
 const MERGE_TYPE_LABELS: Record<string, string> = { text_similarity: "文本相似度合并", field_group: "字段组合分组", time_window: "时间窗口聚合" };
 const FIELD_LABELS: Record<string, string> = {
-  title: "标题", content: "正文", platform: "平台", author: "作者", publishTime: "发布时间",
+  title: "标题", content: "正文", platform: "平台", author: "作者", publishTime: "发布时间", publish_time: "发布时间",
   sentiment: "情感倾向", topic: "话题分类", region: "地域", likes: "点赞数", comments: "评论数",
   shares: "转发数", readCount: "阅读量", heatScore: "热度指数", influenceScore: "影响力评分",
+  risk_level: "风险等级", intent: "用户意图", reads: "阅读数", heat_score: "热度指数",
+  risk_score: "风险分数", ferment_level: "发酵等级", sov: "SOV份额", nps: "NPS评分", growth_rate: "增长率",
 };
 const DISPLAY_POS_LABELS: Record<string, string> = { list: "仅列表", detail: "仅详情", both: "列表+详情" };
 
@@ -206,23 +208,35 @@ export default function ThemeDetail() {
                       <GitMerge className="w-3 h-3 text-primary" /> 第{i + 1}级：{node.name}
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-0.5">
-                      {(() => {
-                        const parts: string[] = [];
-                        (node.mergeConditions || []).forEach(mc => {
-                          const fl = FIELD_LABELS[mc.field] || mc.field;
-                          if (mc.operator === "similarity_gte") parts.push(`${fl}≥${mc.value}%`);
-                          else if (mc.operator === "time_within") parts.push(`${mc.value}h窗口`);
-                          else if (mc.operator === "equals") parts.push(`${fl}相同`);
-                          else parts.push(`${fl}包含${mc.value}`);
-                        });
-                        return parts.join(" + ") || "字段分组合并";
-                      })()}
+                      {node.mergeConditionTree && (node.mergeConditionTree.children || []).length > 0
+                        ? mergeConditionTreeToText(node.mergeConditionTree)
+                        : (() => {
+                            const parts: string[] = [];
+                            (node.mergeConditions || []).forEach(mc => {
+                              const fl = FIELD_LABELS[mc.field] || mc.field;
+                              if (mc.operator === "similarity_gte") parts.push(`${fl}≥${mc.value}%`);
+                              else if (mc.operator === "time_within") parts.push(`${mc.value}h窗口`);
+                              else if (mc.operator === "equals") parts.push(`${fl}相同`);
+                              else parts.push(`${fl}包含${mc.value}`);
+                            });
+                            return parts.join(" + ") || "字段分组合并";
+                          })()
+                      }
                     </div>
+                    {/* Sort config */}
+                    {(node.displayFields || []).some(df => df.isDefaultSort) && (
+                      <div className="text-[10px] text-primary mt-0.5">
+                        📋 排序：{FIELD_LABELS[(node.displayFields || []).find(df => df.isDefaultSort)?.key || ""] || (node.displayFields || []).find(df => df.isDefaultSort)?.key}
+                        {(node.displayFields || []).find(df => df.isDefaultSort)?.sortDirection === "asc" ? " 升序" : " 降序"}
+                      </div>
+                    )}
                     {(node.displayFields || []).length > 0 && (
                       <div className="flex gap-1 mt-1 flex-wrap">
                         {(node.displayFields || []).map(df => (
                           <Badge key={df.key} className="text-[9px] px-1 py-0 bg-muted text-muted-foreground border-0">
                             {FIELD_LABELS[df.key] || df.key}·{DISPLAY_POS_LABELS[df.position]}
+                            {df.isFilter && "·筛选"}
+                            {df.isSortable && "·排序"}
                           </Badge>
                         ))}
                       </div>
@@ -310,16 +324,22 @@ export default function ThemeDetail() {
                 <div className="flex items-center gap-2">
                   <GitMerge className="w-4 h-4 text-primary" />
                   <span className="text-xs font-medium text-foreground">{node.name}</span>
-                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">字段分组合并</Badge>
+                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">
+                    {node.mergeConditionTree && (node.mergeConditionTree.children || []).length > 0
+                      ? mergeConditionTreeToText(node.mergeConditionTree)
+                      : "字段分组合并"}
+                  </Badge>
                 </div>
                 <span className="text-[10px] text-muted-foreground">
-                  {(node.mergeConditions || []).map(mc => {
-                    const fl = FIELD_LABELS[mc.field] || mc.field;
-                    if (mc.operator === "similarity_gte") return `${fl}≥${mc.value}%`;
-                    if (mc.operator === "time_within") return `${mc.value}h窗口`;
-                    if (mc.operator === "equals") return `${fl}相同`;
-                    return `${fl}包含${mc.value}`;
-                  }).join(" + ")}
+                  {node.mergeConditionTree && (node.mergeConditionTree.children || []).length > 0
+                    ? mergeConditionTreeToText(node.mergeConditionTree)
+                    : (node.mergeConditions || []).map(mc => {
+                        const fl = FIELD_LABELS[mc.field] || mc.field;
+                        if (mc.operator === "similarity_gte") return `${fl}≥${mc.value}%`;
+                        if (mc.operator === "time_within") return `${mc.value}h窗口`;
+                        if (mc.operator === "equals") return `${fl}相同`;
+                        return `${fl}包含${mc.value}`;
+                      }).join(" + ")}
                   {nodeIndex > 0 && " · 基于上一级合并结果"}
                 </span>
               </div>
