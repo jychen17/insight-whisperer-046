@@ -360,61 +360,237 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
             </div>
           )}
 
-          {/* ═══════ Step 2: Data Sources (searchable compact) ═══════ */}
+          {/* ═══════ Step 2: Data Sources (inline task config) ═══════ */}
           {step === 1 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-foreground">选择采集任务作为数据源</label>
-                <span className="text-[11px] text-muted-foreground">已选 {form.dataSources.length} 个</span>
+                <label className="text-xs font-medium text-foreground">配置采集任务</label>
+                <button onClick={addDataSource} className="flex items-center gap-1 text-xs text-primary hover:underline"><Plus className="w-3 h-3" /> 新增任务</button>
               </div>
               {errors.dataSources && <p className="text-[11px] text-destructive">{errors.dataSources}</p>}
 
-              {/* Selected chips */}
-              {form.dataSources.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {form.dataSources.map(ds => (
-                    <Badge key={ds.taskId} className="text-xs px-2 py-1 bg-primary/10 text-primary border-0 gap-1">
-                      {ds.taskName}
-                      <button onClick={() => setForm(f => ({ ...f, dataSources: f.dataSources.filter(d => d.taskId !== ds.taskId) }))}
-                        className="hover:text-destructive ml-0.5">×</button>
-                    </Badge>
-                  ))}
+              {form.dataSources.length === 0 ? (
+                <div className="text-center py-8 border-2 border-dashed border-border rounded-lg">
+                  <Calendar className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground mb-1">暂未配置采集任务</p>
+                  <button onClick={addDataSource} className="mt-3 px-4 py-1.5 text-xs text-primary border border-primary/30 rounded-md hover:bg-primary/5">添加第一个采集任务</button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {form.dataSources.map((ds, dsIdx) => {
+                    const isExpanded = editingDS === ds.taskId;
+                    return (
+                      <div key={ds.taskId} className="border border-border rounded-lg overflow-hidden">
+                        {/* Task header */}
+                        <div className="flex items-center justify-between px-3 py-2.5 bg-muted/30 cursor-pointer" onClick={() => setEditingDS(isExpanded ? null : ds.taskId)}>
+                          <div className="flex items-center gap-2">
+                            {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                            <span className="text-xs font-medium text-foreground">{ds.taskName || `任务 ${dsIdx + 1}`}</span>
+                            <Badge className="text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-0">{ds.taskType}</Badge>
+                            {ds.platforms.length > 0 && (
+                              <div className="flex gap-1">
+                                {ds.platforms.slice(0, 3).map(p => <Badge key={p} className="text-[9px] px-1 py-0 bg-muted text-muted-foreground border-0">{p}</Badge>)}
+                                {ds.platforms.length > 3 && <Badge className="text-[9px] px-1 py-0 bg-muted text-muted-foreground border-0">+{ds.platforms.length - 3}</Badge>}
+                              </div>
+                            )}
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); removeDataSource(ds.taskId); }}
+                            className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+
+                        {/* Task form (expanded) */}
+                        {isExpanded && (
+                          <div className="p-4 space-y-4 border-t border-border">
+                            {/* Row 1: Type + Name */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 任务类型</label>
+                                <select value={ds.taskType} onChange={e => updateDataSource(ds.taskId, { taskType: e.target.value })}
+                                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
+                                  {TASK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 任务名称</label>
+                                <input value={ds.taskName} onChange={e => updateDataSource(ds.taskId, { taskName: e.target.value })}
+                                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
+                                  placeholder="例如：机票话题监控-v1" />
+                              </div>
+                            </div>
+
+                            {/* Row 2: Owner + Period */}
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 归属人</label>
+                                <select value={ds.owner} onChange={e => updateDataSource(ds.taskId, { owner: e.target.value })}
+                                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
+                                  <option value="">选择归属人</option>
+                                  {OWNER_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 任务执行周期</label>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <input type="date" value={ds.executionPeriodStart} onChange={e => updateDataSource(ds.taskId, { executionPeriodStart: e.target.value })}
+                                    className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" />
+                                  <span className="text-xs text-muted-foreground">→</span>
+                                  <input type="date" value={ds.executionPeriodEnd} onChange={e => updateDataSource(ds.taskId, { executionPeriodEnd: e.target.value })}
+                                    className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Row 3: Schedule config */}
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 任务调度配置</label>
+                                <div className="flex items-center gap-3 mt-1.5">
+                                  <label className="flex items-center gap-1 text-xs text-foreground cursor-pointer">
+                                    <input type="radio" name={`schedule_${ds.taskId}`} checked={ds.scheduleMode === "interval"}
+                                      onChange={() => updateDataSource(ds.taskId, { scheduleMode: "interval" })} className="accent-primary" />
+                                    间隔模式
+                                  </label>
+                                  <label className="flex items-center gap-1 text-xs text-foreground cursor-pointer">
+                                    <input type="radio" name={`schedule_${ds.taskId}`} checked={ds.scheduleMode === "fixed"}
+                                      onChange={() => updateDataSource(ds.taskId, { scheduleMode: "fixed" })} className="accent-primary" />
+                                    固定时间模式
+                                  </label>
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 调度时间范围（整点）</label>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <input type="number" min={0} max={23} value={ds.scheduleTimeStart}
+                                    onChange={e => updateDataSource(ds.taskId, { scheduleTimeStart: Number(e.target.value) })}
+                                    className="w-16 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground text-center" />
+                                  <span className="text-xs text-muted-foreground">→</span>
+                                  <input type="number" min={0} max={23} value={ds.scheduleTimeEnd}
+                                    onChange={e => updateDataSource(ds.taskId, { scheduleTimeEnd: Number(e.target.value) })}
+                                    className="w-16 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground text-center" />
+                                </div>
+                              </div>
+                              <div>
+                                <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 间隔（小时）</label>
+                                <input type="number" min={1} max={24} value={ds.intervalHours}
+                                  onChange={e => updateDataSource(ds.taskId, { intervalHours: Number(e.target.value) })}
+                                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" />
+                              </div>
+                            </div>
+
+                            {/* Task Params */}
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 任务参数配置</label>
+                                <button onClick={() => addTaskParam(ds.taskId)} className="flex items-center gap-0.5 text-[11px] text-primary hover:underline"><Plus className="w-3 h-3" /> 添加</button>
+                              </div>
+                              {ds.taskParams.map((tp, tpIdx) => (
+                                <div key={tpIdx} className="border border-border rounded-md p-3 mb-2 bg-muted/20 space-y-2.5">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex-1">
+                                      <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 发布平台</label>
+                                      <select value={tp.platform} onChange={e => updateTaskParam(ds.taskId, tpIdx, { platform: e.target.value })}
+                                        className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
+                                        <option value="">选择平台</option>
+                                        {PLATFORM_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                                      </select>
+                                    </div>
+                                    {ds.taskParams.length > 1 && (
+                                      <button onClick={() => removeTaskParam(ds.taskId, tpIdx)} className="ml-2 text-muted-foreground hover:text-destructive mt-4"><Trash2 className="w-3.5 h-3.5" /></button>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 话题</label>
+                                    <div className="flex items-center gap-1.5 mt-1">
+                                      <input value={topicInput[`${ds.taskId}_${tpIdx}`] || ""} onChange={e => setTopicInput(prev => ({ ...prev, [`${ds.taskId}_${tpIdx}`]: e.target.value }))}
+                                        className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
+                                        placeholder="话题（支持回车号分隔）"
+                                        onKeyDown={e => {
+                                          if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            const val = (topicInput[`${ds.taskId}_${tpIdx}`] || "").trim();
+                                            if (val && !tp.topics.includes(val)) {
+                                              updateTaskParam(ds.taskId, tpIdx, { topics: [...tp.topics, val] });
+                                              setTopicInput(prev => ({ ...prev, [`${ds.taskId}_${tpIdx}`]: "" }));
+                                            }
+                                          }
+                                        }} />
+                                      <button onClick={() => {
+                                        const val = (topicInput[`${ds.taskId}_${tpIdx}`] || "").trim();
+                                        if (val && !tp.topics.includes(val)) {
+                                          updateTaskParam(ds.taskId, tpIdx, { topics: [...tp.topics, val] });
+                                          setTopicInput(prev => ({ ...prev, [`${ds.taskId}_${tpIdx}`]: "" }));
+                                        }
+                                      }} className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground hover:bg-muted">添加</button>
+                                    </div>
+                                    {tp.topics.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-1.5">
+                                        {tp.topics.map(topic => (
+                                          <Badge key={topic} className="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary border-0 gap-1">
+                                            {topic}
+                                            <button onClick={() => updateTaskParam(ds.taskId, tpIdx, { topics: tp.topics.filter(t => t !== topic) })}
+                                              className="hover:text-destructive">×</button>
+                                          </Badge>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Extended Params */}
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <label className="text-[11px] font-medium text-foreground flex items-center gap-1">任务扩展参数配置 <span className="text-muted-foreground text-[10px]">ⓘ</span></label>
+                                <button onClick={() => addExtendedParam(ds.taskId)} className="flex items-center gap-0.5 text-[11px] text-primary hover:underline"><Plus className="w-3 h-3" /> 添加</button>
+                              </div>
+                              {ds.extendedParams.map((ep, epIdx) => (
+                                <div key={epIdx} className="border border-border rounded-md p-3 mb-2 bg-muted/20">
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 发布平台</label>
+                                      <select value={ep.platform} onChange={e => updateExtendedParam(ds.taskId, epIdx, { platform: e.target.value })}
+                                        className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
+                                        <option value="">选择平台</option>
+                                        {PLATFORM_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                                      </select>
+                                    </div>
+                                    <div className="flex items-start gap-2">
+                                      <div className="flex-1">
+                                        <label className="text-[10px] font-medium text-foreground">最大翻页</label>
+                                        <input value={ep.maxPages || ""} onChange={e => updateExtendedParam(ds.taskId, epIdx, { maxPages: e.target.value })}
+                                          className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                                          placeholder="最大翻页" />
+                                      </div>
+                                      {ds.extendedParams.length > 1 && (
+                                        <button onClick={() => removeExtendedParam(ds.taskId, epIdx)} className="text-destructive hover:text-destructive/80 mt-5"><Trash2 className="w-3.5 h-3.5" /></button>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-medium text-foreground">最大抓取量</label>
+                                      <input value={ep.maxFetchCount || ""} onChange={e => updateExtendedParam(ds.taskId, epIdx, { maxFetchCount: e.target.value })}
+                                        className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                                        placeholder="最大抓取量" />
+                                    </div>
+                                    <div>
+                                      <label className="text-[10px] font-medium text-foreground">排序方式</label>
+                                      <select value={ep.sortBy || ""} onChange={e => updateExtendedParam(ds.taskId, epIdx, { sortBy: e.target.value })}
+                                        className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
+                                        <option value="">排序方式</option>
+                                        {SORT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                                      </select>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-
-              {/* Search */}
-              <div className="flex items-center border border-border rounded-md bg-card px-3">
-                <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                <input value={dsSearch} onChange={e => setDsSearch(e.target.value)}
-                  className="flex-1 px-2 py-2 text-xs bg-transparent text-foreground outline-none"
-                  placeholder="搜索任务名称或平台..." />
-              </div>
-
-              {/* Compact task list */}
-              <div className="border border-border rounded-lg max-h-[300px] overflow-y-auto divide-y divide-border">
-                {filteredTasks.map(task => {
-                  const selected = form.dataSources.some(ds => ds.taskId === task.id);
-                  return (
-                    <div key={task.id} onClick={() => toggleTask(task)}
-                      className={`flex items-center justify-between px-3 py-2.5 cursor-pointer transition-colors ${selected ? "bg-primary/5" : "hover:bg-muted/30"}`}>
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
-                          {selected && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
-                        </div>
-                        <span className="text-xs font-medium text-foreground">{task.name}</span>
-                        <div className="flex gap-1">
-                          {task.platforms.slice(0, 3).map(p => <Badge key={p} className="text-[9px] px-1 py-0 bg-muted text-muted-foreground border-0">{p}</Badge>)}
-                          {task.platforms.length > 3 && <Badge className="text-[9px] px-1 py-0 bg-muted text-muted-foreground border-0">+{task.platforms.length - 3}</Badge>}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className={`text-[10px] ${task.status === "running" ? "text-emerald-500 border-emerald-500/30" : "text-muted-foreground"}`}>
-                        {task.status === "running" ? "运行中" : "已暂停"}
-                      </Badge>
-                    </div>
-                  );
-                })}
-                {filteredTasks.length === 0 && <p className="text-xs text-muted-foreground text-center py-4">无匹配结果</p>}
-              </div>
             </div>
           )}
 
