@@ -953,7 +953,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 <button onClick={addMergeNode} className="flex items-center gap-1 text-xs text-primary hover:underline"><Plus className="w-3 h-3" /> 添加合并节点</button>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                配置多级合并管线。通过组合字段条件（如"24小时内发布 且 文本相似度≥70%"）定义合并规则。每个节点可配置展示字段、筛选和排序。
+                配置多级合并管线。支持 AND/OR 和 () 嵌套条件组合（如"24小时内发布 且 (文本相似度≥70% 或 话题相同)"）。每个节点可配置展示字段、筛选和排序。
               </p>
 
               {sortedMergeNodes.length === 0 ? (
@@ -983,117 +983,121 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
 
                       {node.enabled && (
                         <div className="p-3 space-y-3">
-                          {/* Merge conditions */}
+                          {/* Merge condition tree */}
                           <div className="p-3 bg-card rounded-md border border-border space-y-2">
-                            <div className="flex items-center justify-between">
-                              <label className="text-[10px] text-muted-foreground">合并条件（所有条件同时满足时合并）</label>
-                              <button onClick={() => addMergeCondition(node.id)} className="flex items-center gap-0.5 text-[10px] text-primary hover:underline"><Plus className="w-2.5 h-2.5" /> 添加条件</button>
-                            </div>
-                            {node.mergeConditions.length === 0 && (
-                              <p className="text-[10px] text-muted-foreground text-center py-3 border border-dashed border-border rounded">请添加合并条件，例如"文本相似度≥80%"和"发布时间在24小时内"</p>
-                            )}
-                            {node.mergeConditions.map((mc, mcIdx) => (
-                              <div key={mc.id} className="flex items-center gap-2 py-1.5">
-                                {mcIdx > 0 && <span className="text-[9px] text-primary font-bold shrink-0">且</span>}
-                                <select value={mc.field} onChange={e => updateMergeCondition(node.id, mc.id, { field: e.target.value })}
-                                  className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground flex-1 min-w-[100px]">
-                                  <option value="">选择字段</option>
-                                  {ALL_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}（{FIELD_TYPE_LABELS[f.fieldType]}）</option>)}
-                                </select>
-                                <select value={mc.operator} onChange={e => updateMergeCondition(node.id, mc.id, { operator: e.target.value as MergeCondition["operator"] })}
-                                  className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
-                                  {MERGE_CONDITION_OPERATORS.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
-                                </select>
-                                {mc.operator !== "equals" && (
-                                  <input value={mc.value} onChange={e => updateMergeCondition(node.id, mc.id, { value: e.target.value })}
-                                    className="w-20 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
-                                    placeholder={mc.operator === "similarity_gte" ? "80" : mc.operator === "time_within" ? "24" : "值"} />
-                                )}
-                                {mc.operator === "similarity_gte" && <span className="text-[10px] text-muted-foreground shrink-0">%</span>}
-                                {mc.operator === "time_within" && <span className="text-[10px] text-muted-foreground shrink-0">小时</span>}
-                                <button onClick={() => removeMergeCondition(node.id, mc.id)} className="text-muted-foreground hover:text-destructive shrink-0"><Trash2 className="w-3 h-3" /></button>
-                              </div>
-                            ))}
-                            {node.mergeConditions.length > 0 && (
+                            <label className="text-[10px] text-muted-foreground">合并条件（支持 AND / OR 和 () 嵌套）</label>
+                            <MergeConditionTreeEditor
+                              node={node.mergeConditionTree || { id: `mct_${node.id}`, type: "group", logic: "AND", children: [] }}
+                              mergeNodeId={node.id}
+                              onAddCondition={addMergeTreeCondition}
+                              onAddGroup={addMergeTreeGroup}
+                              onRemove={removeMergeTreeNode}
+                              onUpdate={updateMergeTreeNode}
+                              depth={0}
+                              isRoot
+                            />
+                            {node.mergeConditionTree && (node.mergeConditionTree.children || []).length > 0 && (
                               <div className="bg-muted/30 rounded p-2 mt-1">
-                                <p className="text-[10px] text-primary">
-                                  💡 合并规则：{node.mergeConditions.map(mc => {
-                                    const fl = ALL_FIELDS.find(f => f.key === mc.field)?.label || mc.field || "?";
-                                    if (mc.operator === "similarity_gte") return `${fl}相似度≥${mc.value || "?"}%`;
-                                    if (mc.operator === "time_within") return `${mc.value || "?"}小时内`;
-                                    if (mc.operator === "equals") return `${fl}相同`;
-                                    return `${fl}包含${mc.value || "?"}`;
-                                  }).join(" 且 ")}
-                                </p>
+                                <p className="text-[10px] text-primary">💡 合并规则：{mergeConditionTreeToText(node.mergeConditionTree)}</p>
                               </div>
                             )}
                           </div>
 
-                          {/* Display fields for merge result */}
+                          {/* Display fields for merge result - grouped by type */}
                           <div className="p-3 bg-card rounded-md border border-border space-y-2">
-                            <label className="text-[10px] text-muted-foreground">合并后展示字段（选择在事件列表或详情中展示哪些字段，支持配置筛选和排序）</label>
-                            <div className="flex flex-wrap gap-1.5">
-                              {ALL_FIELDS.map(f => {
-                                const df = (node.displayFields || []).find(d => d.key === f.key);
-                                const selected = !!df;
-                                return (
-                                  <button key={f.key} onClick={() => toggleMergeDisplayField(node.id, f.key)}
-                                    className={`px-2 py-1 text-[10px] rounded-md border transition-colors ${
-                                      selected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/30"
-                                    }`}>
-                                    {selected && <Check className="w-2.5 h-2.5 inline mr-0.5" />}{f.label}
-                                  </button>
-                                );
-                              })}
+                            <label className="text-[10px] text-muted-foreground">合并后展示字段（AI标签/原始字段/计算字段）</label>
+
+                            <div className="flex items-center border border-border rounded-md bg-card px-2 mb-2">
+                              <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                              <input value={mergeFieldSearch} onChange={e => setMergeFieldSearch(e.target.value)}
+                                className="flex-1 px-2 py-1.5 text-[10px] bg-transparent text-foreground outline-none"
+                                placeholder="搜索字段..." />
                             </div>
 
-                            {/* Selected field config rows */}
-                            {(node.displayFields || []).length > 0 && (
-                              <div className="border border-border rounded-md divide-y divide-border mt-2">
-                                {(node.displayFields || []).map(df => {
-                                  const fieldDef = ALL_FIELDS.find(f => f.key === df.key);
-                                  return (
-                                    <div key={df.key} className="flex items-center justify-between px-3 py-2 text-[10px]">
-                                      <span className="font-medium text-foreground">{fieldDef?.label || df.key}</span>
-                                      <div className="flex items-center gap-2">
-                                        <select value={df.position} onChange={e => updateMergeDisplayField(node.id, df.key, { position: e.target.value as MergeDisplayField["position"] })}
-                                          className="px-1 py-0.5 text-[9px] border border-border rounded bg-card text-foreground">
-                                          <option value="list">列表</option>
-                                          <option value="detail">详情</option>
-                                          <option value="both">都展示</option>
-                                        </select>
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-muted-foreground">筛选</span>
-                                          <Switch checked={df.isFilter || false} onCheckedChange={checked => updateMergeDisplayField(node.id, df.key, { isFilter: checked })} className="scale-[0.6]" />
-                                        </div>
-                                        {df.isFilter && fieldDef?.hasSystemEnum && (
-                                          <select value={df.filterType || "enum"} onChange={e => updateMergeDisplayField(node.id, df.key, { filterType: e.target.value as "enum" | "text" })}
-                                            className="px-1 py-0.5 text-[9px] border border-border rounded bg-card text-foreground">
-                                            <option value="enum">下拉</option>
-                                            <option value="text">搜索</option>
-                                          </select>
-                                        )}
-                                        <div className="flex items-center gap-1">
-                                          <span className="text-muted-foreground">排序</span>
-                                          <Switch checked={df.isSortable || false} onCheckedChange={checked => updateMergeDisplayField(node.id, df.key, { isSortable: checked, isDefaultSort: false })} className="scale-[0.6]" />
-                                        </div>
-                                        {df.isSortable && (
-                                          <div className="flex items-center gap-0.5">
-                                            <button onClick={() => updateMergeDisplayField(node.id, df.key, { isDefaultSort: true, sortDirection: df.sortDirection || "desc" })}
-                                              className={`px-1 py-0.5 text-[8px] rounded border ${df.isDefaultSort ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>默认</button>
-                                            {df.isDefaultSort && (
-                                              <select value={df.sortDirection || "desc"} onChange={e => updateMergeDisplayField(node.id, df.key, { sortDirection: e.target.value as "asc" | "desc" })}
-                                                className="px-0.5 py-0.5 text-[8px] border border-border rounded bg-card text-foreground">
-                                                <option value="desc">降序</option>
-                                                <option value="asc">升序</option>
-                                              </select>
-                                            )}
+                            {(["ai", "raw", "calc"] as const).map(ftype => {
+                              const fields = ALL_FIELDS.filter(f => f.fieldType === ftype).filter(f => !mergeFieldSearch || f.label.includes(mergeFieldSearch) || f.key.includes(mergeFieldSearch));
+                              if (fields.length === 0) return null;
+                              const selectedCount = fields.filter(f => (node.displayFields || []).some(d => d.key === f.key)).length;
+                              const allSelected = selectedCount === fields.length;
+                              const collapsed = collapsedGroups[`merge_${node.id}_${ftype}`];
+                              return (
+                                <div key={ftype} className="mb-1">
+                                  <div className="flex items-center justify-between px-2 py-1.5 bg-muted/40 rounded-t border border-border">
+                                    <button onClick={() => toggleGroup(`merge_${node.id}_${ftype}`)} className="flex items-center gap-1.5 text-[10px] font-medium text-foreground">
+                                      {collapsed ? <ChevronRight className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                                      <span className={`w-1.5 h-1.5 rounded-full ${ftype === "ai" ? "bg-purple-500" : ftype === "calc" ? "bg-primary" : "bg-muted-foreground"}`} />
+                                      {FIELD_TYPE_LABELS[ftype]}
+                                      <Badge className="text-[9px] px-1 py-0 bg-muted text-muted-foreground border-0">{fields.length}</Badge>
+                                      {selectedCount > 0 && <Badge className="text-[9px] px-1 py-0 bg-primary/10 text-primary border-0">已选{selectedCount}</Badge>}
+                                    </button>
+                                    <button onClick={() => toggleAllMergeDisplayFields(node.id, ftype, !allSelected)}
+                                      className="text-[9px] text-primary hover:underline">{allSelected ? "取消全选" : "全选"}</button>
+                                  </div>
+                                  {!collapsed && (
+                                    <div className="border border-t-0 border-border rounded-b divide-y divide-border">
+                                      {fields.map(f => {
+                                        const df = (node.displayFields || []).find(d => d.key === f.key);
+                                        const selected = !!df;
+                                        return (
+                                          <div key={f.key} className={`px-2 py-1.5 transition-colors ${selected ? "bg-primary/5" : ""}`}>
+                                            <div className="flex items-center justify-between">
+                                              <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleMergeDisplayField(node.id, f.key)}>
+                                                <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
+                                                  {selected && <Check className="w-2 h-2 text-primary-foreground" />}
+                                                </div>
+                                                <span className="text-[10px] font-medium text-foreground">{f.label}</span>
+                                              </div>
+                                              {selected && df && (
+                                                <div className="flex items-center gap-1.5">
+                                                  <select value={df.position} onChange={e => updateMergeDisplayField(node.id, df.key, { position: e.target.value as MergeDisplayField["position"] })}
+                                                    className="px-1 py-0.5 text-[9px] border border-border rounded bg-card text-foreground">
+                                                    <option value="list">列表</option><option value="detail">详情</option><option value="both">都展示</option>
+                                                  </select>
+                                                  <div className="flex items-center gap-0.5">
+                                                    <span className="text-[9px] text-muted-foreground">筛选</span>
+                                                    <Switch checked={df.isFilter || false} onCheckedChange={checked => updateMergeDisplayField(node.id, df.key, { isFilter: checked })} className="scale-[0.55]" />
+                                                  </div>
+                                                  {df.isFilter && f.hasSystemEnum && (
+                                                    <select value={df.filterType || "enum"} onChange={e => updateMergeDisplayField(node.id, df.key, { filterType: e.target.value as "enum" | "text" })}
+                                                      className="px-1 py-0.5 text-[8px] border border-border rounded bg-card text-foreground">
+                                                      <option value="enum">下拉</option><option value="text">搜索</option>
+                                                    </select>
+                                                  )}
+                                                  <div className="flex items-center gap-0.5">
+                                                    <span className="text-[9px] text-muted-foreground">排序</span>
+                                                    <Switch checked={df.isSortable || false} onCheckedChange={checked => updateMergeDisplayField(node.id, df.key, { isSortable: checked, isDefaultSort: false })} className="scale-[0.55]" />
+                                                  </div>
+                                                  {df.isSortable && (
+                                                    <div className="flex items-center gap-0.5">
+                                                      <button onClick={() => updateMergeDisplayField(node.id, df.key, { isDefaultSort: true, sortDirection: df.sortDirection || "desc" })}
+                                                        className={`px-1 py-0.5 text-[8px] rounded border ${df.isDefaultSort ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>默认</button>
+                                                      {df.isDefaultSort && (
+                                                        <select value={df.sortDirection || "desc"} onChange={e => updateMergeDisplayField(node.id, df.key, { sortDirection: e.target.value as "asc" | "desc" })}
+                                                          className="px-0.5 py-0.5 text-[8px] border border-border rounded bg-card text-foreground">
+                                                          <option value="desc">降序</option><option value="asc">升序</option>
+                                                        </select>
+                                                      )}
+                                                    </div>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
                                           </div>
-                                        )}
-                                      </div>
+                                        );
+                                      })}
                                     </div>
-                                  );
-                                })}
+                                  )}
+                                </div>
+                              );
+                            })}
+
+                            {/* Merge default sort summary */}
+                            {(node.displayFields || []).some(df => df.isDefaultSort) && (
+                              <div className="bg-primary/5 border border-primary/20 rounded p-2 mt-1">
+                                <p className="text-[10px] text-primary">
+                                  📋 默认排序：按「{ALL_FIELDS.find(f => f.key === (node.displayFields || []).find(df => df.isDefaultSort)?.key)?.label}」
+                                  {(node.displayFields || []).find(df => df.isDefaultSort)?.sortDirection === "asc" ? "升序" : "降序"}排列
+                                </p>
                               </div>
                             )}
                           </div>
@@ -1113,10 +1117,15 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                     <p className="text-[11px] text-muted-foreground mb-1.5">📋 管线预览</p>
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <Badge className="text-[10px] px-2 py-0.5 bg-muted text-foreground border-0">全部帖子</Badge>
-                      {sortedMergeNodes.filter(n => n.enabled).map((n, i) => (
+                      {sortedMergeNodes.filter(n => n.enabled).map((n, ni) => (
                         <div key={n.id} className="flex items-center gap-1.5">
                           <span className="text-muted-foreground text-[10px]">→</span>
-                          <Badge className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary border-0">第{i + 1}级：{n.name}</Badge>
+                          <div className="text-[10px]">
+                            <Badge className="px-2 py-0.5 bg-primary/10 text-primary border-0">第{ni + 1}级：{n.name}</Badge>
+                            {n.mergeConditionTree && (n.mergeConditionTree.children || []).length > 0 && (
+                              <span className="text-muted-foreground ml-1">{mergeConditionTreeToText(n.mergeConditionTree)}</span>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
