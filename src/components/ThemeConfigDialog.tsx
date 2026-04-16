@@ -252,7 +252,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     setForm(f => ({
       ...f, mergeNodes: [...(f.mergeNodes || []), {
         id: `mn_${Date.now()}`, name: `合并节点${(f.mergeNodes || []).length + 1}`, enabled: true,
-        mergeConditions: [], order: maxOrder + 1, displayFields: [],
+        mergeConditions: [], mergeConditionTree: { id: `mct_${Date.now()}`, type: "group" as const, logic: "AND" as const, children: [] },
+        order: maxOrder + 1, displayFields: [],
       }],
     }));
   };
@@ -273,6 +274,36 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     });
   };
 
+  // ── Merge Condition Tree ──
+  const updateMergeConditionTree = (nodeId: string, tree: MergeConditionNode) => {
+    setForm(f => ({
+      ...f, mergeNodes: (f.mergeNodes || []).map(n => n.id === nodeId ? { ...n, mergeConditionTree: tree } : n),
+    }));
+  };
+  const addMergeTreeCondition = (mergeNodeId: string, parentId: string) => {
+    const node = (form.mergeNodes || []).find(n => n.id === mergeNodeId);
+    if (!node?.mergeConditionTree) return;
+    const newCond: MergeConditionNode = { id: `mc_${Date.now()}`, type: "condition", field: "", operator: "equals", value: "" };
+    updateMergeConditionTree(mergeNodeId, insertIntoMergeTree(node.mergeConditionTree, parentId, newCond));
+  };
+  const addMergeTreeGroup = (mergeNodeId: string, parentId: string) => {
+    const node = (form.mergeNodes || []).find(n => n.id === mergeNodeId);
+    if (!node?.mergeConditionTree) return;
+    const newGroup: MergeConditionNode = { id: `mg_${Date.now()}`, type: "group", logic: "AND", children: [] };
+    updateMergeConditionTree(mergeNodeId, insertIntoMergeTree(node.mergeConditionTree, parentId, newGroup));
+  };
+  const removeMergeTreeNode = (mergeNodeId: string, nodeToRemoveId: string) => {
+    const node = (form.mergeNodes || []).find(n => n.id === mergeNodeId);
+    if (!node?.mergeConditionTree) return;
+    updateMergeConditionTree(mergeNodeId, removeFromMergeTree(node.mergeConditionTree, nodeToRemoveId));
+  };
+  const updateMergeTreeNode = (mergeNodeId: string, nodeToUpdateId: string, update: Partial<MergeConditionNode>) => {
+    const node = (form.mergeNodes || []).find(n => n.id === mergeNodeId);
+    if (!node?.mergeConditionTree) return;
+    updateMergeConditionTree(mergeNodeId, updateInMergeTree(node.mergeConditionTree, nodeToUpdateId, update));
+  };
+
+  // Legacy flat merge conditions (kept for backward compat)
   const addMergeCondition = (nodeId: string) => {
     setForm(f => ({
       ...f, mergeNodes: (f.mergeNodes || []).map(n => {
@@ -305,7 +336,9 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
         const dfs = n.displayFields || [];
         const exists = dfs.find(d => d.key === fieldKey);
         if (exists) return { ...n, displayFields: dfs.filter(d => d.key !== fieldKey) };
-        return { ...n, displayFields: [...dfs, { key: fieldKey, position: "list" as const }] };
+        const fieldDef = ALL_FIELDS.find(ff => ff.key === fieldKey);
+        const fieldType = fieldDef?.fieldType || "raw";
+        return { ...n, displayFields: [...dfs, { key: fieldKey, fieldType: fieldType as MergeDisplayField["fieldType"], position: "list" as const, hasSystemEnum: fieldDef?.hasSystemEnum, enumValues: fieldDef?.enumValues }] };
       }),
     }));
   };
@@ -320,6 +353,49 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
         return { ...n, displayFields: dfs };
       }),
     }));
+  };
+
+  // Select all fields for a type in merge display fields
+  const toggleAllMergeDisplayFields = (nodeId: string, fieldType: "ai" | "raw" | "calc", select: boolean) => {
+    const fieldsOfType = ALL_FIELDS.filter(f => f.fieldType === fieldType);
+    setForm(f => ({
+      ...f, mergeNodes: (f.mergeNodes || []).map(n => {
+        if (n.id !== nodeId) return n;
+        let dfs = n.displayFields || [];
+        if (select) {
+          fieldsOfType.forEach(ff => {
+            if (!dfs.find(d => d.key === ff.key)) {
+              dfs = [...dfs, { key: ff.key, fieldType: ff.fieldType as MergeDisplayField["fieldType"], position: "list" as const, hasSystemEnum: ff.hasSystemEnum, enumValues: ff.enumValues }];
+            }
+          });
+        } else {
+          dfs = dfs.filter(d => !fieldsOfType.find(ff => ff.key === d.key));
+        }
+        return { ...n, displayFields: dfs };
+      }),
+    }));
+  };
+
+  // Select all fields for a type in step 3
+  const toggleAllFields = (fieldType: "ai" | "raw" | "calc", select: boolean) => {
+    const fieldsOfType = ALL_FIELDS.filter(f => f.fieldType === fieldType);
+    setForm(f => {
+      let configs = [...f.fieldConfigs];
+      if (select) {
+        fieldsOfType.forEach(ff => {
+          if (!configs.find(c => c.key === ff.key)) {
+            configs.push({
+              key: ff.key, fieldType: ff.fieldType, displayPosition: "both",
+              isFilter: false, filterType: ff.hasSystemEnum ? "enum" : "text",
+              hasSystemEnum: ff.hasSystemEnum, enumValues: ff.enumValues || [],
+            });
+          }
+        });
+      } else {
+        configs = configs.filter(c => !fieldsOfType.find(ff => ff.key === c.key));
+      }
+      return { ...f, fieldConfigs: configs };
+    });
   };
 
   // Toggle platform in multi-select for task params
