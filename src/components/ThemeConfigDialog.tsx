@@ -1155,6 +1155,82 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   );
 }
 
+// ── Merge Condition Tree Editor ──────────────────────────────
+
+const MERGE_COND_OPS = [
+  { value: "similarity_gte", label: "相似度 ≥ (%)" },
+  { value: "time_within", label: "时间窗口内 (小时)" },
+  { value: "equals", label: "字段值相同" },
+  { value: "contains", label: "字段值包含" },
+];
+
+function MergeConditionTreeEditor({
+  node, mergeNodeId, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot,
+}: {
+  node: MergeConditionNode; mergeNodeId: string;
+  onAddCondition: (mergeNodeId: string, parentId: string) => void;
+  onAddGroup: (mergeNodeId: string, parentId: string) => void;
+  onRemove: (mergeNodeId: string, nodeId: string) => void;
+  onUpdate: (mergeNodeId: string, nodeId: string, u: Partial<MergeConditionNode>) => void;
+  depth: number; isRoot?: boolean;
+}) {
+  if (node.type === "condition") {
+    return (
+      <div className="flex items-center gap-2 py-1.5">
+        <select value={node.field || ""} onChange={e => onUpdate(mergeNodeId, node.id, { field: e.target.value })}
+          className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground flex-1 min-w-[100px]">
+          <option value="">选择字段</option>
+          {ALL_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}（{FIELD_TYPE_LABELS[f.fieldType]}）</option>)}
+        </select>
+        <select value={node.operator || "equals"} onChange={e => onUpdate(mergeNodeId, node.id, { operator: e.target.value as any })}
+          className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
+          {MERGE_COND_OPS.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
+        </select>
+        {node.operator !== "equals" && (
+          <input value={node.value || ""} onChange={e => onUpdate(mergeNodeId, node.id, { value: e.target.value })}
+            className="w-20 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
+            placeholder={node.operator === "similarity_gte" ? "80" : node.operator === "time_within" ? "24" : "值"} />
+        )}
+        {node.operator === "similarity_gte" && <span className="text-[10px] text-muted-foreground shrink-0">%</span>}
+        {node.operator === "time_within" && <span className="text-[10px] text-muted-foreground shrink-0">小时</span>}
+        <button onClick={() => onRemove(mergeNodeId, node.id)} className="text-muted-foreground hover:text-destructive shrink-0"><Trash2 className="w-3 h-3" /></button>
+      </div>
+    );
+  }
+
+  const children = node.children || [];
+  return (
+    <div className={`rounded-lg border ${depth === 0 ? "border-border" : "border-primary/20 bg-primary/5"} p-3`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          {!isRoot && <span className="text-[10px] text-muted-foreground">(</span>}
+          <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
+            <button onClick={() => onUpdate(mergeNodeId, node.id, { logic: "AND" })}
+              className={`px-2 py-0.5 text-[10px] rounded transition-colors ${node.logic === "AND" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>AND</button>
+            <button onClick={() => onUpdate(mergeNodeId, node.id, { logic: "OR" })}
+              className={`px-2 py-0.5 text-[10px] rounded transition-colors ${node.logic === "OR" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>OR</button>
+          </div>
+          {!isRoot && <span className="text-[10px] text-muted-foreground">)</span>}
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => onAddCondition(mergeNodeId, node.id)} className="flex items-center gap-0.5 text-[10px] text-primary hover:underline"><Plus className="w-2.5 h-2.5" />条件</button>
+          <button onClick={() => onAddGroup(mergeNodeId, node.id)} className="flex items-center gap-0.5 text-[10px] text-primary hover:underline ml-2"><Plus className="w-2.5 h-2.5" />分组()</button>
+          {!isRoot && <button onClick={() => onRemove(mergeNodeId, node.id)} className="ml-2 text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>}
+        </div>
+      </div>
+      <div className="space-y-1 ml-2">
+        {children.map((child, ci) => (
+          <div key={child.id}>
+            {ci > 0 && <div className="text-[10px] text-primary font-medium py-0.5 ml-2">{node.logic}</div>}
+            <MergeConditionTreeEditor node={child} mergeNodeId={mergeNodeId} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} />
+          </div>
+        ))}
+        {children.length === 0 && <p className="text-[10px] text-muted-foreground py-2 text-center">点击上方按钮添加条件或嵌套分组</p>}
+      </div>
+    </div>
+  );
+}
+
 // ── Nested Condition Tree Editor ────────────────────────────
 
 function ConditionTreeEditor({
