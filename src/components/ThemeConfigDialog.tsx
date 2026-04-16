@@ -844,16 +844,21 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                   if (fields.length === 0) return null;
                   const collapsed = collapsedGroups[ftype];
                   const selectedCount = fields.filter(f => form.fieldConfigs.some(fc => fc.key === f.key)).length;
+                  const allSelected = selectedCount === fields.length;
                   return (
                     <div key={ftype} className="mb-3">
-                      <button onClick={() => toggleGroup(ftype)}
-                        className="flex items-center gap-2 w-full text-left px-3 py-2 bg-muted/50 rounded-t-lg border border-border text-xs font-medium text-foreground hover:bg-muted/70 transition-colors">
-                        {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                        <span className={`w-2 h-2 rounded-full ${ftype === "ai" ? "bg-purple-500" : ftype === "calc" ? "bg-primary" : "bg-muted-foreground"}`} />
-                        {FIELD_TYPE_LABELS[ftype]}
-                        <Badge className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-0">{fields.length}</Badge>
-                        {selectedCount > 0 && <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">已选{selectedCount}</Badge>}
-                      </button>
+                      <div className="flex items-center justify-between px-3 py-2 bg-muted/50 rounded-t-lg border border-border">
+                        <button onClick={() => toggleGroup(ftype)}
+                          className="flex items-center gap-2 text-left text-xs font-medium text-foreground hover:text-primary transition-colors">
+                          {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                          <span className={`w-2 h-2 rounded-full ${ftype === "ai" ? "bg-purple-500" : ftype === "calc" ? "bg-primary" : "bg-muted-foreground"}`} />
+                          {FIELD_TYPE_LABELS[ftype]}
+                          <Badge className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-0">{fields.length}</Badge>
+                          {selectedCount > 0 && <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">已选{selectedCount}</Badge>}
+                        </button>
+                        <button onClick={() => toggleAllFields(ftype, !allSelected)}
+                          className="text-[10px] text-primary hover:underline">{allSelected ? "取消全选" : "全选"}</button>
+                      </div>
                       {!collapsed && (
                         <div className="border border-t-0 border-border rounded-b-lg divide-y divide-border">
                           {fields.map(f => {
