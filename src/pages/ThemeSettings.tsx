@@ -159,7 +159,7 @@ const DISPLAY_POS_LABELS: Record<string, string> = { list: "列表", detail: "�
 const defaultDS = (partial: Partial<DataSourceConfig> & { taskId: string; taskName: string; platforms: string[]; }): DataSourceConfig => ({
   taskType: "话题", owner: "张三", executionPeriodStart: "2026-04-01", executionPeriodEnd: "2026-05-01",
   scheduleMode: "interval", scheduleTimeStart: 0, scheduleTimeEnd: 23, intervalHours: 6,
-  taskParams: partial.platforms.map(p => ({ platform: p, topics: [] })),
+  taskParams: [{ platforms: partial.platforms, topics: [] }],
   extendedParams: partial.platforms.map(p => ({ platform: p })),
   timeRange: "近7天", enabled: true,
   ...partial,
@@ -206,13 +206,16 @@ const defaultThemes: ThemeConfig[] = [
       { key: "ferment_level", fieldType: "calc", displayPosition: "both", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["低", "中", "快"] },
     ],
     mergeNodes: [
-      { id: "mn1", name: "事件合并", enabled: true, type: "text_similarity", similarityThreshold: 80, timeWindowHours: 24, order: 1,
-        displayFields: [
+      { id: "mn1", name: "事件合并", enabled: true, mergeConditions: [
+        { id: "mc1", field: "sentiment", operator: "similarity_gte", value: "80" },
+        { id: "mc2", field: "publish_time", operator: "time_within", value: "24" },
+      ], order: 1, displayFields: [
           { key: "sentiment", position: "list" }, { key: "platform", position: "list" },
           { key: "risk_score", position: "detail" }, { key: "likes", position: "detail" },
         ]},
-      { id: "mn2", name: "业务类型合并", enabled: true, type: "field_group", groupByFields: ["topic"], order: 2,
-        displayFields: [
+      { id: "mn2", name: "业务类型合并", enabled: true, mergeConditions: [
+        { id: "mc3", field: "topic", operator: "equals", value: "" },
+      ], order: 2, displayFields: [
           { key: "sentiment", position: "both" }, { key: "platform", position: "list" },
         ]},
     ],
@@ -258,7 +261,10 @@ const defaultThemes: ThemeConfig[] = [
       { key: "likes", fieldType: "raw", displayPosition: "list", isFilter: false, filterType: "text", hasSystemEnum: false, enumValues: [] },
       { key: "heat_score", fieldType: "calc", displayPosition: "both", isFilter: false, filterType: "text", hasSystemEnum: false, enumValues: [] },
     ],
-    mergeNodes: [{ id: "mn3", name: "热点事件聚合", enabled: true, type: "text_similarity", similarityThreshold: 85, timeWindowHours: 12, order: 1, displayFields: [] }],
+    mergeNodes: [{ id: "mn3", name: "热点事件聚合", enabled: true, mergeConditions: [
+      { id: "mc4", field: "sentiment", operator: "similarity_gte", value: "85" },
+      { id: "mc5", field: "publish_time", operator: "time_within", value: "12" },
+    ], order: 1, displayFields: [] }],
     dashboardWidgets: [{ id: "w7", type: "table", title: "实时热点榜", metric: "热度", position: 1, tagField: "heat_score" }],
     createdAt: "2026-02-01", updatedAt: "2026-03-27",
   },
