@@ -7,6 +7,7 @@ import type {
   FieldConfig,
   MergeNode,
   MergeDisplayField,
+  MergeCondition,
   ConditionNode,
   TaskParamConfig,
   ExtendedParamConfig,
@@ -23,9 +24,10 @@ interface Props {
 }
 
 const TASK_TYPES = ["话题", "账号", "关键词", "链接"];
-const PLATFORM_OPTIONS = ["新浪微博", "小红书", "抖音", "快手", "B站", "知乎", "百度", "今日头条", "黑猫投诉", "京东", "淘宝"];
+const PLATFORM_OPTIONS = ["新浪微博", "小红书", "抖音", "快手", "B站", "知乎", "百度", "今日头条", "黑猫投诉", "京东", "淘宝", "快手app", "消费保"];
 const SORT_OPTIONS = ["默认排序", "时间倒序", "热度排序", "相关度排序"];
 const OWNER_OPTIONS = ["张三", "李四", "王五", "赵六", "陈佳燕-1227152"];
+const BRAND_OPTIONS = ["同程旅行", "万达酒店", "同程金服", "携程", "飞猪", "美团"];
 
 const OPERATORS = [
   { value: "equals", label: "等于" },
@@ -36,11 +38,11 @@ const OPERATORS = [
   { value: "less", label: "小于" },
 ];
 
-const MERGE_TYPES = [
-  { value: "text_similarity", label: "文本相似度", desc: "按内容语义相似度合并" },
-  { value: "field_group", label: "字段分组", desc: "按指定字段值组合分组" },
-  { value: "time_window", label: "时间窗口", desc: "指定时间范围内合并" },
-  { value: "custom", label: "自定义规则", desc: "自定义合并逻辑" },
+const MERGE_CONDITION_OPERATORS = [
+  { value: "similarity_gte", label: "相似度 ≥ (%)" },
+  { value: "time_within", label: "时间窗口内 (小时)" },
+  { value: "equals", label: "字段值相同" },
+  { value: "contains", label: "字段值包含" },
 ];
 
 const ICONS = ["🛡️", "🌐", "⚡", "💡", "🔥", "📡", "🎯", "🧭", "📊", "💬", "🔍", "🏷️"];
@@ -112,7 +114,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
       executionPeriodStart: new Date().toISOString().slice(0, 10),
       executionPeriodEnd: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
       scheduleMode: "interval", scheduleTimeStart: 0, scheduleTimeEnd: 23, intervalHours: 6,
-      taskParams: [{ platform: "", topics: [] }],
+      taskParams: [{ platforms: [], topics: [] }],
       extendedParams: [{ platform: "" }],
       platforms: [], timeRange: "近7天", enabled: true,
       conditionTree: { ...emptyConditionTree, id: `root_${id}` },
@@ -140,7 +142,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
         if (ds.taskId !== taskId) return ds;
         const updated = { ...ds, ...update };
         // Derive platforms from taskParams
-        updated.platforms = [...new Set(updated.taskParams.map(tp => tp.platform).filter(Boolean))];
+        updated.platforms = [...new Set(updated.taskParams.flatMap(tp => tp.platforms).filter(Boolean))];
         return updated;
       }),
     }));
@@ -149,7 +151,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const addTaskParam = (taskId: string) => {
     const ds = form.dataSources.find(d => d.taskId === taskId);
     if (!ds) return;
-    updateDataSource(taskId, { taskParams: [...ds.taskParams, { platform: "", topics: [] }] });
+    updateDataSource(taskId, { taskParams: [...ds.taskParams, { platforms: [], topics: [] }] });
   };
 
   const updateTaskParam = (taskId: string, idx: number, update: Partial<TaskParamConfig>) => {
@@ -227,7 +229,14 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     });
   };
   const updateFieldConfig = (key: string, update: Partial<FieldConfig>) => {
-    setForm(f => ({ ...f, fieldConfigs: f.fieldConfigs.map(fc => fc.key === key ? { ...fc, ...update } : fc) }));
+    setForm(f => {
+      let configs = f.fieldConfigs.map(fc => fc.key === key ? { ...fc, ...update } : fc);
+      // If setting isDefaultSort, clear others
+      if (update.isDefaultSort) {
+        configs = configs.map(fc => fc.key === key ? fc : { ...fc, isDefaultSort: false });
+      }
+      return { ...f, fieldConfigs: configs };
+    });
   };
 
   // ── Merge Nodes ──
@@ -237,7 +246,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     setForm(f => ({
       ...f, mergeNodes: [...(f.mergeNodes || []), {
         id: `mn_${Date.now()}`, name: `合并节点${(f.mergeNodes || []).length + 1}`, enabled: true,
-        type: "text_similarity", similarityThreshold: 80, timeWindowHours: 24, groupByFields: [], order: maxOrder + 1, displayFields: [],
+        mergeConditions: [], order: maxOrder + 1, displayFields: [],
       }],
     }));
   };
@@ -257,6 +266,32 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
       return { ...f, mergeNodes: sorted };
     });
   };
+
+  const addMergeCondition = (nodeId: string) => {
+    setForm(f => ({
+      ...f, mergeNodes: (f.mergeNodes || []).map(n => {
+        if (n.id !== nodeId) return n;
+        return { ...n, mergeConditions: [...n.mergeConditions, { id: `mc_${Date.now()}`, field: "", operator: "equals" as const, value: "" }] };
+      }),
+    }));
+  };
+  const updateMergeCondition = (nodeId: string, condId: string, update: Partial<MergeCondition>) => {
+    setForm(f => ({
+      ...f, mergeNodes: (f.mergeNodes || []).map(n => {
+        if (n.id !== nodeId) return n;
+        return { ...n, mergeConditions: n.mergeConditions.map(mc => mc.id === condId ? { ...mc, ...update } : mc) };
+      }),
+    }));
+  };
+  const removeMergeCondition = (nodeId: string, condId: string) => {
+    setForm(f => ({
+      ...f, mergeNodes: (f.mergeNodes || []).map(n => {
+        if (n.id !== nodeId) return n;
+        return { ...n, mergeConditions: n.mergeConditions.filter(mc => mc.id !== condId) };
+      }),
+    }));
+  };
+
   const toggleMergeDisplayField = (nodeId: string, fieldKey: string) => {
     setForm(f => ({
       ...f, mergeNodes: (f.mergeNodes || []).map(n => {
@@ -272,24 +307,29 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     setForm(f => ({
       ...f, mergeNodes: (f.mergeNodes || []).map(n => {
         if (n.id !== nodeId) return n;
-        return { ...n, displayFields: (n.displayFields || []).map(d => d.key === fieldKey ? { ...d, ...update } : d) };
+        let dfs = (n.displayFields || []).map(d => d.key === fieldKey ? { ...d, ...update } : d);
+        if (update.isDefaultSort) {
+          dfs = dfs.map(d => d.key === fieldKey ? d : { ...d, isDefaultSort: false });
+        }
+        return { ...n, displayFields: dfs };
       }),
     }));
   };
-  const toggleGroupByField = (nodeId: string, fieldKey: string) => {
-    setForm(f => ({
-      ...f, mergeNodes: (f.mergeNodes || []).map(n => {
-        if (n.id !== nodeId) return n;
-        const fields = n.groupByFields || [];
-        return { ...n, groupByFields: fields.includes(fieldKey) ? fields.filter(k => k !== fieldKey) : [...fields, fieldKey] };
-      }),
-    }));
+
+  // Toggle platform in multi-select for task params
+  const toggleTaskParamPlatform = (taskId: string, tpIdx: number, platform: string) => {
+    const ds = form.dataSources.find(d => d.taskId === taskId);
+    if (!ds) return;
+    const tp = ds.taskParams[tpIdx];
+    const platforms = tp.platforms.includes(platform)
+      ? tp.platforms.filter(p => p !== platform)
+      : [...tp.platforms, platform];
+    updateTaskParam(taskId, tpIdx, { platforms });
   };
 
   if (!open) return null;
 
   const sortedMergeNodes = [...(form.mergeNodes || [])].sort((a, b) => a.order - b.order);
-  
 
   const fieldsByType = { ai: ALL_FIELDS.filter(f => f.fieldType === "ai"), raw: ALL_FIELDS.filter(f => f.fieldType === "raw"), calc: ALL_FIELDS.filter(f => f.fieldType === "calc") };
   const filteredFields = (fields: typeof ALL_FIELDS) => fields.filter(f => !fieldSearch || f.label.includes(fieldSearch) || f.key.includes(fieldSearch));
@@ -486,24 +526,51 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                               {ds.taskParams.map((tp, tpIdx) => (
                                 <div key={tpIdx} className="border border-border rounded-md p-3 mb-2 bg-muted/20 space-y-2.5">
                                   <div className="flex items-center justify-between">
-                                    <div className="flex-1">
-                                      <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 发布平台</label>
-                                      <select value={tp.platform} onChange={e => updateTaskParam(ds.taskId, tpIdx, { platform: e.target.value })}
-                                        className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
-                                        <option value="">选择平台</option>
-                                        {PLATFORM_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
-                                      </select>
-                                    </div>
+                                    <span className="text-[10px] font-medium text-muted-foreground">参数组 {tpIdx + 1}</span>
                                     {ds.taskParams.length > 1 && (
-                                      <button onClick={() => removeTaskParam(ds.taskId, tpIdx)} className="ml-2 text-muted-foreground hover:text-destructive mt-4"><Trash2 className="w-3.5 h-3.5" /></button>
+                                      <button onClick={() => removeTaskParam(ds.taskId, tpIdx)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3.5 h-3.5" /></button>
                                     )}
                                   </div>
+
+                                  {/* Brand (optional) */}
                                   <div>
-                                    <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 话题</label>
+                                    <label className="text-[10px] font-medium text-foreground">品牌（可选）</label>
+                                    <select value={tp.brand || ""} onChange={e => updateTaskParam(ds.taskId, tpIdx, { brand: e.target.value || undefined })}
+                                      className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
+                                      <option value="">不限品牌</option>
+                                      {BRAND_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
+                                    </select>
+                                  </div>
+
+                                  {/* Platforms (multi-select) */}
+                                  <div>
+                                    <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 发布平台（多选）</label>
+                                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                      {PLATFORM_OPTIONS.map(p => {
+                                        const selected = tp.platforms.includes(p);
+                                        return (
+                                          <button key={p} onClick={() => toggleTaskParamPlatform(ds.taskId, tpIdx, p)}
+                                            className={`px-2 py-1 text-[10px] rounded-md border transition-colors ${
+                                              selected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/30"
+                                            }`}>
+                                            {selected && <Check className="w-2.5 h-2.5 inline mr-0.5" />}{p}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    {tp.platforms.length > 0 && (
+                                      <p className="text-[10px] text-primary mt-1">已选 {tp.platforms.length} 个平台</p>
+                                    )}
+                                  </div>
+
+                                  {/* Topics (tag input) */}
+                                  <div>
+                                    <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 抓取关键词</label>
+                                    <p className="text-[9px] text-muted-foreground">支持英文逗号、中文逗号和顿号分隔多个词，按回车键（Enter）或者右侧按钮完成添加</p>
                                     <div className="flex items-center gap-1.5 mt-1">
                                       <input value={topicInput[`${ds.taskId}_${tpIdx}`] || ""} onChange={e => setTopicInput(prev => ({ ...prev, [`${ds.taskId}_${tpIdx}`]: e.target.value }))}
                                         className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
-                                        placeholder="话题（支持回车号分隔）"
+                                        placeholder="输入关键词"
                                         onKeyDown={e => {
                                           if (e.key === "Enter") {
                                             e.preventDefault();
@@ -576,7 +643,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                                       <label className="text-[10px] font-medium text-foreground">排序方式</label>
                                       <select value={ep.sortBy || ""} onChange={e => updateExtendedParam(ds.taskId, epIdx, { sortBy: e.target.value })}
                                         className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
-                                        <option value="">排序方式</option>
+                                        <option value="">默认</option>
                                         {SORT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                                       </select>
                                     </div>
@@ -594,9 +661,9 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
             </div>
           )}
 
-          {/* ═══════ Step 3: Conditions + Fields ═══════ */}
+          {/* ═══════ Step 3: Conditions & Fields ═══════ */}
           {step === 2 && (
-            <div className="space-y-6">
+            <div className="space-y-5">
               {/* Per-datasource condition builder */}
               <div>
                 <label className="text-xs font-medium text-foreground mb-1 block">各数据源入主题条件</label>
@@ -608,7 +675,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                   </div>
                 ) : (
                   <>
-                    {/* Data source tabs */}
                     <div className="flex gap-1 mb-3 flex-wrap">
                       {form.dataSources.map(ds => (
                         <button key={ds.taskId} onClick={() => setActiveConditionDS(ds.taskId)}
@@ -623,7 +689,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                       ))}
                     </div>
 
-                    {/* Active datasource condition tree */}
                     {getActiveDS() && (
                       <div className="border border-primary/20 rounded-lg p-3 bg-primary/5">
                         <div className="flex items-center justify-between mb-2">
@@ -631,7 +696,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                             <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{getActiveDS()?.taskName}</Badge>
                             <span className="text-[10px] text-muted-foreground">平台：{getActiveDS()?.platforms.join("、")}</span>
                           </div>
-                          {/* Copy from another datasource */}
                           {form.dataSources.length > 1 && (
                             <div className="flex items-center gap-1">
                               <Copy className="w-3 h-3 text-muted-foreground" />
@@ -641,7 +705,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                                   const sourceDS = form.dataSources.find(ds => ds.taskId === e.target.value);
                                   if (sourceDS?.conditionTree) {
                                     const cloneTree = JSON.parse(JSON.stringify(sourceDS.conditionTree));
-                                    // Regenerate IDs to avoid conflicts
                                     const reId = (node: any) => {
                                       node.id = `${node.id}_copy_${Date.now()}`;
                                       (node.children || []).forEach(reId);
@@ -682,10 +745,9 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                   <span className="text-[11px] text-muted-foreground">已选 {form.fieldConfigs.length} 个</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-3">
-                  选择要展示的字段（AI标签/原生字段/计算字段），配置展示位置和筛选方式。枚举值来自标签管理。
+                  选择要展示的字段（AI标签/原生字段/计算字段），配置展示位置、筛选方式和排序。
                 </p>
 
-                {/* Search */}
                 <div className="flex items-center border border-border rounded-md bg-card px-3 mb-3">
                   <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                   <input value={fieldSearch} onChange={e => setFieldSearch(e.target.value)}
@@ -693,7 +755,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                     placeholder="搜索字段名称..." />
                 </div>
 
-                {/* Grouped collapsible field list */}
                 {(["ai", "raw", "calc"] as const).map(ftype => {
                   const fields = filteredFields(fieldsByType[ftype]);
                   if (fields.length === 0) return null;
@@ -728,19 +789,16 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                                   </div>
                                   {selected && fc && (
                                     <div className="flex items-center gap-2">
-                                      {/* Display position */}
                                       <select value={fc.displayPosition} onChange={e => updateFieldConfig(f.key, { displayPosition: e.target.value as FieldConfig["displayPosition"] })}
                                         className="px-1.5 py-1 text-[10px] border border-border rounded bg-card text-foreground">
                                         <option value="list">列表展示</option>
                                         <option value="detail">详情展示</option>
                                         <option value="both">列表+详情</option>
                                       </select>
-                                      {/* Filter toggle */}
                                       <div className="flex items-center gap-1">
                                         <span className="text-[10px] text-muted-foreground">筛选</span>
                                         <Switch checked={fc.isFilter} onCheckedChange={checked => updateFieldConfig(f.key, { isFilter: checked })} className="scale-75" />
                                       </div>
-                                      {/* Filter type: only show dropdown/fuzzy choice if field has enum */}
                                       {fc.isFilter && (
                                         f.hasSystemEnum ? (
                                           <select value={fc.filterType} onChange={e => updateFieldConfig(f.key, { filterType: e.target.value as "enum" | "text" })}
@@ -752,10 +810,28 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                                           <Badge className="text-[9px] px-1.5 py-0 bg-muted text-muted-foreground border-0">模糊搜索</Badge>
                                         )
                                       )}
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-muted-foreground">排序</span>
+                                        <Switch checked={fc.isSortable || false} onCheckedChange={checked => updateFieldConfig(f.key, { isSortable: checked, isDefaultSort: false })} className="scale-75" />
+                                      </div>
+                                      {fc.isSortable && (
+                                        <div className="flex items-center gap-1">
+                                          <button onClick={() => updateFieldConfig(f.key, { isDefaultSort: true, sortDirection: fc.sortDirection || "desc" })}
+                                            className={`px-1.5 py-0.5 text-[9px] rounded border transition-colors ${
+                                              fc.isDefaultSort ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/30"
+                                            }`}>默认</button>
+                                          {fc.isDefaultSort && (
+                                            <select value={fc.sortDirection || "desc"} onChange={e => updateFieldConfig(f.key, { sortDirection: e.target.value as "asc" | "desc" })}
+                                              className="px-1 py-0.5 text-[9px] border border-border rounded bg-card text-foreground">
+                                              <option value="desc">降序</option>
+                                              <option value="asc">升序</option>
+                                            </select>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
                                   )}
                                 </div>
-                                {/* Show enum values if filter=enum */}
                                 {selected && fc?.isFilter && fc.filterType === "enum" && fc.hasSystemEnum && (
                                   <div className="ml-7 mt-1.5 flex flex-wrap gap-1">
                                     <span className="text-[10px] text-muted-foreground mr-1">枚举值（来自标签管理）：</span>
@@ -770,6 +846,16 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                     </div>
                   );
                 })}
+
+                {/* Default sort summary */}
+                {form.fieldConfigs.some(fc => fc.isDefaultSort) && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 mt-2">
+                    <p className="text-[11px] text-primary">
+                      📋 默认排序：按「{form.fieldConfigs.find(fc => fc.isDefaultSort)?.key && ALL_FIELDS.find(f => f.key === form.fieldConfigs.find(fc => fc.isDefaultSort)?.key)?.label}」
+                      {form.fieldConfigs.find(fc => fc.isDefaultSort)?.sortDirection === "asc" ? "升序" : "降序"}排列
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -784,7 +870,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 <button onClick={addMergeNode} className="flex items-center gap-1 text-xs text-primary hover:underline"><Plus className="w-3 h-3" /> 添加合并节点</button>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                配置多级合并管线。每个节点基于上一级结果再合并。字段分组支持多字段组合。每个节点可配置结果展示字段及位置。
+                配置多级合并管线。通过组合字段条件（如"24小时内发布 且 文本相似度≥70%"）定义合并规则。每个节点可配置展示字段、筛选和排序。
               </p>
 
               {sortedMergeNodes.length === 0 ? (
@@ -814,132 +900,119 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
 
                       {node.enabled && (
                         <div className="p-3 space-y-3">
-                          {/* Type selection */}
-                          <div>
-                            <label className="text-[10px] text-muted-foreground mb-1 block">合并类型</label>
-                            <div className="grid grid-cols-2 gap-2">
-                              {MERGE_TYPES.map(mt => (
-                                <button key={mt.value} onClick={() => updateMergeNode(node.id, { type: mt.value as MergeNode["type"] })}
-                                  className={`text-left p-2.5 rounded-md border text-xs transition-colors ${
-                                    node.type === mt.value ? "border-primary bg-primary/10" : "border-border hover:bg-muted/30"
-                                  }`}>
-                                  <div className="font-medium text-foreground">{mt.label}</div>
-                                  <div className="text-[10px] text-muted-foreground mt-0.5">{mt.desc}</div>
-                                </button>
-                              ))}
+                          {/* Merge conditions */}
+                          <div className="p-3 bg-card rounded-md border border-border space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[10px] text-muted-foreground">合并条件（所有条件同时满足时合并）</label>
+                              <button onClick={() => addMergeCondition(node.id)} className="flex items-center gap-0.5 text-[10px] text-primary hover:underline"><Plus className="w-2.5 h-2.5" /> 添加条件</button>
                             </div>
+                            {node.mergeConditions.length === 0 && (
+                              <p className="text-[10px] text-muted-foreground text-center py-3 border border-dashed border-border rounded">请添加合并条件，例如"文本相似度≥80%"和"发布时间在24小时内"</p>
+                            )}
+                            {node.mergeConditions.map((mc, mcIdx) => (
+                              <div key={mc.id} className="flex items-center gap-2 py-1.5">
+                                {mcIdx > 0 && <span className="text-[9px] text-primary font-bold shrink-0">且</span>}
+                                <select value={mc.field} onChange={e => updateMergeCondition(node.id, mc.id, { field: e.target.value })}
+                                  className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground flex-1 min-w-[100px]">
+                                  <option value="">选择字段</option>
+                                  {ALL_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}（{FIELD_TYPE_LABELS[f.fieldType]}）</option>)}
+                                </select>
+                                <select value={mc.operator} onChange={e => updateMergeCondition(node.id, mc.id, { operator: e.target.value as MergeCondition["operator"] })}
+                                  className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
+                                  {MERGE_CONDITION_OPERATORS.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
+                                </select>
+                                {mc.operator !== "equals" && (
+                                  <input value={mc.value} onChange={e => updateMergeCondition(node.id, mc.id, { value: e.target.value })}
+                                    className="w-20 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
+                                    placeholder={mc.operator === "similarity_gte" ? "80" : mc.operator === "time_within" ? "24" : "值"} />
+                                )}
+                                {mc.operator === "similarity_gte" && <span className="text-[10px] text-muted-foreground shrink-0">%</span>}
+                                {mc.operator === "time_within" && <span className="text-[10px] text-muted-foreground shrink-0">小时</span>}
+                                <button onClick={() => removeMergeCondition(node.id, mc.id)} className="text-muted-foreground hover:text-destructive shrink-0"><Trash2 className="w-3 h-3" /></button>
+                              </div>
+                            ))}
+                            {node.mergeConditions.length > 0 && (
+                              <div className="bg-muted/30 rounded p-2 mt-1">
+                                <p className="text-[10px] text-primary">
+                                  💡 合并规则：{node.mergeConditions.map(mc => {
+                                    const fl = ALL_FIELDS.find(f => f.key === mc.field)?.label || mc.field || "?";
+                                    if (mc.operator === "similarity_gte") return `${fl}相似度≥${mc.value || "?"}%`;
+                                    if (mc.operator === "time_within") return `${mc.value || "?"}小时内`;
+                                    if (mc.operator === "equals") return `${fl}相同`;
+                                    return `${fl}包含${mc.value || "?"}`;
+                                  }).join(" 且 ")}
+                                </p>
+                              </div>
+                            )}
                           </div>
-
-                          {/* Type-specific config */}
-                          {node.type === "text_similarity" && (
-                            <div className="space-y-3 p-3 bg-card rounded-md border border-border">
-                              <div>
-                                <label className="text-[10px] text-muted-foreground">相似度阈值</label>
-                                <div className="flex items-center gap-3 mt-1">
-                                  <input type="range" min="50" max="99" value={node.similarityThreshold || 80}
-                                    onChange={e => updateMergeNode(node.id, { similarityThreshold: Number(e.target.value) })} className="flex-1 accent-primary" />
-                                  <span className="text-sm font-bold text-primary min-w-[3rem] text-right">{node.similarityThreshold || 80}%</span>
-                                </div>
-                              </div>
-                              <div>
-                                <label className="text-[10px] text-muted-foreground">时间窗口</label>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <input type="number" min="1" max="168" value={node.timeWindowHours || 24}
-                                    onChange={e => updateMergeNode(node.id, { timeWindowHours: Number(e.target.value) })}
-                                    className="w-20 px-2 py-1 text-xs border border-border rounded bg-card text-foreground focus:ring-1 focus:ring-primary outline-none" />
-                                  <span className="text-[10px] text-muted-foreground">小时</span>
-                                  <div className="flex gap-1 ml-2">
-                                    {[6, 12, 24, 48].map(h => (
-                                      <button key={h} onClick={() => updateMergeNode(node.id, { timeWindowHours: h })}
-                                        className={`px-2 py-0.5 text-[10px] rounded border transition-colors ${(node.timeWindowHours || 24) === h ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>{h}h</button>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {node.type === "field_group" && (
-                            <div className="p-3 bg-card rounded-md border border-border space-y-2">
-                              <label className="text-[10px] text-muted-foreground">按字段组合分组（可多选，如"时间窗口+业务类型"组合）</label>
-                              <div className="flex flex-wrap gap-1.5 mt-1">
-                                {ALL_FIELDS.map(f => {
-                                  const selected = (node.groupByFields || []).includes(f.key);
-                                  return (
-                                    <button key={f.key} onClick={() => toggleGroupByField(node.id, f.key)}
-                                      className={`px-2 py-1 text-[10px] rounded-md border transition-colors ${
-                                        selected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/30"
-                                      }`}>
-                                      {selected && <Check className="w-2.5 h-2.5 inline mr-0.5" />}{f.label}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                              {(node.groupByFields || []).length > 0 && (
-                                <p className="text-[10px] text-primary">将按「{(node.groupByFields || []).map(k => ALL_FIELDS.find(f => f.key === k)?.label || k).join(" + ")}」组合进行分组合并</p>
-                              )}
-
-                              {/* Optional time window for field_group */}
-                              <div className="pt-2 border-t border-border/50">
-                                <label className="text-[10px] text-muted-foreground">可选：同时限制时间窗口</label>
-                                <div className="flex items-center gap-2 mt-1">
-                                  <input type="number" min="0" max="168" value={node.timeWindowHours || 0}
-                                    onChange={e => updateMergeNode(node.id, { timeWindowHours: Number(e.target.value) })}
-                                    className="w-20 px-2 py-1 text-xs border border-border rounded bg-card text-foreground focus:ring-1 focus:ring-primary outline-none" />
-                                  <span className="text-[10px] text-muted-foreground">小时（0 = 不限制）</span>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {node.type === "time_window" && (
-                            <div className="p-3 bg-card rounded-md border border-border">
-                              <label className="text-[10px] text-muted-foreground">时间窗口</label>
-                              <div className="flex items-center gap-2 mt-1">
-                                <input type="number" min="1" max="168" value={node.timeWindowHours || 24}
-                                  onChange={e => updateMergeNode(node.id, { timeWindowHours: Number(e.target.value) })}
-                                  className="w-20 px-2 py-1 text-xs border border-border rounded bg-card text-foreground focus:ring-1 focus:ring-primary outline-none" />
-                                <span className="text-[10px] text-muted-foreground">小时内合并</span>
-                              </div>
-                            </div>
-                          )}
-
-                          {node.type === "custom" && (
-                            <div className="p-3 bg-card rounded-md border border-border">
-                              <label className="text-[10px] text-muted-foreground">自定义合并规则</label>
-                              <textarea value={node.customRule || ""} onChange={e => updateMergeNode(node.id, { customRule: e.target.value })}
-                                className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded bg-card text-foreground focus:ring-1 focus:ring-primary outline-none resize-none"
-                                rows={3} placeholder="例如：IF(similarity > 0.8 AND same_topic) THEN merge" />
-                            </div>
-                          )}
 
                           {/* Display fields for merge result */}
                           <div className="p-3 bg-card rounded-md border border-border space-y-2">
-                            <label className="text-[10px] text-muted-foreground">合并结果展示字段（选择在事件列表或详情中展示哪些字段）</label>
+                            <label className="text-[10px] text-muted-foreground">合并后展示字段（选择在事件列表或详情中展示哪些字段，支持配置筛选和排序）</label>
                             <div className="flex flex-wrap gap-1.5">
                               {ALL_FIELDS.map(f => {
                                 const df = (node.displayFields || []).find(d => d.key === f.key);
                                 const selected = !!df;
                                 return (
-                                  <div key={f.key} className="flex items-center gap-0.5">
-                                    <button onClick={() => toggleMergeDisplayField(node.id, f.key)}
-                                      className={`px-2 py-1 text-[10px] rounded-l-md border transition-colors ${
-                                        selected ? "border-primary bg-primary/10 text-primary border-r-0" : "border-border text-muted-foreground hover:bg-muted/30"
-                                      }`}>
-                                      {selected && <Check className="w-2.5 h-2.5 inline mr-0.5" />}{f.label}
-                                    </button>
-                                    {selected && (
-                                      <select value={df!.position} onChange={e => updateMergeDisplayField(node.id, f.key, { position: e.target.value as MergeDisplayField["position"] })}
-                                        className="px-1 py-1 text-[9px] border border-primary/30 rounded-r-md bg-primary/5 text-primary outline-none">
-                                        <option value="list">列表</option>
-                                        <option value="detail">详情</option>
-                                        <option value="both">都展示</option>
-                                      </select>
-                                    )}
-                                  </div>
+                                  <button key={f.key} onClick={() => toggleMergeDisplayField(node.id, f.key)}
+                                    className={`px-2 py-1 text-[10px] rounded-md border transition-colors ${
+                                      selected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/30"
+                                    }`}>
+                                    {selected && <Check className="w-2.5 h-2.5 inline mr-0.5" />}{f.label}
+                                  </button>
                                 );
                               })}
                             </div>
+
+                            {/* Selected field config rows */}
+                            {(node.displayFields || []).length > 0 && (
+                              <div className="border border-border rounded-md divide-y divide-border mt-2">
+                                {(node.displayFields || []).map(df => {
+                                  const fieldDef = ALL_FIELDS.find(f => f.key === df.key);
+                                  return (
+                                    <div key={df.key} className="flex items-center justify-between px-3 py-2 text-[10px]">
+                                      <span className="font-medium text-foreground">{fieldDef?.label || df.key}</span>
+                                      <div className="flex items-center gap-2">
+                                        <select value={df.position} onChange={e => updateMergeDisplayField(node.id, df.key, { position: e.target.value as MergeDisplayField["position"] })}
+                                          className="px-1 py-0.5 text-[9px] border border-border rounded bg-card text-foreground">
+                                          <option value="list">列表</option>
+                                          <option value="detail">详情</option>
+                                          <option value="both">都展示</option>
+                                        </select>
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-muted-foreground">筛选</span>
+                                          <Switch checked={df.isFilter || false} onCheckedChange={checked => updateMergeDisplayField(node.id, df.key, { isFilter: checked })} className="scale-[0.6]" />
+                                        </div>
+                                        {df.isFilter && fieldDef?.hasSystemEnum && (
+                                          <select value={df.filterType || "enum"} onChange={e => updateMergeDisplayField(node.id, df.key, { filterType: e.target.value as "enum" | "text" })}
+                                            className="px-1 py-0.5 text-[9px] border border-border rounded bg-card text-foreground">
+                                            <option value="enum">下拉</option>
+                                            <option value="text">搜索</option>
+                                          </select>
+                                        )}
+                                        <div className="flex items-center gap-1">
+                                          <span className="text-muted-foreground">排序</span>
+                                          <Switch checked={df.isSortable || false} onCheckedChange={checked => updateMergeDisplayField(node.id, df.key, { isSortable: checked, isDefaultSort: false })} className="scale-[0.6]" />
+                                        </div>
+                                        {df.isSortable && (
+                                          <div className="flex items-center gap-0.5">
+                                            <button onClick={() => updateMergeDisplayField(node.id, df.key, { isDefaultSort: true, sortDirection: df.sortDirection || "desc" })}
+                                              className={`px-1 py-0.5 text-[8px] rounded border ${df.isDefaultSort ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>默认</button>
+                                            {df.isDefaultSort && (
+                                              <select value={df.sortDirection || "desc"} onChange={e => updateMergeDisplayField(node.id, df.key, { sortDirection: e.target.value as "asc" | "desc" })}
+                                                className="px-0.5 py-0.5 text-[8px] border border-border rounded bg-card text-foreground">
+                                                <option value="desc">降序</option>
+                                                <option value="asc">升序</option>
+                                              </select>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </div>
 
                           {i > 0 && (
@@ -1010,7 +1083,6 @@ function ConditionTreeEditor({
           className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
           {OPERATORS.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
         </select>
-        {/* If field has enum, show dropdown for value */}
         {(() => {
           const fieldDef = ALL_FIELDS.find(f => f.key === node.field);
           if (fieldDef?.hasSystemEnum && fieldDef.enumValues.length > 0) {
@@ -1033,7 +1105,6 @@ function ConditionTreeEditor({
     );
   }
 
-  // Group node
   const children = node.children || [];
   return (
     <div className={`rounded-lg border ${depth === 0 ? "border-border" : "border-primary/20 bg-primary/5"} p-3`}>

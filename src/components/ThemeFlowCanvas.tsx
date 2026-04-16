@@ -163,14 +163,18 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
   // Merge pipeline nodes
   const mergeFlowNodes: FlowNode[] = mergeNodes.map((mn, i) => {
     const sublabelParts: string[] = [];
-    if (mn.type === "text_similarity" && mn.similarityThreshold) sublabelParts.push(`阈值 ${mn.similarityThreshold}%`);
-    if (mn.type === "time_window" && mn.timeWindowHours) sublabelParts.push(`${mn.timeWindowHours}h窗口`);
-    if (mn.type === "field_group" && mn.groupByFields?.length) sublabelParts.push(mn.groupByFields.join("+"));
+    (mn.mergeConditions || []).forEach(mc => {
+      const fieldLabel = FIELD_LABELS[mc.field] || mc.field;
+      if (mc.operator === "similarity_gte") sublabelParts.push(`${fieldLabel}≥${mc.value}%`);
+      else if (mc.operator === "time_within") sublabelParts.push(`${mc.value}h窗口`);
+      else if (mc.operator === "equals") sublabelParts.push(`${fieldLabel}相同`);
+      else if (mc.operator === "contains") sublabelParts.push(`${fieldLabel}包含${mc.value}`);
+    });
     return {
       id: `merge_${mn.id}`,
       type: "merge" as const,
-      label: mn.name || MERGE_TYPE_LABELS[mn.type],
-      sublabel: sublabelParts.join(" · ") || MERGE_TYPE_LABELS[mn.type],
+      label: mn.name,
+      sublabel: sublabelParts.join(" + ") || "字段分组合并",
       x: mergeColXs[i],
       y: themeNode.y - 2,
       width: nodeW + 10, height: 56,
