@@ -15,22 +15,33 @@ export interface FieldConfig {
   filterType: "enum" | "text";
   hasSystemEnum: boolean;
   enumValues: string[];
+  isSortable?: boolean;
+  isDefaultSort?: boolean;
+  sortDirection?: "asc" | "desc";
 }
 
 export interface MergeDisplayField {
   key: string;
   position: "list" | "detail" | "both";
+  isFilter?: boolean;
+  filterType?: "enum" | "text";
+  isSortable?: boolean;
+  isDefaultSort?: boolean;
+  sortDirection?: "asc" | "desc";
+}
+
+export interface MergeCondition {
+  id: string;
+  field: string;
+  operator: "similarity_gte" | "time_within" | "equals" | "contains";
+  value: string;
 }
 
 export interface MergeNode {
   id: string;
   name: string;
   enabled: boolean;
-  type: "text_similarity" | "field_group" | "time_window" | "custom";
-  similarityThreshold?: number;
-  timeWindowHours?: number;
-  groupByFields?: string[];
-  customRule?: string;
+  mergeConditions: MergeCondition[];
   order: number;
   displayFields?: MergeDisplayField[];
 }
@@ -63,7 +74,8 @@ export interface ThemeConfig {
 }
 
 export interface TaskParamConfig {
-  platform: string;
+  brand?: string;
+  platforms: string[];
   topics: string[];
 }
 
