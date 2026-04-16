@@ -224,14 +224,23 @@ const defaultThemes: ThemeConfig[] = [
       { id: "mn1", name: "事件合并", enabled: true, mergeConditions: [
         { id: "mc1", field: "sentiment", operator: "similarity_gte", value: "80" },
         { id: "mc2", field: "publish_time", operator: "time_within", value: "24" },
-      ], order: 1, displayFields: [
-          { key: "sentiment", position: "list" }, { key: "platform", position: "list" },
-          { key: "risk_score", position: "detail" }, { key: "likes", position: "detail" },
+      ], mergeConditionTree: {
+        id: "mct_mn1", type: "group", logic: "AND", children: [
+          { id: "mc1t", type: "condition", field: "sentiment", operator: "similarity_gte", value: "80" },
+          { id: "mc2t", type: "condition", field: "publish_time", operator: "time_within", value: "24" },
+        ],
+      }, order: 1, displayFields: [
+          { key: "sentiment", fieldType: "ai", position: "list" }, { key: "platform", fieldType: "raw", position: "list" },
+          { key: "risk_score", fieldType: "calc", position: "detail" }, { key: "likes", fieldType: "raw", position: "detail" },
         ]},
       { id: "mn2", name: "业务类型合并", enabled: true, mergeConditions: [
         { id: "mc3", field: "topic", operator: "equals", value: "" },
-      ], order: 2, displayFields: [
-          { key: "sentiment", position: "both" }, { key: "platform", position: "list" },
+      ], mergeConditionTree: {
+        id: "mct_mn2", type: "group", logic: "AND", children: [
+          { id: "mc3t", type: "condition", field: "topic", operator: "equals", value: "" },
+        ],
+      }, order: 2, displayFields: [
+          { key: "sentiment", fieldType: "ai", position: "both" }, { key: "platform", fieldType: "raw", position: "list" },
         ]},
     ],
     dashboardWidgets: [
@@ -279,7 +288,12 @@ const defaultThemes: ThemeConfig[] = [
     mergeNodes: [{ id: "mn3", name: "热点事件聚合", enabled: true, mergeConditions: [
       { id: "mc4", field: "sentiment", operator: "similarity_gte", value: "85" },
       { id: "mc5", field: "publish_time", operator: "time_within", value: "12" },
-    ], order: 1, displayFields: [] }],
+    ], mergeConditionTree: {
+      id: "mct_mn3", type: "group", logic: "AND", children: [
+        { id: "mc4t", type: "condition", field: "sentiment", operator: "similarity_gte", value: "85" },
+        { id: "mc5t", type: "condition", field: "publish_time", operator: "time_within", value: "12" },
+      ],
+    }, order: 1, displayFields: [] }],
     dashboardWidgets: [{ id: "w7", type: "table", title: "实时热点榜", metric: "热度", position: 1, tagField: "heat_score" }],
     createdAt: "2026-02-01", updatedAt: "2026-03-27",
   },
