@@ -8,6 +8,7 @@ import type {
   MergeNode,
   MergeDisplayField,
   MergeCondition,
+  MergeConditionNode,
   ConditionNode,
   TaskParamConfig,
   ExtendedParamConfig,
