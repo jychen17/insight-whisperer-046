@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GitBranch, ZoomIn, ZoomOut, Maximize2, Database, Filter, GitMerge } from "lucide-react";
 import type { ThemeConfig, ConditionNode } from "@/pages/ThemeSettings";
+import { mergeConditionTreeToText } from "@/components/ThemeConfigDialog";
 
 function conditionToText(node: ConditionNode | undefined): string {
   if (!node) return "";
@@ -162,19 +163,25 @@ export default function ThemeFlowCanvas({ theme }: { theme: ThemeConfig }) {
 
   // Merge pipeline nodes
   const mergeFlowNodes: FlowNode[] = mergeNodes.map((mn, i) => {
-    const sublabelParts: string[] = [];
-    (mn.mergeConditions || []).forEach(mc => {
-      const fieldLabel = FIELD_LABELS[mc.field] || mc.field;
-      if (mc.operator === "similarity_gte") sublabelParts.push(`${fieldLabel}≥${mc.value}%`);
-      else if (mc.operator === "time_within") sublabelParts.push(`${mc.value}h窗口`);
-      else if (mc.operator === "equals") sublabelParts.push(`${fieldLabel}相同`);
-      else if (mc.operator === "contains") sublabelParts.push(`${fieldLabel}包含${mc.value}`);
-    });
+    let sublabel = "";
+    if (mn.mergeConditionTree && (mn.mergeConditionTree.children || []).length > 0) {
+      sublabel = mergeConditionTreeToText(mn.mergeConditionTree);
+    } else {
+      const sublabelParts: string[] = [];
+      (mn.mergeConditions || []).forEach(mc => {
+        const fieldLabel = FIELD_LABELS[mc.field] || mc.field;
+        if (mc.operator === "similarity_gte") sublabelParts.push(`${fieldLabel}≥${mc.value}%`);
+        else if (mc.operator === "time_within") sublabelParts.push(`${mc.value}h窗口`);
+        else if (mc.operator === "equals") sublabelParts.push(`${fieldLabel}相同`);
+        else if (mc.operator === "contains") sublabelParts.push(`${fieldLabel}包含${mc.value}`);
+      });
+      sublabel = sublabelParts.join(" + ") || "字段分组合并";
+    }
     return {
       id: `merge_${mn.id}`,
       type: "merge" as const,
       label: mn.name,
-      sublabel: sublabelParts.join(" + ") || "字段分组合并",
+      sublabel,
       x: mergeColXs[i],
       y: themeNode.y - 2,
       width: nodeW + 10, height: 56,
