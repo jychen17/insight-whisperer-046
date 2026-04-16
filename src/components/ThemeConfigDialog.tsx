@@ -1247,3 +1247,55 @@ function updateInTree(tree: ConditionNode, nodeId: string, update: Partial<Condi
   }
   return tree;
 }
+
+// ── Merge Condition Tree helpers ────────────────────────────
+
+import type { MergeConditionNode as MCN } from "@/pages/ThemeSettings";
+
+function insertIntoMergeTree(tree: MCN, parentId: string, newNode: MCN): MCN {
+  if (tree.id === parentId && tree.type === "group") {
+    return { ...tree, children: [...(tree.children || []), newNode] };
+  }
+  if (tree.type === "group" && tree.children) {
+    return { ...tree, children: tree.children.map(c => insertIntoMergeTree(c, parentId, newNode)) };
+  }
+  return tree;
+}
+
+function removeFromMergeTree(tree: MCN, nodeId: string): MCN {
+  if (tree.type === "group" && tree.children) {
+    return { ...tree, children: tree.children.filter(c => c.id !== nodeId).map(c => removeFromMergeTree(c, nodeId)) };
+  }
+  return tree;
+}
+
+function updateInMergeTree(tree: MCN, nodeId: string, update: Partial<MCN>): MCN {
+  if (tree.id === nodeId) return { ...tree, ...update };
+  if (tree.type === "group" && tree.children) {
+    return { ...tree, children: tree.children.map(c => updateInMergeTree(c, nodeId, update)) };
+  }
+  return tree;
+}
+
+export function mergeConditionTreeToText(node: MCN | undefined): string {
+  if (!node) return "";
+  if (node.type === "condition") {
+    const MERGE_FIELD_LABELS: Record<string, string> = {
+      sentiment: "情感倾向", risk_level: "风险等级", topic: "话题分类", intent: "用户意图",
+      platform: "平台", publish_time: "发布时间", author: "作者", content: "内容正文",
+      likes: "点赞数", comments: "评论数", shares: "分享数", reads: "阅读数",
+      heat_score: "热度指数", risk_score: "风险分数", ferment_level: "发酵等级",
+      sov: "SOV份额", nps: "NPS评分", growth_rate: "增长率",
+    };
+    const fl = MERGE_FIELD_LABELS[node.field || ""] || node.field || "";
+    if (node.operator === "similarity_gte") return `${fl}≥${node.value}%`;
+    if (node.operator === "time_within") return `${node.value}h窗口`;
+    if (node.operator === "equals") return `${fl}相同`;
+    if (node.operator === "contains") return `${fl}包含${node.value}`;
+    return `${fl} ${node.operator} ${node.value}`;
+  }
+  const childTexts = (node.children || []).map(c => mergeConditionTreeToText(c)).filter(Boolean);
+  if (childTexts.length === 0) return "";
+  const joined = childTexts.join(node.logic === "OR" ? " 或 " : " 且 ");
+  return childTexts.length > 1 ? `(${joined})` : joined;
+}
