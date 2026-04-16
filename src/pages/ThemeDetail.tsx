@@ -206,9 +206,17 @@ export default function ThemeDetail() {
                       <GitMerge className="w-3 h-3 text-primary" /> 第{i + 1}级：{node.name}
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-0.5">
-                      {MERGE_TYPE_LABELS[node.type]}
-                      {node.type === "text_similarity" && ` · 阈值${node.similarityThreshold}% · ${node.timeWindowHours}h窗口`}
-                      {node.type === "field_group" && ` · 按${(node.groupByFields || []).map(f => FIELD_LABELS[f] || f).join("+")}分组`}
+                      {(() => {
+                        const parts: string[] = [];
+                        (node.mergeConditions || []).forEach(mc => {
+                          const fl = FIELD_LABELS[mc.field] || mc.field;
+                          if (mc.operator === "similarity_gte") parts.push(`${fl}≥${mc.value}%`);
+                          else if (mc.operator === "time_within") parts.push(`${mc.value}h窗口`);
+                          else if (mc.operator === "equals") parts.push(`${fl}相同`);
+                          else parts.push(`${fl}包含${mc.value}`);
+                        });
+                        return parts.join(" + ") || "字段分组合并";
+                      })()}
                     </div>
                     {(node.displayFields || []).length > 0 && (
                       <div className="flex gap-1 mt-1 flex-wrap">
@@ -302,11 +310,16 @@ export default function ThemeDetail() {
                 <div className="flex items-center gap-2">
                   <GitMerge className="w-4 h-4 text-primary" />
                   <span className="text-xs font-medium text-foreground">{node.name}</span>
-                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{MERGE_TYPE_LABELS[node.type]}</Badge>
+                  <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">字段分组合并</Badge>
                 </div>
                 <span className="text-[10px] text-muted-foreground">
-                  {node.type === "text_similarity" && `相似度 ≥ ${node.similarityThreshold}% · ${node.timeWindowHours}h窗口`}
-                  {node.type === "field_group" && `按「${(node.groupByFields || []).map(f => FIELD_LABELS[f] || f).join("+")}」分组`}
+                  {(node.mergeConditions || []).map(mc => {
+                    const fl = FIELD_LABELS[mc.field] || mc.field;
+                    if (mc.operator === "similarity_gte") return `${fl}≥${mc.value}%`;
+                    if (mc.operator === "time_within") return `${mc.value}h窗口`;
+                    if (mc.operator === "equals") return `${fl}相同`;
+                    return `${fl}包含${mc.value}`;
+                  }).join(" + ")}
                   {nodeIndex > 0 && " · 基于上一级合并结果"}
                 </span>
               </div>
