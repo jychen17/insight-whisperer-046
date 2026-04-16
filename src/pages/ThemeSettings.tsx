@@ -22,9 +22,12 @@ export interface FieldConfig {
 
 export interface MergeDisplayField {
   key: string;
+  fieldType: "raw" | "ai" | "calc";
   position: "list" | "detail" | "both";
   isFilter?: boolean;
   filterType?: "enum" | "text";
+  hasSystemEnum?: boolean;
+  enumValues?: string[];
   isSortable?: boolean;
   isDefaultSort?: boolean;
   sortDirection?: "asc" | "desc";
@@ -37,11 +40,23 @@ export interface MergeCondition {
   value: string;
 }
 
+// Merge condition tree - reuses ConditionNode with merge-specific operators
+export interface MergeConditionNode {
+  id: string;
+  type: "condition" | "group";
+  field?: string;
+  operator?: "similarity_gte" | "time_within" | "equals" | "contains";
+  value?: string;
+  logic?: "AND" | "OR";
+  children?: MergeConditionNode[];
+}
+
 export interface MergeNode {
   id: string;
   name: string;
   enabled: boolean;
   mergeConditions: MergeCondition[];
+  mergeConditionTree?: MergeConditionNode;
   order: number;
   displayFields?: MergeDisplayField[];
 }
