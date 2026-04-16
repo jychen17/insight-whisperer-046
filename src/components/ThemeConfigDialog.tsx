@@ -22,15 +22,10 @@ interface Props {
   onSave: (theme: ThemeConfig) => void;
 }
 
-const MOCK_TASKS = [
-  { id: "t1", name: "同程-万达", platforms: ["小红书", "微博", "抖音"], status: "running" },
-  { id: "t2", name: "同程-金服", platforms: ["微博", "黑猫投诉"], status: "running" },
-  { id: "t3", name: "同程-基础监控", platforms: ["百度", "今日头条"], status: "running" },
-  { id: "t4", name: "OTA行业监控", platforms: ["微博", "抖音", "小红书", "百度"], status: "running" },
-  { id: "t5", name: "全平台热点", platforms: ["微博", "抖音", "小红书", "百度", "快手"], status: "running" },
-  { id: "t6", name: "用户反馈监控", platforms: ["小红书", "黑猫投诉", "微博"], status: "paused" },
-  { id: "t7", name: "竞品价格监控", platforms: ["抖音", "小红书"], status: "running" },
-];
+const TASK_TYPES = ["话题", "账号", "关键词", "链接"];
+const PLATFORM_OPTIONS = ["新浪微博", "小红书", "抖音", "快手", "B站", "知乎", "百度", "今日头条", "黑猫投诉", "京东", "淘宝"];
+const SORT_OPTIONS = ["默认排序", "时间倒序", "热度排序", "相关度排序"];
+const OWNER_OPTIONS = ["张三", "李四", "王五", "赵六", "陈佳燕-1227152"];
 
 const OPERATORS = [
   { value: "equals", label: "等于" },
