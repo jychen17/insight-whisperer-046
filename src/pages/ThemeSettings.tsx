@@ -237,9 +237,9 @@ const defaultThemes: ThemeConfig[] = [
   {
     id: "hotspot", name: "热点洞察主题", description: "社媒热点发现、话题趋势追踪", owner: "王五",
     type: "builtin", status: "active", icon: "⚡",
-    dataSources: [{ taskId: "t5", taskName: "全平台热点", platforms: ["微博", "抖音", "小红书", "百度", "快手"], timeRange: "实时", enabled: true,
+    dataSources: [defaultDS({ taskId: "t5", taskName: "全平台热点", platforms: ["微博", "抖音", "小红书", "百度", "快手"],
       conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "topic", operator: "contains", value: "旅游" }] },
-    }],
+    })],
     conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
       { key: "platform", fieldType: "raw", displayPosition: "list", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["微博", "抖音", "小红书", "百度", "快手"] },
@@ -253,9 +253,9 @@ const defaultThemes: ThemeConfig[] = [
   {
     id: "experience", name: "产品体验主题", description: "用户反馈收集、产品问题洞察", owner: "赵六",
     type: "builtin", status: "active", icon: "💡",
-    dataSources: [{ taskId: "t6", taskName: "用户反馈监控", platforms: ["小红书", "黑猫投诉", "微博"], timeRange: "近7天", enabled: true,
+    dataSources: [defaultDS({ taskId: "t6", taskName: "用户反馈监控", platforms: ["小红书", "黑猫投诉", "微博"],
       conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "intent", operator: "equals", value: "用户反馈" }] },
-    }],
+    })],
     conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
       { key: "sentiment", fieldType: "ai", displayPosition: "both", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["正面", "负面", "中性"] },
