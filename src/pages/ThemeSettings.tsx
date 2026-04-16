@@ -215,9 +215,9 @@ const defaultThemes: ThemeConfig[] = [
   {
     id: "industry", name: "行业咨询主题", description: "行业动态、竞品动向、市场趋势监测", owner: "李四",
     type: "builtin", status: "active", icon: "🌐",
-    dataSources: [{ taskId: "t4", taskName: "OTA行业监控", platforms: ["微博", "抖音", "小红书", "百度"], timeRange: "近30天", enabled: true,
+    dataSources: [defaultDS({ taskId: "t4", taskName: "OTA行业监控", platforms: ["微博", "抖音", "小红书", "百度"],
       conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "topic", operator: "contains", value: "OTA" }] },
-    }],
+    })],
     conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
       { key: "platform", fieldType: "raw", displayPosition: "list", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["微博", "抖音", "小红书", "百度"] },
