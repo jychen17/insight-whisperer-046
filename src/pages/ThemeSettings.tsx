@@ -62,9 +62,31 @@ export interface ThemeConfig {
   updatedAt: string;
 }
 
+export interface TaskParamConfig {
+  platform: string;
+  topics: string[];
+}
+
+export interface ExtendedParamConfig {
+  platform: string;
+  maxPages?: string;
+  maxFetchCount?: string;
+  sortBy?: string;
+}
+
 export interface DataSourceConfig {
   taskId: string;
   taskName: string;
+  taskType: string;
+  owner: string;
+  executionPeriodStart: string;
+  executionPeriodEnd: string;
+  scheduleMode: "interval" | "fixed";
+  scheduleTimeStart: number;
+  scheduleTimeEnd: number;
+  intervalHours: number;
+  taskParams: TaskParamConfig[];
+  extendedParams: ExtendedParamConfig[];
   platforms: string[];
   timeRange: string;
   enabled: boolean;
