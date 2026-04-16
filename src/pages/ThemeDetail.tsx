@@ -208,23 +208,35 @@ export default function ThemeDetail() {
                       <GitMerge className="w-3 h-3 text-primary" /> 第{i + 1}级：{node.name}
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-0.5">
-                      {(() => {
-                        const parts: string[] = [];
-                        (node.mergeConditions || []).forEach(mc => {
-                          const fl = FIELD_LABELS[mc.field] || mc.field;
-                          if (mc.operator === "similarity_gte") parts.push(`${fl}≥${mc.value}%`);
-                          else if (mc.operator === "time_within") parts.push(`${mc.value}h窗口`);
-                          else if (mc.operator === "equals") parts.push(`${fl}相同`);
-                          else parts.push(`${fl}包含${mc.value}`);
-                        });
-                        return parts.join(" + ") || "字段分组合并";
-                      })()}
+                      {node.mergeConditionTree && (node.mergeConditionTree.children || []).length > 0
+                        ? mergeConditionTreeToText(node.mergeConditionTree)
+                        : (() => {
+                            const parts: string[] = [];
+                            (node.mergeConditions || []).forEach(mc => {
+                              const fl = FIELD_LABELS[mc.field] || mc.field;
+                              if (mc.operator === "similarity_gte") parts.push(`${fl}≥${mc.value}%`);
+                              else if (mc.operator === "time_within") parts.push(`${mc.value}h窗口`);
+                              else if (mc.operator === "equals") parts.push(`${fl}相同`);
+                              else parts.push(`${fl}包含${mc.value}`);
+                            });
+                            return parts.join(" + ") || "字段分组合并";
+                          })()
+                      }
                     </div>
+                    {/* Sort config */}
+                    {(node.displayFields || []).some(df => df.isDefaultSort) && (
+                      <div className="text-[10px] text-primary mt-0.5">
+                        📋 排序：{FIELD_LABELS[(node.displayFields || []).find(df => df.isDefaultSort)?.key || ""] || (node.displayFields || []).find(df => df.isDefaultSort)?.key}
+                        {(node.displayFields || []).find(df => df.isDefaultSort)?.sortDirection === "asc" ? " 升序" : " 降序"}
+                      </div>
+                    )}
                     {(node.displayFields || []).length > 0 && (
                       <div className="flex gap-1 mt-1 flex-wrap">
                         {(node.displayFields || []).map(df => (
                           <Badge key={df.key} className="text-[9px] px-1 py-0 bg-muted text-muted-foreground border-0">
                             {FIELD_LABELS[df.key] || df.key}·{DISPLAY_POS_LABELS[df.position]}
+                            {df.isFilter && "·筛选"}
+                            {df.isSortable && "·排序"}
                           </Badge>
                         ))}
                       </div>
