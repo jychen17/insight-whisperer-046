@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Trash2, GripVertical, GitMerge, ArrowUp, ArrowDown, Search, ChevronDown, ChevronRight, Check, Copy } from "lucide-react";
+import { X, Plus, Trash2, GripVertical, GitMerge, ArrowUp, ArrowDown, Search, ChevronDown, ChevronRight, Check, Copy, Calendar } from "lucide-react";
 import type {
   ThemeConfig,
   DataSourceConfig,
@@ -8,6 +8,8 @@ import type {
   MergeNode,
   MergeDisplayField,
   ConditionNode,
+  TaskParamConfig,
+  ExtendedParamConfig,
 } from "@/pages/ThemeSettings";
 import { ALL_FIELDS } from "@/pages/ThemeSettings";
 import { Badge } from "@/components/ui/badge";
