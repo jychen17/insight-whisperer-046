@@ -8,6 +8,7 @@ import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ThemeConfigDialog from "@/components/ThemeConfigDialog";
 import { defaultThemes, type ThemeConfig } from "@/pages/ThemeSettings";
 
