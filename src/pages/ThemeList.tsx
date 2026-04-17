@@ -147,8 +147,8 @@ export default function ThemeList() {
                 <TableHead>说明</TableHead>
                 <TableHead>类型</TableHead>
                 <TableHead>负责人</TableHead>
-                <TableHead className="text-right">今日数据</TableHead>
-                <TableHead className="text-right">预警</TableHead>
+                <TableHead className="text-right">昨日数据</TableHead>
+                <TableHead className="text-right">昨日预警</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead>更新时间</TableHead>
                 <TableHead className="text-right">操作</TableHead>
