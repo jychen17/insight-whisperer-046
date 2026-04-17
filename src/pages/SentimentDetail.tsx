@@ -227,6 +227,52 @@ export default function SentimentDetail() {
 
   const [themeConfigOpen, setThemeConfigOpen] = useState(false);
 
+  // Export dialog state
+  const sentimentTheme = useMemo(() => defaultThemes.find(t => t.id === "sentiment") ?? null, []);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportScope, setExportScope] = useState<"all" | "selected">("all");
+  const [exportFormat, setExportFormat] = useState<"xlsx" | "csv">("xlsx");
+  const [exportFields, setExportFields] = useState<string[]>([]);
+  const [exportFieldSearch, setExportFieldSearch] = useState("");
+
+  const FIELD_LABELS_LOCAL: Record<string, string> = {
+    title: "标题", content: "正文", platform: "平台", author: "作者", publish_time: "发布时间",
+    sentiment: "情感倾向", topic: "话题分类", region: "地域", likes: "点赞数", comments: "评论数",
+    shares: "转发数", risk_level: "风险等级", intent: "用户意图",
+    risk_score: "风险分数", ferment_level: "发酵等级",
+  };
+
+  const openExportDialog = (scope: "all" | "selected") => {
+    const count = scope === "selected"
+      ? (sentimentView === "events" ? selectedEventIds.length : selectedIds.length)
+      : (sentimentView === "events" ? mergedEvents.length : items.length);
+    if (scope === "selected" && count === 0) {
+      toast({ title: "请先选择数据", variant: "destructive" });
+      return;
+    }
+    setExportScope(scope);
+    setExportFields((sentimentTheme?.fieldConfigs || []).map(fc => fc.key));
+    setExportFieldSearch("");
+    setExportFormat("xlsx");
+    setExportDialogOpen(true);
+  };
+
+  const confirmExport = () => {
+    if (exportFields.length === 0) {
+      toast({ title: "请至少选择一个字段", variant: "destructive" });
+      return;
+    }
+    const count = exportScope === "selected"
+      ? (sentimentView === "events" ? selectedEventIds.length : selectedIds.length)
+      : (sentimentView === "events" ? mergedEvents.length : items.length);
+    toast({
+      title: `导出${exportScope === "all" ? "全部" : "所选"}数据`,
+      description: `已开始导出 ${count} 条${sentimentView === "events" ? "事件" : "舆情"}（${exportFormat.toUpperCase()}，${exportFields.length} 个字段）`,
+    });
+    setExportDialogOpen(false);
+  };
+
+
   const displayItems = useMemo(() => {
     const filtered = items.filter(item => {
       if (showNoiseFilter === "normal") return !item.isNoise;
@@ -876,24 +922,12 @@ export default function SentimentDetail() {
               <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1"><Download className="w-3 h-3" />导出数据<ChevronDown className="w-3 h-3" /></button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem
-                onClick={() => {
-                  const total = sentimentView === "events" ? mergedEvents.length : items.length;
-                  toast({ title: "导出全部数据", description: `已开始导出全部 ${total} 条${sentimentView === "events" ? "事件" : "舆情"}数据` });
-                }}
-              >
+              <DropdownMenuItem onClick={() => openExportDialog("all")}>
                 <FileText className="w-3.5 h-3.5" />导出全部数据
               </DropdownMenuItem>
               <DropdownMenuItem
                 disabled={sentimentView === "events" ? selectedEventIds.length === 0 : selectedIds.length === 0}
-                onClick={() => {
-                  const count = sentimentView === "events" ? selectedEventIds.length : selectedIds.length;
-                  if (count === 0) {
-                    toast({ title: "请先选择数据", variant: "destructive" });
-                    return;
-                  }
-                  toast({ title: "导出所选数据", description: `已开始导出 ${count} 条已选${sentimentView === "events" ? "事件" : "舆情"}数据` });
-                }}
+                onClick={() => openExportDialog("selected")}
               >
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 导出所选数据
@@ -1691,9 +1725,131 @@ export default function SentimentDetail() {
       <ThemeConfigDialog
         open={themeConfigOpen}
         onOpenChange={setThemeConfigOpen}
-        theme={defaultThemes.find(t => t.id === "sentiment") ?? null}
+        theme={sentimentTheme}
         onSave={() => setThemeConfigOpen(false)}
       />
+
+      {/* Export Dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-4 h-4 text-primary" />
+              导出{exportScope === "all" ? "全部" : "所选"}数据
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Scope summary */}
+            <div className="flex items-center justify-between p-3 bg-muted/40 rounded-md text-xs">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-primary/10 text-primary border-0">
+                  {exportScope === "all" ? "全部数据" : "所选数据"}
+                </Badge>
+                <span className="text-muted-foreground">
+                  共 {exportScope === "all"
+                    ? (sentimentView === "events" ? mergedEvents.length : items.length)
+                    : (sentimentView === "events" ? selectedEventIds.length : selectedIds.length)} 条{sentimentView === "events" ? "事件" : "舆情"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                {(["xlsx", "csv"] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setExportFormat(f)}
+                    className={`px-2.5 py-1 rounded text-xs border ${exportFormat === f ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border"}`}
+                  >
+                    {f.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Field selection */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-foreground">
+                  导出字段 <span className="text-xs text-muted-foreground">({exportFields.length}/{(sentimentTheme?.fieldConfigs || []).length})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center border border-border rounded-md bg-card px-2">
+                    <Search className="w-3 h-3 text-muted-foreground" />
+                    <input
+                      value={exportFieldSearch}
+                      onChange={e => setExportFieldSearch(e.target.value)}
+                      placeholder="搜索字段"
+                      className="px-1.5 py-1 text-xs bg-transparent text-foreground outline-none w-28"
+                    />
+                  </div>
+                  <button
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setExportFields((sentimentTheme?.fieldConfigs || []).map(fc => fc.key))}
+                  >全选</button>
+                  <button
+                    className="text-xs text-muted-foreground hover:underline"
+                    onClick={() => setExportFields([])}
+                  >清空</button>
+                </div>
+              </div>
+
+              {(["ai", "raw", "calc"] as const).map(group => {
+                const groupLabel = { ai: "AI 标签", raw: "原始字段", calc: "计算字段" }[group];
+                const fields = (sentimentTheme?.fieldConfigs || []).filter(fc =>
+                  fc.fieldType === group &&
+                  (FIELD_LABELS_LOCAL[fc.key] || fc.key).includes(exportFieldSearch)
+                );
+                if (fields.length === 0) return null;
+                const groupKeys = fields.map(f => f.key);
+                const allSelected = groupKeys.every(k => exportFields.includes(k));
+                return (
+                  <div key={group} className="mb-3 border border-border rounded-md">
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <Badge className={`text-[10px] border-0 ${
+                          group === "ai" ? "bg-primary/10 text-primary"
+                          : group === "raw" ? "bg-emerald-500/10 text-emerald-600"
+                          : "bg-amber-500/10 text-amber-600"
+                        }`}>{groupLabel}</Badge>
+                        <span className="text-xs text-muted-foreground">{fields.length} 个</span>
+                      </div>
+                      <button
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => {
+                          if (allSelected) setExportFields(prev => prev.filter(k => !groupKeys.includes(k)));
+                          else setExportFields(prev => [...new Set([...prev, ...groupKeys])]);
+                        }}
+                      >{allSelected ? "取消全选" : "全选本组"}</button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-x-3 gap-y-1.5 p-3">
+                      {fields.map(fc => (
+                        <label key={fc.key} className="flex items-center gap-2 text-xs cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={exportFields.includes(fc.key)}
+                            onChange={e => {
+                              if (e.target.checked) setExportFields(prev => [...prev, fc.key]);
+                              else setExportFields(prev => prev.filter(k => k !== fc.key));
+                            }}
+                            className="rounded border-border"
+                          />
+                          <span className="text-foreground">{FIELD_LABELS_LOCAL[fc.key] || fc.key}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportDialogOpen(false)}>取消</Button>
+            <Button onClick={confirmExport}>
+              <Download className="w-3.5 h-3.5" />确认导出
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
