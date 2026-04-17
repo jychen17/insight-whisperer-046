@@ -169,7 +169,14 @@ export default function CollectionTasks() {
               {filtered.map((r) => (
                 <TableRow key={r.taskId}>
                   <TableCell>
-                    <span className="font-mono text-xs text-muted-foreground">{r.taskId}</span>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/datacenter/themes?themeId=${r.themeId}&action=edit&step=2&dsTaskId=${r.taskId}`)}
+                      className="font-mono text-xs text-primary hover:underline"
+                      title="点击跳转到对应主题配置第 2 步并展开此数据源"
+                    >
+                      {r.taskId}
+                    </button>
                   </TableCell>
                   <TableCell className="font-medium">{r.taskName}</TableCell>
                   <TableCell>
