@@ -10,9 +10,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Brain, FileText, Calculator, Tag, Search, Eye, Pencil, Settings2, X } from "lucide-react";
+import { Plus, Brain, FileText, Calculator, Tag, Search, Eye, Pencil, Settings2, Trash2 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type DataType = "数字" | "字符串" | "时间";
+
+interface EnumPair {
+  key: string;
+  label: string;
+}
 
 interface TagItem {
   id: string;
@@ -22,20 +28,21 @@ interface TagItem {
   source: string;
   status: boolean;
   category: string;
-  enumValues?: string[];
+  enumValues?: EnumPair[];
+  otherLabel?: string;
 }
 
 const aiTags: TagItem[] = [
-  { id: "AI01", name: "业务类型", description: "AI识别内容所属业务线（酒店/机票/度假等）", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: ["酒店", "机票", "度假", "门票", "用车"] },
-  { id: "AI02", name: "情感类型", description: "NLP模型识别文本正面/负面/中性情感", dataType: "字符串", source: "情感模型", status: true, category: "ai", enumValues: ["正面", "负面", "中性"] },
+  { id: "AI01", name: "业务类型", description: "AI识别内容所属业务线（酒店/机票/度假等）", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: [{key:"1",label:"酒店"},{key:"2",label:"机票"},{key:"3",label:"度假"},{key:"4",label:"门票"},{key:"5",label:"用车"}], otherLabel: "其他业务" },
+  { id: "AI02", name: "情感类型", description: "NLP模型识别文本正面/负面/中性情感", dataType: "字符串", source: "情感模型", status: true, category: "ai", enumValues: [{key:"1",label:"正面"},{key:"0",label:"中性"},{key:"-1",label:"负面"}] },
   { id: "AI03", name: "内容主题", description: "AI聚类识别内容主题标签", dataType: "字符串", source: "主题模型", status: true, category: "ai" },
-  { id: "AI04", name: "是否负面舆情", description: "综合判断是否构成负面舆情", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: ["是", "否"] },
-  { id: "AI05", name: "舆情问题类型", description: "识别投诉/曝光/维权等问题类型", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: ["投诉", "曝光", "维权", "咨询"] },
+  { id: "AI04", name: "是否负面舆情", description: "综合判断是否构成负面舆情", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: [{key:"1",label:"是"},{key:"0",label:"否"}] },
+  { id: "AI05", name: "舆情问题类型", description: "识别投诉/曝光/维权等问题类型", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: [{key:"1",label:"投诉"},{key:"2",label:"曝光"},{key:"3",label:"维权"},{key:"4",label:"咨询"}] },
   { id: "AI06", name: "舆情判断依据", description: "AI输出的舆情判定关键依据文本", dataType: "字符串", source: "舆情模型", status: true, category: "ai" },
-  { id: "AI07", name: "风险等级", description: "AI风控模型识别内容风险级别", dataType: "字符串", source: "风控模型", status: true, category: "ai", enumValues: ["高", "中", "低"] },
+  { id: "AI07", name: "风险等级", description: "AI风控模型识别内容风险级别", dataType: "字符串", source: "风控模型", status: true, category: "ai", enumValues: [{key:"5",label:"极高风险"},{key:"4",label:"高风险"},{key:"3",label:"中风险"},{key:"2",label:"中低风险"},{key:"1",label:"低风险"}], otherLabel: "低风险" },
   { id: "AI08", name: "风险判断依据", description: "风控模型输出的判断依据", dataType: "字符串", source: "风控模型", status: true, category: "ai" },
   { id: "AI09", name: "OTA品牌", description: "识别提及的OTA品牌名称", dataType: "字符串", source: "NER模型", status: true, category: "ai" },
-  { id: "AI10", name: "所属BG", description: "识别内容对应的业务BG", dataType: "字符串", source: "风控模型", status: false, category: "ai", enumValues: ["大住宿BG", "大交通BG", "度假BG", "国际业务BG"] },
+  { id: "AI10", name: "所属BG", description: "识别内容对应的业务BG", dataType: "字符串", source: "风控模型", status: false, category: "ai", enumValues: [{key:"1",label:"大住宿BG"},{key:"2",label:"大交通BG"},{key:"3",label:"度假BG"},{key:"4",label:"国际业务BG"}] },
 ];
 
 const rawTags: TagItem[] = [
@@ -48,11 +55,11 @@ const rawTags: TagItem[] = [
   { id: "RAW07", name: "评论量", description: "内容获得的评论数", dataType: "数字", source: "采集字段", status: true, category: "raw" },
   { id: "RAW08", name: "收藏量", description: "内容获得的收藏/保存数", dataType: "数字", source: "采集字段", status: true, category: "raw" },
   { id: "RAW09", name: "分享量", description: "内容被分享/转发次数", dataType: "数字", source: "采集字段", status: true, category: "raw" },
-  { id: "RAW10", name: "平台来源", description: "数据采集来源平台", dataType: "字符串", source: "采集字段", status: true, category: "raw", enumValues: ["小红书", "微博", "抖音", "知乎", "微信公众号"] },
+  { id: "RAW10", name: "平台来源", description: "数据采集来源平台", dataType: "字符串", source: "采集字段", status: true, category: "raw", enumValues: [{key:"xhs",label:"小红书"},{key:"wb",label:"微博"},{key:"dy",label:"抖音"},{key:"zh",label:"知乎"},{key:"wx",label:"微信公众号"}] },
 ];
 
 const calcTags: TagItem[] = [
-  { id: "CALC01", name: "发酵等级", description: "低(评论<10)、中(10-50)、快(>50)", dataType: "字符串", source: "评论量", status: true, category: "calc", enumValues: ["低", "中", "快"] },
+  { id: "CALC01", name: "发酵等级", description: "低(评论<10)、中(10-50)、快(>50)", dataType: "字符串", source: "评论量", status: true, category: "calc", enumValues: [{key:"1",label:"低"},{key:"2",label:"中"},{key:"3",label:"快"}] },
   { id: "CALC02", name: "风险分数", description: "(评论+点赞+收藏+分享+阅读)×0.5 + 风险等级×0.5", dataType: "数字", source: "加权计算", status: true, category: "calc" },
   { id: "CALC03", name: "互动热度", description: "点赞+评论+收藏+分享的加权综合分", dataType: "数字", source: "加权计算", status: true, category: "calc" },
   { id: "CALC04", name: "传播速度", description: "单位时间内互动增量", dataType: "数字", source: "时序计算", status: true, category: "calc" },
@@ -177,8 +184,8 @@ const sourceOptions: Record<string, string[]> = {
 
 const allSources = ["舆情模型", "情感模型", "主题模型", "风控模型", "NER模型", "采集字段", "加权计算", "时序计算", "规则计算", "评论量"];
 
-const emptyForm: { name: string; description: string; category: string; dataType: DataType | ""; source: string; enumValues: string[] } = {
-  name: "", description: "", category: "ai", dataType: "", source: "", enumValues: [],
+const emptyForm: { name: string; description: string; category: string; dataType: DataType | ""; source: string; enableEnum: boolean; enumValues: EnumPair[]; otherLabel: string } = {
+  name: "", description: "", category: "ai", dataType: "", source: "", enableEnum: false, enumValues: [], otherLabel: "",
 };
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -190,43 +197,96 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-function EnumValuesEditor({ values, onChange }: { values: string[]; onChange: (v: string[]) => void }) {
-  const [draft, setDraft] = useState("");
-  const add = () => {
-    const v = draft.trim();
-    if (!v || values.includes(v)) { setDraft(""); return; }
-    onChange([...values, v]);
-    setDraft("");
+function EnumValuesEditor({
+  enabled, onEnabledChange, values, onChange, otherLabel, onOtherLabelChange,
+}: {
+  enabled: boolean;
+  onEnabledChange: (v: boolean) => void;
+  values: EnumPair[];
+  onChange: (v: EnumPair[]) => void;
+  otherLabel: string;
+  onOtherLabelChange: (v: string) => void;
+}) {
+  const updateRow = (idx: number, patch: Partial<EnumPair>) => {
+    onChange(values.map((it, i) => i === idx ? { ...it, ...patch } : it));
   };
+  const removeRow = (idx: number) => onChange(values.filter((_, i) => i !== idx));
+  const addRow = () => onChange([...values, { key: "", label: "" }]);
+
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <Input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-          placeholder="输入枚举值后回车或点击添加"
-          className="h-9"
-        />
-        <Button type="button" variant="outline" size="sm" onClick={add}>添加</Button>
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <span className="text-sm">是否设置枚举值：</span>
+        <RadioGroup
+          value={enabled ? "yes" : "no"}
+          onValueChange={(v) => onEnabledChange(v === "yes")}
+          className="flex items-center gap-4"
+        >
+          <div className="flex items-center gap-1.5">
+            <RadioGroupItem value="yes" id="enum-yes" />
+            <Label htmlFor="enum-yes" className="text-sm font-normal cursor-pointer">是</Label>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <RadioGroupItem value="no" id="enum-no" />
+            <Label htmlFor="enum-no" className="text-sm font-normal cursor-pointer">否</Label>
+          </div>
+        </RadioGroup>
       </div>
-      {values.length === 0 ? (
-        <p className="text-xs text-muted-foreground">尚未配置任何枚举值</p>
-      ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {values.map((v) => (
-            <Badge key={v} variant="secondary" className="gap-1 pr-1">
-              {v}
-              <button
+
+      {enabled && (
+        <div className="space-y-2">
+          <div className="flex items-start gap-3">
+            <Label className="w-16 shrink-0 pt-2 text-sm">枚举值：</Label>
+            <div className="flex-1 space-y-2">
+              {values.map((row, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Input
+                    value={row.key}
+                    onChange={(e) => updateRow(idx, { key: e.target.value })}
+                    placeholder="值"
+                    className="h-9 flex-1"
+                  />
+                  <Input
+                    value={row.label}
+                    onChange={(e) => updateRow(idx, { label: e.target.value })}
+                    placeholder="显示名称"
+                    className="h-9 flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-destructive hover:text-destructive"
+                    onClick={() => removeRow(idx)}
+                    aria-label="删除"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
                 type="button"
-                onClick={() => onChange(values.filter((x) => x !== v))}
-                className="ml-0.5 rounded-sm hover:bg-muted-foreground/20 p-0.5"
-                aria-label={`删除 ${v}`}
+                variant="outline"
+                size="sm"
+                onClick={addRow}
+                className="w-full border-dashed h-9 gap-1"
               >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          ))}
+                <Plus className="w-3.5 h-3.5" /> 添加枚举值
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <Label className="w-24 shrink-0 text-sm">
+              <span className="text-destructive">*</span> 其它枚举值：
+            </Label>
+            <Input
+              value={otherLabel}
+              onChange={(e) => onOtherLabelChange(e.target.value)}
+              placeholder="未匹配上述枚举时的默认显示名称"
+              className="h-9 flex-1"
+            />
+          </div>
         </div>
       )}
     </div>
@@ -239,7 +299,9 @@ export default function TagSystem() {
   const [editOpen, setEditOpen] = useState(false);
   const [enumOpen, setEnumOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<TagItem | null>(null);
-  const [enumDraft, setEnumDraft] = useState<string[]>([]);
+  const [enumDraft, setEnumDraft] = useState<EnumPair[]>([]);
+  const [enumDraftEnabled, setEnumDraftEnabled] = useState(false);
+  const [enumDraftOther, setEnumDraftOther] = useState("");
   const [form, setForm] = useState<typeof emptyForm>({ ...emptyForm });
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [filters, setFilters] = useState<Filters>({ search: "", dataType: "", source: "", status: "" });
@@ -257,13 +319,16 @@ export default function TagSystem() {
 
   const openEdit = (tag: TagItem) => {
     setSelectedTag(tag);
+    const enumVals = tag.enumValues ?? [];
     setForm({
       name: tag.name,
       description: tag.description,
       category: tag.category,
       dataType: tag.dataType,
       source: tag.source,
-      enumValues: tag.enumValues ?? [],
+      enableEnum: enumVals.length > 0,
+      enumValues: enumVals,
+      otherLabel: tag.otherLabel ?? "",
     });
     setErrors({});
     setEditOpen(true);
@@ -271,7 +336,10 @@ export default function TagSystem() {
 
   const openConfigEnum = (tag: TagItem) => {
     setSelectedTag(tag);
-    setEnumDraft(tag.enumValues ?? []);
+    const enumVals = tag.enumValues ?? [];
+    setEnumDraft(enumVals);
+    setEnumDraftEnabled(enumVals.length > 0);
+    setEnumDraftOther(tag.otherLabel ?? "");
     setEnumOpen(true);
   };
 
@@ -420,8 +488,11 @@ export default function TagSystem() {
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {selectedTag.enumValues!.map((v) => (
-                        <Badge key={v} variant="secondary" className="text-xs">{v}</Badge>
+                        <Badge key={v.key} variant="secondary" className="text-xs">{v.key} · {v.label}</Badge>
                       ))}
+                      {selectedTag.otherLabel && (
+                        <Badge variant="outline" className="text-xs">其它：{selectedTag.otherLabel}</Badge>
+                      )}
                     </div>
                   )}
                 </DetailRow>
@@ -513,8 +584,15 @@ export default function TagSystem() {
             </div>
             {form.dataType === "字符串" && (
               <div className="space-y-1.5">
-                <Label>枚举值配置 <span className="text-xs text-muted-foreground font-normal">（可选，用于约束取值范围）</span></Label>
-                <EnumValuesEditor values={form.enumValues} onChange={(v) => setForm({ ...form, enumValues: v })} />
+                <Label>枚举值配置</Label>
+                <EnumValuesEditor
+                  enabled={form.enableEnum}
+                  onEnabledChange={(b) => setForm({ ...form, enableEnum: b })}
+                  values={form.enumValues}
+                  onChange={(v) => setForm({ ...form, enumValues: v })}
+                  otherLabel={form.otherLabel}
+                  onOtherLabelChange={(v) => setForm({ ...form, otherLabel: v })}
+                />
               </div>
             )}
             {form.category === "calc" && (
@@ -606,8 +684,15 @@ export default function TagSystem() {
             </div>
             {form.dataType === "字符串" && (
               <div className="space-y-1.5">
-                <Label>枚举值配置 <span className="text-xs text-muted-foreground font-normal">（可选，用于约束取值范围）</span></Label>
-                <EnumValuesEditor values={form.enumValues} onChange={(v) => setForm({ ...form, enumValues: v })} />
+                <Label>枚举值配置</Label>
+                <EnumValuesEditor
+                  enabled={form.enableEnum}
+                  onEnabledChange={(b) => setForm({ ...form, enableEnum: b })}
+                  values={form.enumValues}
+                  onChange={(v) => setForm({ ...form, enumValues: v })}
+                  otherLabel={form.otherLabel}
+                  onOtherLabelChange={(v) => setForm({ ...form, otherLabel: v })}
+                />
               </div>
             )}
             {form.category === "calc" && (
@@ -632,7 +717,7 @@ export default function TagSystem() {
 
       {/* 配置枚举值弹窗 */}
       <Dialog open={enumOpen} onOpenChange={setEnumOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>配置枚举值</DialogTitle>
             <DialogDescription>
@@ -640,7 +725,14 @@ export default function TagSystem() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-2">
-            <EnumValuesEditor values={enumDraft} onChange={setEnumDraft} />
+            <EnumValuesEditor
+              enabled={enumDraftEnabled}
+              onEnabledChange={setEnumDraftEnabled}
+              values={enumDraft}
+              onChange={setEnumDraft}
+              otherLabel={enumDraftOther}
+              onOtherLabelChange={setEnumDraftOther}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEnumOpen(false)}>取消</Button>
