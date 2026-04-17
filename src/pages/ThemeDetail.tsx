@@ -48,7 +48,7 @@ export default function ThemeDetail() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dashboardDialogTheme, setDashboardDialogTheme] = useState<ThemeConfig | null>(null);
   const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(theme || null);
-  const [activeTab, setActiveTab] = useState("posts");
+  const [activeTab, setActiveTab] = useState<string>("");
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
   if (!currentTheme) {
@@ -261,15 +261,15 @@ export default function ThemeDetail() {
         <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
           <span className="w-1 h-4 rounded-full gradient-primary inline-block" /> 数据展示
         </h3>
-        <Tabs value={activeTab} onValueChange={v => { setActiveTab(v); setExpandedEvent(null); }}>
+        <Tabs value={activeTab || (enabledNodes.length > 0 ? `node_${enabledNodes[enabledNodes.length - 1].id}` : "posts")} onValueChange={v => { setActiveTab(v); setExpandedEvent(null); }}>
           <TabsList>
-            <TabsTrigger value="posts">全部帖子<Badge className="ml-1.5 text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-0">{MOCK_POSTS.length}</Badge></TabsTrigger>
-            {enabledNodes.map((node, i) => (
+            {[...enabledNodes].map((node, i) => ({ node, i })).reverse().map(({ node, i }) => (
               <TabsTrigger key={node.id} value={`node_${node.id}`}>
                 第{i + 1}级：{node.name}
                 <Badge className="ml-1.5 text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{i === 0 ? MOCK_NODE1_EVENTS.length : MOCK_NODE2_GROUPS.length}</Badge>
               </TabsTrigger>
             ))}
+            <TabsTrigger value="posts">全部帖子<Badge className="ml-1.5 text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-0">{MOCK_POSTS.length}</Badge></TabsTrigger>
           </TabsList>
 
           <TabsContent value="posts">
