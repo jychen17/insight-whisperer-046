@@ -263,13 +263,13 @@ export default function ThemeDetail() {
         </h3>
         <Tabs value={activeTab} onValueChange={v => { setActiveTab(v); setExpandedEvent(null); }}>
           <TabsList>
-            <TabsTrigger value="posts">全部帖子<Badge className="ml-1.5 text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-0">{MOCK_POSTS.length}</Badge></TabsTrigger>
-            {enabledNodes.map((node, i) => (
+            {[...enabledNodes].map((node, i) => ({ node, i })).reverse().map(({ node, i }) => (
               <TabsTrigger key={node.id} value={`node_${node.id}`}>
                 第{i + 1}级：{node.name}
                 <Badge className="ml-1.5 text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{i === 0 ? MOCK_NODE1_EVENTS.length : MOCK_NODE2_GROUPS.length}</Badge>
               </TabsTrigger>
             ))}
+            <TabsTrigger value="posts">全部帖子<Badge className="ml-1.5 text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-0">{MOCK_POSTS.length}</Badge></TabsTrigger>
           </TabsList>
 
           <TabsContent value="posts">
