@@ -95,12 +95,9 @@ export default function CollectionTasks() {
         {typeDistribution.map((t) => (
           <Card key={t.key}>
             <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`inline-block w-2.5 h-2.5 rounded-sm ${t.bgClass}`} />
-                  <p className="text-sm text-muted-foreground">{t.label}任务</p>
-                </div>
-                <span className="text-xs text-muted-foreground/60">{t.percent}%</span>
+              <div className="flex items-center gap-2">
+                <span className={`inline-block w-2.5 h-2.5 rounded-sm ${t.bgClass}`} />
+                <p className="text-sm text-muted-foreground">{t.label}任务</p>
               </div>
               <p className={`text-2xl font-bold mt-2 ${t.colorClass}`}>{t.count}</p>
             </CardContent>
