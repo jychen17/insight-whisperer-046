@@ -8,6 +8,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import ThemeConfigDialog from "@/components/ThemeConfigDialog";
 
@@ -373,10 +375,18 @@ export default function ThemeSettings() {
   const [editingTheme, setEditingTheme] = useState<ThemeConfig | null>(null);
   const [dashboardDialogTheme, setDashboardDialogTheme] = useState<ThemeConfig | null>(null);
   const [permissionDialogTheme, setPermissionDialogTheme] = useState<ThemeConfig | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Mock current user role — in real app this comes from auth context.
   // Super admin sees all data by default and can manage permissions on every theme.
   const currentUser = { name: "当前用户", isSuperAdmin: true };
+
+  const filteredThemes = themes.filter(t => {
+    const matchSearch = !search || t.name.includes(search) || t.description.includes(search);
+    const matchStatus = statusFilter === "all" || t.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
   const handleCreateTheme = () => { setEditingTheme(null); setDialogOpen(true); };
   const handleEditTheme = (theme: ThemeConfig) => { setEditingTheme(theme); setDialogOpen(true); };
@@ -407,15 +417,38 @@ export default function ThemeSettings() {
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="flex items-center gap-3">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="搜索主题名称或描述..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-8 h-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-32 h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部状态</SelectItem>
+            <SelectItem value="active">启用</SelectItem>
+            <SelectItem value="inactive">停用</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-[280px]">主题名称</TableHead>
               <TableHead className="text-center w-[80px]">数据源</TableHead>
-              <TableHead className="text-center w-[80px]">展示字段</TableHead>
               <TableHead className="text-center w-[80px]">合并节点</TableHead>
               <TableHead className="w-[100px]">负责人</TableHead>
+              <TableHead className="w-[100px]">更新人</TableHead>
               <TableHead className="w-[110px]">数据权限</TableHead>
               <TableHead className="w-[90px]">状态</TableHead>
               <TableHead className="w-[110px]">更新时间</TableHead>
@@ -423,7 +456,7 @@ export default function ThemeSettings() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {themes.map(theme => {
+            {filteredThemes.map(theme => {
               const activeNodes = (theme.mergeNodes || []).filter(n => n.enabled);
               const isSelected = selectedTheme?.id === theme.id;
               return (
@@ -445,7 +478,6 @@ export default function ThemeSettings() {
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-sm font-medium text-foreground">{theme.dataSources.length}</TableCell>
-                  <TableCell className="text-center text-sm font-medium text-foreground">{theme.fieldConfigs.length}</TableCell>
                   <TableCell className="text-center">
                     {activeNodes.length > 0 ? (
                       <Badge className="text-[10px] px-1.5 py-0 bg-accent text-accent-foreground border-0">
@@ -453,6 +485,7 @@ export default function ThemeSettings() {
                       </Badge>
                     ) : <span className="text-sm text-muted-foreground">0</span>}
                   </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{theme.owner}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{theme.owner}</TableCell>
                   <TableCell>
                     {theme.permissionMode === "selected" ? (

@@ -92,7 +92,7 @@ export default function ThemeList() {
               <LayoutDashboard className="w-4 h-4 text-blue-500" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">今日数据总量</p>
+              <p className="text-xs text-muted-foreground">昨日数据总量</p>
               <p className="text-xl font-bold text-foreground">{totalData.toLocaleString()}</p>
             </div>
           </CardContent>
@@ -103,7 +103,7 @@ export default function ThemeList() {
               <span className="text-destructive text-sm">⚠</span>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">待处理预警</p>
+              <p className="text-xs text-muted-foreground">昨日预警</p>
               <p className="text-xl font-bold text-foreground">{totalAlerts}</p>
             </div>
           </CardContent>
@@ -147,8 +147,8 @@ export default function ThemeList() {
                 <TableHead>说明</TableHead>
                 <TableHead>类型</TableHead>
                 <TableHead>负责人</TableHead>
-                <TableHead className="text-right">今日数据</TableHead>
-                <TableHead className="text-right">预警</TableHead>
+                <TableHead className="text-right">昨日数据</TableHead>
+                <TableHead className="text-right">昨日预警</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead>更新时间</TableHead>
                 <TableHead className="text-right">操作</TableHead>
