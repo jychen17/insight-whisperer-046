@@ -33,16 +33,16 @@ interface TagItem {
 }
 
 const aiTags: TagItem[] = [
-  { id: "AI01", name: "业务类型", description: "AI识别内容所属业务线（酒店/机票/度假等）", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: ["酒店", "机票", "度假", "门票", "用车"] },
-  { id: "AI02", name: "情感类型", description: "NLP模型识别文本正面/负面/中性情感", dataType: "字符串", source: "情感模型", status: true, category: "ai", enumValues: ["正面", "负面", "中性"] },
+  { id: "AI01", name: "业务类型", description: "AI识别内容所属业务线（酒店/机票/度假等）", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: [{key:"1",label:"酒店"},{key:"2",label:"机票"},{key:"3",label:"度假"},{key:"4",label:"门票"},{key:"5",label:"用车"}], otherLabel: "其他业务" },
+  { id: "AI02", name: "情感类型", description: "NLP模型识别文本正面/负面/中性情感", dataType: "字符串", source: "情感模型", status: true, category: "ai", enumValues: [{key:"1",label:"正面"},{key:"0",label:"中性"},{key:"-1",label:"负面"}] },
   { id: "AI03", name: "内容主题", description: "AI聚类识别内容主题标签", dataType: "字符串", source: "主题模型", status: true, category: "ai" },
-  { id: "AI04", name: "是否负面舆情", description: "综合判断是否构成负面舆情", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: ["是", "否"] },
-  { id: "AI05", name: "舆情问题类型", description: "识别投诉/曝光/维权等问题类型", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: ["投诉", "曝光", "维权", "咨询"] },
+  { id: "AI04", name: "是否负面舆情", description: "综合判断是否构成负面舆情", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: [{key:"1",label:"是"},{key:"0",label:"否"}] },
+  { id: "AI05", name: "舆情问题类型", description: "识别投诉/曝光/维权等问题类型", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: [{key:"1",label:"投诉"},{key:"2",label:"曝光"},{key:"3",label:"维权"},{key:"4",label:"咨询"}] },
   { id: "AI06", name: "舆情判断依据", description: "AI输出的舆情判定关键依据文本", dataType: "字符串", source: "舆情模型", status: true, category: "ai" },
-  { id: "AI07", name: "风险等级", description: "AI风控模型识别内容风险级别", dataType: "字符串", source: "风控模型", status: true, category: "ai", enumValues: ["高", "中", "低"] },
+  { id: "AI07", name: "风险等级", description: "AI风控模型识别内容风险级别", dataType: "字符串", source: "风控模型", status: true, category: "ai", enumValues: [{key:"5",label:"极高风险"},{key:"4",label:"高风险"},{key:"3",label:"中风险"},{key:"2",label:"中低风险"},{key:"1",label:"低风险"}], otherLabel: "低风险" },
   { id: "AI08", name: "风险判断依据", description: "风控模型输出的判断依据", dataType: "字符串", source: "风控模型", status: true, category: "ai" },
   { id: "AI09", name: "OTA品牌", description: "识别提及的OTA品牌名称", dataType: "字符串", source: "NER模型", status: true, category: "ai" },
-  { id: "AI10", name: "所属BG", description: "识别内容对应的业务BG", dataType: "字符串", source: "风控模型", status: false, category: "ai", enumValues: ["大住宿BG", "大交通BG", "度假BG", "国际业务BG"] },
+  { id: "AI10", name: "所属BG", description: "识别内容对应的业务BG", dataType: "字符串", source: "风控模型", status: false, category: "ai", enumValues: [{key:"1",label:"大住宿BG"},{key:"2",label:"大交通BG"},{key:"3",label:"度假BG"},{key:"4",label:"国际业务BG"}] },
 ];
 
 const rawTags: TagItem[] = [
@@ -55,11 +55,11 @@ const rawTags: TagItem[] = [
   { id: "RAW07", name: "评论量", description: "内容获得的评论数", dataType: "数字", source: "采集字段", status: true, category: "raw" },
   { id: "RAW08", name: "收藏量", description: "内容获得的收藏/保存数", dataType: "数字", source: "采集字段", status: true, category: "raw" },
   { id: "RAW09", name: "分享量", description: "内容被分享/转发次数", dataType: "数字", source: "采集字段", status: true, category: "raw" },
-  { id: "RAW10", name: "平台来源", description: "数据采集来源平台", dataType: "字符串", source: "采集字段", status: true, category: "raw", enumValues: ["小红书", "微博", "抖音", "知乎", "微信公众号"] },
+  { id: "RAW10", name: "平台来源", description: "数据采集来源平台", dataType: "字符串", source: "采集字段", status: true, category: "raw", enumValues: [{key:"xhs",label:"小红书"},{key:"wb",label:"微博"},{key:"dy",label:"抖音"},{key:"zh",label:"知乎"},{key:"wx",label:"微信公众号"}] },
 ];
 
 const calcTags: TagItem[] = [
-  { id: "CALC01", name: "发酵等级", description: "低(评论<10)、中(10-50)、快(>50)", dataType: "字符串", source: "评论量", status: true, category: "calc", enumValues: ["低", "中", "快"] },
+  { id: "CALC01", name: "发酵等级", description: "低(评论<10)、中(10-50)、快(>50)", dataType: "字符串", source: "评论量", status: true, category: "calc", enumValues: [{key:"1",label:"低"},{key:"2",label:"中"},{key:"3",label:"快"}] },
   { id: "CALC02", name: "风险分数", description: "(评论+点赞+收藏+分享+阅读)×0.5 + 风险等级×0.5", dataType: "数字", source: "加权计算", status: true, category: "calc" },
   { id: "CALC03", name: "互动热度", description: "点赞+评论+收藏+分享的加权综合分", dataType: "数字", source: "加权计算", status: true, category: "calc" },
   { id: "CALC04", name: "传播速度", description: "单位时间内互动增量", dataType: "数字", source: "时序计算", status: true, category: "calc" },
