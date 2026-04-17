@@ -13,7 +13,7 @@ import type {
   TaskParamConfig,
   ExtendedParamConfig,
 } from "@/pages/ThemeSettings";
-import { ALL_FIELDS } from "@/pages/ThemeSettings";
+import { ALL_FIELDS, BUILTIN_TASKS } from "@/pages/ThemeSettings";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
@@ -59,7 +59,6 @@ const emptyTheme: ThemeConfig = {
 };
 
 export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }: Props) {
-  const [step, setStep] = useState(0);
   const [form, setForm] = useState<ThemeConfig>(emptyTheme);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [dsSearch, setDsSearch] = useState("");
@@ -67,14 +66,20 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [activeConditionDS, setActiveConditionDS] = useState<string>("");
   const [mergeFieldSearch, setMergeFieldSearch] = useState("");
+  const [activeSection, setActiveSection] = useState<string>("basic");
 
   const isEdit = !!theme;
-  const steps = ["基本信息", "数据源", "入主题条件与字段", "合并管线"];
+  const sections = [
+    { id: "basic", label: "基本信息", num: 1 },
+    { id: "datasources", label: "采集任务", num: 2 },
+    { id: "fields", label: "入主题条件与字段", num: 3 },
+    { id: "merge", label: "合并管线", num: 4 },
+  ];
 
   useEffect(() => {
     if (open) {
-      setStep(0); setErrors({}); setDsSearch(""); setFieldSearch("");
-      setCollapsedGroups({}); setActiveConditionDS("");
+      setErrors({}); setDsSearch(""); setFieldSearch("");
+      setCollapsedGroups({}); setActiveConditionDS(""); setActiveSection("basic");
       const initForm = theme ? {
         ...theme,
         mergeNodes: Array.isArray(theme.mergeNodes) ? theme.mergeNodes : [],
@@ -82,6 +87,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
         fieldConfigs: Array.isArray(theme.fieldConfigs) ? theme.fieldConfigs : [],
         dataSources: (theme.dataSources || []).map(ds => ({
           ...ds,
+          taskMode: ds.taskMode || "custom",
           conditionTree: ds.conditionTree || { ...emptyConditionTree },
         })),
       } : { ...emptyTheme, id: `custom_${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10) };
@@ -92,21 +98,28 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     }
   }, [open, theme]);
 
-  const validateStep = (s: number): boolean => {
+  const validateAll = (): boolean => {
     const e: Record<string, string> = {};
-    if (s === 0) {
-      if (!form.name.trim()) e.name = "请输入主题名称";
-      if (!form.description.trim()) e.description = "请输入主题描述";
-      if (!form.owner.trim()) e.owner = "请输入负责人";
-    }
-    if (s === 1 && form.dataSources.length === 0) e.dataSources = "请至少选择一个采集任务";
+    if (!form.name.trim()) e.name = "请输入主题名称";
+    if (!form.description.trim()) e.description = "请输入主题描述";
+    if (!form.owner.trim()) e.owner = "请输入负责人";
+    if (form.dataSources.length === 0) e.dataSources = "请至少配置一个采集任务";
     setErrors(e);
+    if (Object.keys(e).length > 0) {
+      // Jump to the first section with errors
+      if (e.name || e.description || e.owner) setActiveSection("basic");
+      else if (e.dataSources) setActiveSection("datasources");
+    }
     return Object.keys(e).length === 0;
   };
 
-  const handleNext = () => { if (validateStep(step)) setStep(s => Math.min(s + 1, steps.length - 1)); };
-  const handlePrev = () => setStep(s => Math.max(s - 1, 0));
-  const handleSave = () => { if (validateStep(step)) onSave({ ...form, updatedAt: new Date().toISOString().slice(0, 10) }); };
+  const handleSave = () => { if (validateAll()) onSave({ ...form, updatedAt: new Date().toISOString().slice(0, 10) }); };
+
+  const scrollToSection = (id: string) => {
+    setActiveSection(id);
+    const el = document.getElementById(`section-${id}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // ── Data Sources ──
   const addDataSource = () => {
@@ -120,12 +133,32 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
       extendedParams: [{ platform: "" }],
       platforms: [], timeRange: "近7天", enabled: true,
       conditionTree: { ...emptyConditionTree, id: `root_${id}` },
+      taskMode: "custom",
     };
     setForm(f => {
       if (f.dataSources.length === 0) setActiveConditionDS(id);
       return { ...f, dataSources: [...f.dataSources, newDs] };
     });
     setEditingDS(id);
+  };
+
+  // Apply a built-in task as a data source's config (preserves taskId, conditionTree)
+  const applyBuiltinTask = (taskId: string, builtinId: string) => {
+    const builtin = BUILTIN_TASKS.find(t => t.id === builtinId);
+    if (!builtin) {
+      updateDataSource(taskId, { taskMode: "builtin", builtinTaskId: "", taskName: "" });
+      return;
+    }
+    updateDataSource(taskId, {
+      taskMode: "builtin",
+      builtinTaskId: builtin.id,
+      taskName: builtin.name,
+      taskType: builtin.taskType,
+      owner: builtin.owner,
+      platforms: [builtin.platform],
+      taskParams: [{ platforms: [builtin.platform], topics: [] }],
+      extendedParams: [{ platform: builtin.platform }],
+    });
   };
 
   const removeDataSource = (taskId: string) => {
