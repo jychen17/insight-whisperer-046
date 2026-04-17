@@ -308,7 +308,7 @@ export default function CollectionTasks() {
                 <Button
                   size="sm"
                   onClick={() => {
-                    navigate(`/datacenter/themes?themeId=${detailRow.themeId}&action=edit`);
+                    navigate(`/datacenter/themes?themeId=${detailRow.themeId}&action=edit&step=2&dsTaskId=${detailRow.taskId}`);
                     setDetailRow(null);
                   }}
                 >
