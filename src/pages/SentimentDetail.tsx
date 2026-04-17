@@ -224,6 +224,8 @@ export default function SentimentDetail() {
   // Handle filter for events
   const [eventFilterHandleStatus, setEventFilterHandleStatus] = useState<"all" | HandleStatus>("all");
 
+  const [themeConfigOpen, setThemeConfigOpen] = useState(false);
+
   const displayItems = useMemo(() => {
     const filtered = items.filter(item => {
       if (showNoiseFilter === "normal") return !item.isNoise;
