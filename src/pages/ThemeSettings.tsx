@@ -118,7 +118,23 @@ export interface DataSourceConfig {
   timeRange: string;
   enabled: boolean;
   conditionTree?: ConditionNode;
+  /** "builtin" = pick a pre-existing collection task; "custom" = define inline */
+  taskMode?: "builtin" | "custom";
+  /** When taskMode === "builtin", references an existing task from CollectionTasks */
+  builtinTaskId?: string;
 }
+
+/** Pre-defined collection tasks that themes can reference (mirrors CollectionTasks page). */
+export const BUILTIN_TASKS = [
+  { id: "T001", name: "微博品牌舆情采集", platform: "微博", taskType: "关键词", frequency: "每5分钟", owner: "张三" },
+  { id: "T002", name: "抖音热点视频采集", platform: "抖音", taskType: "话题", frequency: "每10分钟", owner: "李四" },
+  { id: "T003", name: "小红书种草内容采集", platform: "小红书", taskType: "关键词", frequency: "每15分钟", owner: "王五" },
+  { id: "T004", name: "黑猫投诉数据采集", platform: "黑猫投诉", taskType: "关键词", frequency: "每30分钟", owner: "赵六" },
+  { id: "T005", name: "知乎问答采集", platform: "知乎", taskType: "话题", frequency: "每1小时", owner: "张三" },
+  { id: "T006", name: "B站视频弹幕采集", platform: "B站", taskType: "账号", frequency: "每30分钟", owner: "李四" },
+  { id: "T007", name: "百度贴吧热帖采集", platform: "百度", taskType: "关键词", frequency: "每1小时", owner: "王五" },
+  { id: "T008", name: "今日头条新闻采集", platform: "今日头条", taskType: "关键词", frequency: "每15分钟", owner: "陈佳燕-1227152" },
+];
 
 export interface TagRule {
   id: string;

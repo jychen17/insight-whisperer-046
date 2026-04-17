@@ -13,7 +13,7 @@ import type {
   TaskParamConfig,
   ExtendedParamConfig,
 } from "@/pages/ThemeSettings";
-import { ALL_FIELDS } from "@/pages/ThemeSettings";
+import { ALL_FIELDS, BUILTIN_TASKS } from "@/pages/ThemeSettings";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
@@ -59,7 +59,6 @@ const emptyTheme: ThemeConfig = {
 };
 
 export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }: Props) {
-  const [step, setStep] = useState(0);
   const [form, setForm] = useState<ThemeConfig>(emptyTheme);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [dsSearch, setDsSearch] = useState("");
@@ -67,14 +66,20 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [activeConditionDS, setActiveConditionDS] = useState<string>("");
   const [mergeFieldSearch, setMergeFieldSearch] = useState("");
+  const [activeSection, setActiveSection] = useState<string>("basic");
 
   const isEdit = !!theme;
-  const steps = ["基本信息", "数据源", "入主题条件与字段", "合并管线"];
+  const sections = [
+    { id: "basic", label: "基本信息", num: 1 },
+    { id: "datasources", label: "采集任务", num: 2 },
+    { id: "fields", label: "入主题条件与字段", num: 3 },
+    { id: "merge", label: "合并管线", num: 4 },
+  ];
 
   useEffect(() => {
     if (open) {
-      setStep(0); setErrors({}); setDsSearch(""); setFieldSearch("");
-      setCollapsedGroups({}); setActiveConditionDS("");
+      setErrors({}); setDsSearch(""); setFieldSearch("");
+      setCollapsedGroups({}); setActiveConditionDS(""); setActiveSection("basic");
       const initForm = theme ? {
         ...theme,
         mergeNodes: Array.isArray(theme.mergeNodes) ? theme.mergeNodes : [],
@@ -82,6 +87,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
         fieldConfigs: Array.isArray(theme.fieldConfigs) ? theme.fieldConfigs : [],
         dataSources: (theme.dataSources || []).map(ds => ({
           ...ds,
+          taskMode: ds.taskMode || "custom",
           conditionTree: ds.conditionTree || { ...emptyConditionTree },
         })),
       } : { ...emptyTheme, id: `custom_${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10) };
@@ -92,21 +98,28 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     }
   }, [open, theme]);
 
-  const validateStep = (s: number): boolean => {
+  const validateAll = (): boolean => {
     const e: Record<string, string> = {};
-    if (s === 0) {
-      if (!form.name.trim()) e.name = "请输入主题名称";
-      if (!form.description.trim()) e.description = "请输入主题描述";
-      if (!form.owner.trim()) e.owner = "请输入负责人";
-    }
-    if (s === 1 && form.dataSources.length === 0) e.dataSources = "请至少选择一个采集任务";
+    if (!form.name.trim()) e.name = "请输入主题名称";
+    if (!form.description.trim()) e.description = "请输入主题描述";
+    if (!form.owner.trim()) e.owner = "请输入负责人";
+    if (form.dataSources.length === 0) e.dataSources = "请至少配置一个采集任务";
     setErrors(e);
+    if (Object.keys(e).length > 0) {
+      // Jump to the first section with errors
+      if (e.name || e.description || e.owner) setActiveSection("basic");
+      else if (e.dataSources) setActiveSection("datasources");
+    }
     return Object.keys(e).length === 0;
   };
 
-  const handleNext = () => { if (validateStep(step)) setStep(s => Math.min(s + 1, steps.length - 1)); };
-  const handlePrev = () => setStep(s => Math.max(s - 1, 0));
-  const handleSave = () => { if (validateStep(step)) onSave({ ...form, updatedAt: new Date().toISOString().slice(0, 10) }); };
+  const handleSave = () => { if (validateAll()) onSave({ ...form, updatedAt: new Date().toISOString().slice(0, 10) }); };
+
+  const scrollToSection = (id: string) => {
+    setActiveSection(id);
+    const el = document.getElementById(`section-${id}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // ── Data Sources ──
   const addDataSource = () => {
@@ -120,12 +133,32 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
       extendedParams: [{ platform: "" }],
       platforms: [], timeRange: "近7天", enabled: true,
       conditionTree: { ...emptyConditionTree, id: `root_${id}` },
+      taskMode: "custom",
     };
     setForm(f => {
       if (f.dataSources.length === 0) setActiveConditionDS(id);
       return { ...f, dataSources: [...f.dataSources, newDs] };
     });
     setEditingDS(id);
+  };
+
+  // Apply a built-in task as a data source's config (preserves taskId, conditionTree)
+  const applyBuiltinTask = (taskId: string, builtinId: string) => {
+    const builtin = BUILTIN_TASKS.find(t => t.id === builtinId);
+    if (!builtin) {
+      updateDataSource(taskId, { taskMode: "builtin", builtinTaskId: "", taskName: "" });
+      return;
+    }
+    updateDataSource(taskId, {
+      taskMode: "builtin",
+      builtinTaskId: builtin.id,
+      taskName: builtin.name,
+      taskType: builtin.taskType,
+      owner: builtin.owner,
+      platforms: [builtin.platform],
+      taskParams: [{ platforms: [builtin.platform], topics: [] }],
+      extendedParams: [{ platform: builtin.platform }],
+    });
   };
 
   const removeDataSource = (taskId: string) => {
@@ -422,32 +455,40 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30">
-      <div className="bg-card rounded-xl border border-border shadow-2xl w-[900px] max-h-[88vh] flex flex-col animate-fade-in">
+      <div className="bg-card rounded-xl border border-border shadow-2xl w-[1100px] max-w-[95vw] max-h-[92vh] flex flex-col animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border shrink-0">
           <h2 className="text-base font-semibold text-foreground">{isEdit ? "编辑主题" : "新建主题"}</h2>
           <button onClick={() => onOpenChange(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
 
-        {/* Steps */}
-        <div className="flex items-center gap-1 px-5 py-3 border-b border-border shrink-0">
-          {steps.map((s, i) => (
-            <button key={s} onClick={() => { if (i < step || validateStep(step)) setStep(i); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${
-                i === step ? "gradient-primary text-primary-foreground font-medium" : i < step ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-              }`}>
-              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                i === step ? "bg-primary-foreground/20" : i < step ? "bg-primary/20" : "bg-muted-foreground/20"
-              }`}>{i + 1}</span>{s}
-            </button>
-          ))}
-        </div>
+        {/* Body: sidebar nav + scrollable content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Anchor sidebar */}
+          <nav className="w-44 shrink-0 border-r border-border bg-muted/20 p-3 overflow-y-auto">
+            <p className="text-[10px] font-medium text-muted-foreground px-2 mb-2 uppercase tracking-wider">配置导航</p>
+            {sections.map(s => (
+              <button key={s.id} onClick={() => scrollToSection(s.id)}
+                className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-left mb-1 transition-colors ${
+                  activeSection === s.id ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                }`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                  activeSection === s.id ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20 text-muted-foreground"
+                }`}>{s.num}</span>
+                {s.label}
+              </button>
+            ))}
+          </nav>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-8">
 
-          {/* ═══════ Step 1: Basic Info ═══════ */}
-          {step === 0 && (
+          {/* ═══════ Section 1: Basic Info ═══════ */}
+          <section id="section-basic" className="scroll-mt-4">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
+              <h3 className="text-sm font-semibold text-foreground">基本信息</h3>
+            </div>
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-medium text-foreground">主题图标</label>
@@ -482,10 +523,14 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 {errors.owner && <p className="text-[11px] text-destructive mt-1">{errors.owner}</p>}
               </div>
             </div>
-          )}
+          </section>
 
-          {/* ═══════ Step 2: Data Sources (inline task config) ═══════ */}
-          {step === 1 && (
+          {/* ═══════ Section 2: Data Sources (built-in OR custom) ═══════ */}
+          <section id="section-datasources" className="scroll-mt-4">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
+              <h3 className="text-sm font-semibold text-foreground">采集任务配置</h3>
+            </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground">配置采集任务</label>
@@ -525,7 +570,64 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                         {/* Task form (expanded) */}
                         {isExpanded && (
                           <div className="p-4 space-y-4 border-t border-border">
-                            {/* Row 1: Type + Name */}
+                            {/* Mode toggle: Built-in vs Custom */}
+                            <div className="flex items-center gap-3 p-2.5 bg-muted/40 rounded-md border border-border">
+                              <span className="text-[11px] font-medium text-foreground shrink-0">任务来源：</span>
+                              <div className="flex gap-2 flex-1">
+                                <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+                                  <input type="radio" name={`mode_${ds.taskId}`} checked={(ds.taskMode || "custom") === "builtin"}
+                                    onChange={() => updateDataSource(ds.taskId, { taskMode: "builtin" })} className="accent-primary" />
+                                  <span className="text-foreground">选择已有任务</span>
+                                  <span className="text-[10px] text-muted-foreground">（内置）</span>
+                                </label>
+                                <label className="flex items-center gap-1.5 cursor-pointer text-xs ml-3">
+                                  <input type="radio" name={`mode_${ds.taskId}`} checked={(ds.taskMode || "custom") === "custom"}
+                                    onChange={() => updateDataSource(ds.taskId, { taskMode: "custom" })} className="accent-primary" />
+                                  <span className="text-foreground">自定义任务</span>
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Built-in task picker */}
+                            {(ds.taskMode || "custom") === "builtin" && (
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 选择已有采集任务</label>
+                                  <select value={ds.builtinTaskId || ""} onChange={e => applyBuiltinTask(ds.taskId, e.target.value)}
+                                    className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
+                                    <option value="">从数据中心已配置的任务中选择...</option>
+                                    {BUILTIN_TASKS.map(t => (
+                                      <option key={t.id} value={t.id}>{t.name} · {t.platform} · {t.frequency}</option>
+                                    ))}
+                                  </select>
+                                  <p className="text-[10px] text-muted-foreground mt-1">复用「数据中心 → 采集任务」中已配置的任务，无需重复填写参数</p>
+                                </div>
+
+                                {ds.builtinTaskId && (() => {
+                                  const bt = BUILTIN_TASKS.find(t => t.id === ds.builtinTaskId);
+                                  if (!bt) return null;
+                                  return (
+                                    <div className="border border-primary/20 bg-primary/5 rounded-md p-3 space-y-1.5">
+                                      <div className="flex items-center gap-2">
+                                        <Badge className="text-[10px] px-1.5 py-0 bg-primary/15 text-primary border-0">已关联</Badge>
+                                        <span className="text-xs font-medium text-foreground">{bt.name}</span>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
+                                        <div>任务ID：<span className="text-foreground">{bt.id}</span></div>
+                                        <div>平台：<span className="text-foreground">{bt.platform}</span></div>
+                                        <div>类型：<span className="text-foreground">{bt.taskType}</span></div>
+                                        <div>归属人：<span className="text-foreground">{bt.owner}</span></div>
+                                        <div>采集频率：<span className="text-foreground">{bt.frequency}</span></div>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
+
+                            {/* Custom task form (existing inline config) */}
+                            {(ds.taskMode || "custom") === "custom" && (
+                            <>
                             <div className="grid grid-cols-2 gap-3">
                               <div>
                                 <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 任务类型</label>
@@ -735,6 +837,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                                 </div>
                               ))}
                             </div>
+                            </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -743,10 +847,14 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 </div>
               )}
             </div>
-          )}
+          </section>
 
-          {/* ═══════ Step 3: Conditions & Fields ═══════ */}
-          {step === 2 && (
+          {/* ═══════ Section 3: Conditions & Fields ═══════ */}
+          <section id="section-fields" className="scroll-mt-4">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">3</span>
+              <h3 className="text-sm font-semibold text-foreground">入主题条件与字段</h3>
+            </div>
             <div className="space-y-5">
               {/* Per-datasource condition builder */}
               <div>
@@ -947,10 +1055,14 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 )}
               </div>
             </div>
-          )}
+          </section>
 
-          {/* ═══════ Step 4: Merge Pipeline ═══════ */}
-          {step === 3 && (
+          {/* ═══════ Section 4: Merge Pipeline ═══════ */}
+          <section id="section-merge" className="scroll-mt-4">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">4</span>
+              <h3 className="text-sm font-semibold text-foreground">合并管线</h3>
+            </div>
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground flex items-center gap-2">
@@ -1139,20 +1251,16 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 </div>
               )}
             </div>
-          )}
+          </section>
+          </div>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between p-5 border-t border-border shrink-0">
-          <div className="text-[11px] text-muted-foreground">步骤 {step + 1} / {steps.length}</div>
+          <div className="text-[11px] text-muted-foreground">{Object.keys(errors).length > 0 ? <span className="text-destructive">请补全必填项后保存</span> : "所有配置在同一页面，可随时滚动调整"}</div>
           <div className="flex gap-2">
             <button onClick={() => onOpenChange(false)} className="px-4 py-2 text-xs border border-border rounded-md bg-card text-foreground hover:bg-muted transition-colors">取消</button>
-            {step > 0 && <button onClick={handlePrev} className="px-4 py-2 text-xs border border-border rounded-md bg-card text-foreground hover:bg-muted transition-colors">上一步</button>}
-            {step < steps.length - 1 ? (
-              <button onClick={handleNext} className="px-4 py-2 text-xs gradient-primary text-primary-foreground rounded-md font-medium">下一步</button>
-            ) : (
-              <button onClick={handleSave} className="px-4 py-2 text-xs gradient-primary text-primary-foreground rounded-md font-medium">{isEdit ? "保存修改" : "创建主题"}</button>
-            )}
+            <button onClick={handleSave} className="px-4 py-2 text-xs gradient-primary text-primary-foreground rounded-md font-medium">{isEdit ? "保存修改" : "创建主题"}</button>
           </div>
         </div>
       </div>
