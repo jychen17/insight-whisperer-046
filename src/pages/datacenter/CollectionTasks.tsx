@@ -91,38 +91,22 @@ export default function CollectionTasks() {
         <p className="text-sm text-muted-foreground mt-1">主题配置中已添加的所有数据源汇总，统一查看调度方式、采集平台与抓取目标</p>
       </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm text-muted-foreground">按任务类型分布</p>
-              <p className="text-xs text-muted-foreground/70 mt-0.5">共 {rows.length} 个采集任务</p>
-            </div>
-            <div className="flex items-center gap-4 text-xs">
-              {typeDistribution.map((t) => (
-                <div key={t.key} className="flex items-center gap-1.5">
-                  <span className={`inline-block w-2 h-2 rounded-sm ${t.bgClass}`} />
-                  <span className="text-muted-foreground">{t.label}</span>
-                  <span className={`font-semibold ${t.colorClass}`}>{t.count}</span>
-                  <span className="text-muted-foreground/60">({t.percent}%)</span>
+      <div className="grid grid-cols-3 gap-4">
+        {typeDistribution.map((t) => (
+          <Card key={t.key}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`inline-block w-2.5 h-2.5 rounded-sm ${t.bgClass}`} />
+                  <p className="text-sm text-muted-foreground">{t.label}任务</p>
                 </div>
-              ))}
-            </div>
-          </div>
-          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
-            {typeDistribution.map((t) => (
-              t.count > 0 && (
-                <div
-                  key={t.key}
-                  className={`${t.bgClass} h-full transition-all`}
-                  style={{ width: `${t.percent}%` }}
-                  title={`${t.label} ${t.count} 个 (${t.percent}%)`}
-                />
-              )
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                <span className="text-xs text-muted-foreground/60">{t.percent}%</span>
+              </div>
+              <p className={`text-2xl font-bold mt-2 ${t.colorClass}`}>{t.count}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       <Card>
         <CardHeader className="pb-3">
