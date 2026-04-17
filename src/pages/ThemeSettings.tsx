@@ -478,7 +478,6 @@ export default function ThemeSettings() {
                     </div>
                   </TableCell>
                   <TableCell className="text-center text-sm font-medium text-foreground">{theme.dataSources.length}</TableCell>
-                  <TableCell className="text-center text-sm font-medium text-foreground">{theme.fieldConfigs.length}</TableCell>
                   <TableCell className="text-center">
                     {activeNodes.length > 0 ? (
                       <Badge className="text-[10px] px-1.5 py-0 bg-accent text-accent-foreground border-0">
@@ -486,6 +485,7 @@ export default function ThemeSettings() {
                       </Badge>
                     ) : <span className="text-sm text-muted-foreground">0</span>}
                   </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{theme.owner}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{theme.owner}</TableCell>
                   <TableCell>
                     {theme.permissionMode === "selected" ? (
