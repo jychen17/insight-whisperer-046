@@ -235,6 +235,11 @@ export default function SentimentDetail() {
   const [exportFields, setExportFields] = useState<string[]>([]);
   const [exportFieldSearch, setExportFieldSearch] = useState("");
 
+  // Custom visible columns for article list
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    "title", "platform", "author", "publish_time", "sentiment", "likes", "comments",
+  ]);
+
   const FIELD_LABELS_LOCAL: Record<string, string> = {
     title: "标题", content: "正文", platform: "平台", author: "作者", publish_time: "发布时间",
     sentiment: "情感倾向", topic: "话题分类", region: "地域", likes: "点赞数", comments: "评论数",
