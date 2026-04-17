@@ -369,10 +369,29 @@ function conditionToText(node: ConditionNode): string {
 
 export default function ThemeSettings() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [themes, setThemes] = useState<ThemeConfig[]>(defaultThemes);
   const [selectedTheme, setSelectedTheme] = useState<ThemeConfig | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTheme, setEditingTheme] = useState<ThemeConfig | null>(null);
+
+  // Auto-open edit dialog or focus row when navigated with query params (e.g. from CollectionTasks edit button)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const themeId = params.get("themeId");
+    const action = params.get("action");
+    if (themeId) {
+      const target = themes.find(t => t.id === themeId);
+      if (target) {
+        setSelectedTheme(target);
+        if (action === "edit") {
+          setEditingTheme(target);
+          setDialogOpen(true);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
   const [dashboardDialogTheme, setDashboardDialogTheme] = useState<ThemeConfig | null>(null);
   const [permissionDialogTheme, setPermissionDialogTheme] = useState<ThemeConfig | null>(null);
   const [search, setSearch] = useState("");
