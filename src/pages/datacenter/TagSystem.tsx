@@ -10,50 +10,53 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Brain, FileText, Calculator, Tag, Search, Eye, Pencil } from "lucide-react";
+import { Plus, Brain, FileText, Calculator, Tag, Search, Eye, Pencil, Settings2, X } from "lucide-react";
+
+type DataType = "数字" | "字符串" | "时间";
 
 interface TagItem {
   id: string;
   name: string;
   description: string;
-  dataType: string;
+  dataType: DataType;
   source: string;
   status: boolean;
   category: string;
+  enumValues?: string[];
 }
 
 const aiTags: TagItem[] = [
-  { id: "AI01", name: "业务类型", description: "AI识别内容所属业务线（酒店/机票/度假等）", dataType: "枚举", source: "舆情模型", status: true, category: "ai" },
-  { id: "AI02", name: "情感类型", description: "NLP模型识别文本正面/负面/中性情感", dataType: "枚举", source: "情感模型", status: true, category: "ai" },
-  { id: "AI03", name: "内容主题", description: "AI聚类识别内容主题标签", dataType: "多值", source: "主题模型", status: true, category: "ai" },
-  { id: "AI04", name: "是否负面舆情", description: "综合判断是否构成负面舆情", dataType: "布尔", source: "舆情模型", status: true, category: "ai" },
-  { id: "AI05", name: "舆情问题类型", description: "识别投诉/曝光/维权等问题类型", dataType: "枚举", source: "舆情模型", status: true, category: "ai" },
-  { id: "AI06", name: "舆情判断依据", description: "AI输出的舆情判定关键依据文本", dataType: "文本", source: "舆情模型", status: true, category: "ai" },
-  { id: "AI07", name: "风险等级", description: "AI风控模型识别内容风险级别", dataType: "枚举", source: "风控模型", status: true, category: "ai" },
-  { id: "AI08", name: "风险判断依据", description: "风控模型输出的判断依据", dataType: "文本", source: "风控模型", status: true, category: "ai" },
-  { id: "AI09", name: "OTA品牌", description: "识别提及的OTA品牌名称", dataType: "枚举", source: "NER模型", status: true, category: "ai" },
-  { id: "AI10", name: "所属BG", description: "识别内容对应的业务BG", dataType: "枚举", source: "风控模型", status: false, category: "ai" },
+  { id: "AI01", name: "业务类型", description: "AI识别内容所属业务线（酒店/机票/度假等）", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: ["酒店", "机票", "度假", "门票", "用车"] },
+  { id: "AI02", name: "情感类型", description: "NLP模型识别文本正面/负面/中性情感", dataType: "字符串", source: "情感模型", status: true, category: "ai", enumValues: ["正面", "负面", "中性"] },
+  { id: "AI03", name: "内容主题", description: "AI聚类识别内容主题标签", dataType: "字符串", source: "主题模型", status: true, category: "ai" },
+  { id: "AI04", name: "是否负面舆情", description: "综合判断是否构成负面舆情", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: ["是", "否"] },
+  { id: "AI05", name: "舆情问题类型", description: "识别投诉/曝光/维权等问题类型", dataType: "字符串", source: "舆情模型", status: true, category: "ai", enumValues: ["投诉", "曝光", "维权", "咨询"] },
+  { id: "AI06", name: "舆情判断依据", description: "AI输出的舆情判定关键依据文本", dataType: "字符串", source: "舆情模型", status: true, category: "ai" },
+  { id: "AI07", name: "风险等级", description: "AI风控模型识别内容风险级别", dataType: "字符串", source: "风控模型", status: true, category: "ai", enumValues: ["高", "中", "低"] },
+  { id: "AI08", name: "风险判断依据", description: "风控模型输出的判断依据", dataType: "字符串", source: "风控模型", status: true, category: "ai" },
+  { id: "AI09", name: "OTA品牌", description: "识别提及的OTA品牌名称", dataType: "字符串", source: "NER模型", status: true, category: "ai" },
+  { id: "AI10", name: "所属BG", description: "识别内容对应的业务BG", dataType: "字符串", source: "风控模型", status: false, category: "ai", enumValues: ["大住宿BG", "大交通BG", "度假BG", "国际业务BG"] },
 ];
 
 const rawTags: TagItem[] = [
-  { id: "RAW01", name: "标题", description: "原始内容标题", dataType: "文本", source: "采集字段", status: true, category: "raw" },
-  { id: "RAW02", name: "正文内容", description: "原始正文/帖子内容", dataType: "长文本", source: "采集字段", status: true, category: "raw" },
-  { id: "RAW03", name: "发布人昵称", description: "内容发布者昵称", dataType: "文本", source: "采集字段", status: true, category: "raw" },
-  { id: "RAW04", name: "发布人粉丝数", description: "发布者粉丝/关注者数量", dataType: "数值", source: "采集字段", status: true, category: "raw" },
+  { id: "RAW01", name: "标题", description: "原始内容标题", dataType: "字符串", source: "采集字段", status: true, category: "raw" },
+  { id: "RAW02", name: "正文内容", description: "原始正文/帖子内容", dataType: "字符串", source: "采集字段", status: true, category: "raw" },
+  { id: "RAW03", name: "发布人昵称", description: "内容发布者昵称", dataType: "字符串", source: "采集字段", status: true, category: "raw" },
+  { id: "RAW04", name: "发布人粉丝数", description: "发布者粉丝/关注者数量", dataType: "数字", source: "采集字段", status: true, category: "raw" },
   { id: "RAW05", name: "发布时间", description: "内容原始发布时间", dataType: "时间", source: "采集字段", status: true, category: "raw" },
-  { id: "RAW06", name: "点赞量", description: "内容获得的点赞数", dataType: "数值", source: "采集字段", status: true, category: "raw" },
-  { id: "RAW07", name: "评论量", description: "内容获得的评论数", dataType: "数值", source: "采集字段", status: true, category: "raw" },
-  { id: "RAW08", name: "收藏量", description: "内容获得的收藏/保存数", dataType: "数值", source: "采集字段", status: true, category: "raw" },
-  { id: "RAW09", name: "分享量", description: "内容被分享/转发次数", dataType: "数值", source: "采集字段", status: true, category: "raw" },
-  { id: "RAW10", name: "平台来源", description: "数据采集来源平台", dataType: "枚举", source: "采集字段", status: true, category: "raw" },
+  { id: "RAW06", name: "点赞量", description: "内容获得的点赞数", dataType: "数字", source: "采集字段", status: true, category: "raw" },
+  { id: "RAW07", name: "评论量", description: "内容获得的评论数", dataType: "数字", source: "采集字段", status: true, category: "raw" },
+  { id: "RAW08", name: "收藏量", description: "内容获得的收藏/保存数", dataType: "数字", source: "采集字段", status: true, category: "raw" },
+  { id: "RAW09", name: "分享量", description: "内容被分享/转发次数", dataType: "数字", source: "采集字段", status: true, category: "raw" },
+  { id: "RAW10", name: "平台来源", description: "数据采集来源平台", dataType: "字符串", source: "采集字段", status: true, category: "raw", enumValues: ["小红书", "微博", "抖音", "知乎", "微信公众号"] },
 ];
 
 const calcTags: TagItem[] = [
-  { id: "CALC01", name: "发酵等级", description: "低(评论<10)、中(10-50)、快(>50)", dataType: "枚举", source: "评论量", status: true, category: "calc" },
-  { id: "CALC02", name: "风险分数", description: "(评论+点赞+收藏+分享+阅读)×0.5 + 风险等级×0.5", dataType: "数值", source: "加权计算", status: true, category: "calc" },
-  { id: "CALC03", name: "互动热度", description: "点赞+评论+收藏+分享的加权综合分", dataType: "数值", source: "加权计算", status: true, category: "calc" },
-  { id: "CALC04", name: "传播速度", description: "单位时间内互动增量", dataType: "数值", source: "时序计算", status: true, category: "calc" },
-  { id: "CALC05", name: "影响力指数", description: "发布人粉丝数×互动率的综合评分", dataType: "数值", source: "加权计算", status: false, category: "calc" },
+  { id: "CALC01", name: "发酵等级", description: "低(评论<10)、中(10-50)、快(>50)", dataType: "字符串", source: "评论量", status: true, category: "calc", enumValues: ["低", "中", "快"] },
+  { id: "CALC02", name: "风险分数", description: "(评论+点赞+收藏+分享+阅读)×0.5 + 风险等级×0.5", dataType: "数字", source: "加权计算", status: true, category: "calc" },
+  { id: "CALC03", name: "互动热度", description: "点赞+评论+收藏+分享的加权综合分", dataType: "数字", source: "加权计算", status: true, category: "calc" },
+  { id: "CALC04", name: "传播速度", description: "单位时间内互动增量", dataType: "数字", source: "时序计算", status: true, category: "calc" },
+  { id: "CALC05", name: "影响力指数", description: "发布人粉丝数×互动率的综合评分", dataType: "数字", source: "加权计算", status: false, category: "calc" },
 ];
 
 const typeIcons: Record<string, typeof Brain> = {
@@ -68,6 +71,8 @@ const categoryLabels: Record<string, string> = {
   calc: "计算标签",
 };
 
+const ALL_DATA_TYPES: DataType[] = ["数字", "字符串", "时间"];
+
 interface Filters {
   search: string;
   dataType: string;
@@ -76,10 +81,10 @@ interface Filters {
 }
 
 function TagTable({
-  tags, category, filters, onView, onEdit,
+  tags, category, filters, onView, onEdit, onConfigEnum,
 }: {
   tags: TagItem[]; category: string; filters: Filters;
-  onView: (tag: TagItem) => void; onEdit: (tag: TagItem) => void;
+  onView: (tag: TagItem) => void; onEdit: (tag: TagItem) => void; onConfigEnum: (tag: TagItem) => void;
 }) {
   const Icon = typeIcons[category] || Tag;
 
@@ -101,6 +106,7 @@ function TagTable({
           <TableHead className="w-20">标签ID</TableHead>
           <TableHead>标签名称</TableHead>
           <TableHead>数据类型</TableHead>
+          <TableHead>枚举值</TableHead>
           <TableHead>来源</TableHead>
           <TableHead>状态</TableHead>
           <TableHead className="text-right">操作</TableHead>
@@ -109,47 +115,59 @@ function TagTable({
       <TableBody>
         {filtered.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={6} className="text-center text-muted-foreground py-8">暂无匹配的标签</TableCell>
+            <TableCell colSpan={7} className="text-center text-muted-foreground py-8">暂无匹配的标签</TableCell>
           </TableRow>
         ) : (
-          filtered.map((t) => (
-            <TableRow key={t.id}>
-              <TableCell className="text-xs text-muted-foreground font-mono">{t.id}</TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium text-sm">{t.name}</p>
-                    <p className="text-xs text-muted-foreground">{t.description}</p>
+          filtered.map((t) => {
+            const canHaveEnum = t.dataType === "字符串";
+            const hasEnum = (t.enumValues?.length ?? 0) > 0;
+            return (
+              <TableRow key={t.id}>
+                <TableCell className="text-xs text-muted-foreground font-mono">{t.id}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+                    <div>
+                      <p className="font-medium text-sm">{t.name}</p>
+                      <p className="text-xs text-muted-foreground">{t.description}</p>
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell><Badge variant="outline" className="text-xs">{t.dataType}</Badge></TableCell>
-              <TableCell className="text-sm text-muted-foreground">{t.source}</TableCell>
-              <TableCell><Switch checked={t.status} /></TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" title="查看" onClick={() => onView(t)}>
-                    <Eye className="w-4 h-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" title="编辑" onClick={() => onEdit(t)}>
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))
+                </TableCell>
+                <TableCell><Badge variant="outline" className="text-xs">{t.dataType}</Badge></TableCell>
+                <TableCell>
+                  {!canHaveEnum ? (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ) : hasEnum ? (
+                    <Badge variant="secondary" className="text-xs">已配置 · {t.enumValues!.length} 项</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs text-muted-foreground border-dashed">未配置</Badge>
+                  )}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">{t.source}</TableCell>
+                <TableCell><Switch checked={t.status} /></TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title="查看" onClick={() => onView(t)}>
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" title="编辑" onClick={() => onEdit(t)}>
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    {canHaveEnum && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="配置枚举值" onClick={() => onConfigEnum(t)}>
+                        <Settings2 className="w-4 h-4" />
+                      </Button>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })
         )}
       </TableBody>
     </Table>
   );
 }
-
-const dataTypeOptions: Record<string, string[]> = {
-  ai: ["枚举", "多值", "布尔", "文本"],
-  raw: ["文本", "长文本", "数值", "时间", "枚举"],
-  calc: ["枚举", "数值"],
-};
 
 const sourceOptions: Record<string, string[]> = {
   ai: ["舆情模型", "情感模型", "主题模型", "风控模型", "NER模型"],
@@ -157,16 +175,60 @@ const sourceOptions: Record<string, string[]> = {
   calc: ["加权计算", "时序计算", "规则计算"],
 };
 
-const allDataTypes = ["枚举", "多值", "布尔", "文本", "长文本", "数值", "时间"];
 const allSources = ["舆情模型", "情感模型", "主题模型", "风控模型", "NER模型", "采集字段", "加权计算", "时序计算", "规则计算", "评论量"];
 
-const emptyForm = { name: "", description: "", category: "ai", dataType: "", source: "" };
+const emptyForm: { name: string; description: string; category: string; dataType: DataType | ""; source: string; enumValues: string[] } = {
+  name: "", description: "", category: "ai", dataType: "", source: "", enumValues: [],
+};
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start py-2.5 border-b border-border last:border-0">
       <span className="text-sm text-muted-foreground w-24 shrink-0">{label}</span>
-      <span className="text-sm text-foreground">{children}</span>
+      <span className="text-sm text-foreground flex-1">{children}</span>
+    </div>
+  );
+}
+
+function EnumValuesEditor({ values, onChange }: { values: string[]; onChange: (v: string[]) => void }) {
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const v = draft.trim();
+    if (!v || values.includes(v)) { setDraft(""); return; }
+    onChange([...values, v]);
+    setDraft("");
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder="输入枚举值后回车或点击添加"
+          className="h-9"
+        />
+        <Button type="button" variant="outline" size="sm" onClick={add}>添加</Button>
+      </div>
+      {values.length === 0 ? (
+        <p className="text-xs text-muted-foreground">尚未配置任何枚举值</p>
+      ) : (
+        <div className="flex flex-wrap gap-1.5">
+          {values.map((v) => (
+            <Badge key={v} variant="secondary" className="gap-1 pr-1">
+              {v}
+              <button
+                type="button"
+                onClick={() => onChange(values.filter((x) => x !== v))}
+                className="ml-0.5 rounded-sm hover:bg-muted-foreground/20 p-0.5"
+                aria-label={`删除 ${v}`}
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -175,8 +237,10 @@ export default function TagSystem() {
   const [createOpen, setCreateOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [enumOpen, setEnumOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<TagItem | null>(null);
-  const [form, setForm] = useState({ ...emptyForm });
+  const [enumDraft, setEnumDraft] = useState<string[]>([]);
+  const [form, setForm] = useState<typeof emptyForm>({ ...emptyForm });
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [filters, setFilters] = useState<Filters>({ search: "", dataType: "", source: "", status: "" });
 
@@ -199,9 +263,16 @@ export default function TagSystem() {
       category: tag.category,
       dataType: tag.dataType,
       source: tag.source,
+      enumValues: tag.enumValues ?? [],
     });
     setErrors({});
     setEditOpen(true);
+  };
+
+  const openConfigEnum = (tag: TagItem) => {
+    setSelectedTag(tag);
+    setEnumDraft(tag.enumValues ?? []);
+    setEnumOpen(true);
   };
 
   const handleSave = () => {
@@ -232,7 +303,7 @@ export default function TagSystem() {
     setFilters((prev) => ({ ...prev, [key]: value }));
   };
 
-  const tableProps = { filters, onView: openView, onEdit: openEdit };
+  const tableProps = { filters, onView: openView, onEdit: openEdit, onConfigEnum: openConfigEnum };
 
   return (
     <div className="space-y-6">
@@ -261,7 +332,7 @@ export default function TagSystem() {
               <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="数据类型" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部类型</SelectItem>
-                {allDataTypes.map((dt) => <SelectItem key={dt} value={dt}>{dt}</SelectItem>)}
+                {ALL_DATA_TYPES.map((dt) => <SelectItem key={dt} value={dt}>{dt}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.source} onValueChange={(v) => updateFilter("source", v)}>
@@ -342,6 +413,19 @@ export default function TagSystem() {
               <DetailRow label="数据类型">
                 <Badge variant="outline">{selectedTag.dataType}</Badge>
               </DetailRow>
+              {selectedTag.dataType === "字符串" && (
+                <DetailRow label="枚举值">
+                  {(selectedTag.enumValues?.length ?? 0) === 0 ? (
+                    <span className="text-xs text-muted-foreground">未配置</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedTag.enumValues!.map((v) => (
+                        <Badge key={v} variant="secondary" className="text-xs">{v}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </DetailRow>
+              )}
               <DetailRow label="来源">{selectedTag.source}</DetailRow>
               <DetailRow label="状态">
                 <Badge variant={selectedTag.status ? "default" : "secondary"}>
@@ -397,12 +481,19 @@ export default function TagSystem() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>数据类型 <span className="text-destructive">*</span></Label>
-                <Select value={form.dataType} onValueChange={(v) => { setForm({ ...form, dataType: v }); setErrors({ ...errors, dataType: false }); }}>
+                <Select
+                  value={form.dataType}
+                  onValueChange={(v) => {
+                    const next = v as DataType;
+                    setForm({ ...form, dataType: next, enumValues: next === "字符串" ? form.enumValues : [] });
+                    setErrors({ ...errors, dataType: false });
+                  }}
+                >
                   <SelectTrigger className={errors.dataType ? "border-destructive" : ""}>
                     <SelectValue placeholder="请选择" />
                   </SelectTrigger>
                   <SelectContent>
-                    {dataTypeOptions[form.category]?.map((dt) => <SelectItem key={dt} value={dt}>{dt}</SelectItem>)}
+                    {ALL_DATA_TYPES.map((dt) => <SelectItem key={dt} value={dt}>{dt}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 {errors.dataType && <p className="text-xs text-destructive">请选择数据类型</p>}
@@ -420,6 +511,12 @@ export default function TagSystem() {
                 {errors.source && <p className="text-xs text-destructive">请选择来源</p>}
               </div>
             </div>
+            {form.dataType === "字符串" && (
+              <div className="space-y-1.5">
+                <Label>枚举值配置 <span className="text-xs text-muted-foreground font-normal">（可选，用于约束取值范围）</span></Label>
+                <EnumValuesEditor values={form.enumValues} onChange={(v) => setForm({ ...form, enumValues: v })} />
+              </div>
+            )}
             {form.category === "calc" && (
               <div className="space-y-1.5">
                 <Label>计算公式</Label>
@@ -450,7 +547,7 @@ export default function TagSystem() {
           <div className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label>标签类型 <span className="text-destructive">*</span></Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v, dataType: "", source: "" })}>
+              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v, source: "" })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ai"><span className="flex items-center gap-1.5"><Brain className="w-3.5 h-3.5" /> AI标签</span></SelectItem>
@@ -481,10 +578,17 @@ export default function TagSystem() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>数据类型 <span className="text-destructive">*</span></Label>
-                <Select value={form.dataType} onValueChange={(v) => { setForm({ ...form, dataType: v }); setErrors({ ...errors, dataType: false }); }}>
+                <Select
+                  value={form.dataType}
+                  onValueChange={(v) => {
+                    const next = v as DataType;
+                    setForm({ ...form, dataType: next, enumValues: next === "字符串" ? form.enumValues : [] });
+                    setErrors({ ...errors, dataType: false });
+                  }}
+                >
                   <SelectTrigger className={errors.dataType ? "border-destructive" : ""}><SelectValue placeholder="请选择" /></SelectTrigger>
                   <SelectContent>
-                    {dataTypeOptions[form.category]?.map((dt) => <SelectItem key={dt} value={dt}>{dt}</SelectItem>)}
+                    {ALL_DATA_TYPES.map((dt) => <SelectItem key={dt} value={dt}>{dt}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 {errors.dataType && <p className="text-xs text-destructive">请选择数据类型</p>}
@@ -500,10 +604,16 @@ export default function TagSystem() {
                 {errors.source && <p className="text-xs text-destructive">请选择来源</p>}
               </div>
             </div>
+            {form.dataType === "字符串" && (
+              <div className="space-y-1.5">
+                <Label>枚举值配置 <span className="text-xs text-muted-foreground font-normal">（可选，用于约束取值范围）</span></Label>
+                <EnumValuesEditor values={form.enumValues} onChange={(v) => setForm({ ...form, enumValues: v })} />
+              </div>
+            )}
             {form.category === "calc" && (
               <div className="space-y-1.5">
                 <Label>计算公式</Label>
-                <Textarea placeholder="例如：(评论+点赞+收藏+分享)×0.5 + 风险等级×0.5" value="" rows={2} />
+                <Textarea placeholder="例如：(评论+点赞+收藏+分享)×0.5 + 风险等级×0.5" rows={2} />
               </div>
             )}
             {form.category === "ai" && (
@@ -516,6 +626,25 @@ export default function TagSystem() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>取消</Button>
             <Button onClick={handleSave}>创建标签</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 配置枚举值弹窗 */}
+      <Dialog open={enumOpen} onOpenChange={setEnumOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>配置枚举值</DialogTitle>
+            <DialogDescription>
+              为标签「{selectedTag?.name}」配置可选的枚举取值，便于下游字段校验和筛选
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <EnumValuesEditor values={enumDraft} onChange={setEnumDraft} />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEnumOpen(false)}>取消</Button>
+            <Button onClick={() => setEnumOpen(false)}>保存</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
