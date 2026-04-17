@@ -654,26 +654,104 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                     </select>
                                   </div>
 
-                                  {/* Platforms (multi-select) */}
-                                  <div>
-                                    <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 发布平台（多选）</label>
-                                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                      {PLATFORM_OPTIONS.map(p => {
-                                        const selected = (Array.isArray(tp.platforms) ? tp.platforms : []).includes(p);
-                                        return (
-                                          <button key={p} onClick={() => toggleTaskParamPlatform(ds.taskId, tpIdx, p)}
-                                            className={`px-2 py-1 text-[10px] rounded-md border transition-colors ${
-                                              selected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/30"
-                                            }`}>
-                                            {selected && <Check className="w-2.5 h-2.5 inline mr-0.5" />}{p}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                    {(Array.isArray(tp.platforms) ? tp.platforms : []).length > 0 && (
-                                      <p className="text-[10px] text-primary mt-1">已选 {(Array.isArray(tp.platforms) ? tp.platforms : []).length} 个平台</p>
-                                    )}
-                                  </div>
+                                  {/* Platforms (multi-select dropdown — 发布平台数十个，使用下拉选择) */}
+                                  {(() => {
+                                    const selectedPlatforms = Array.isArray(tp.platforms) ? tp.platforms : [];
+                                    const searchKey = `${ds.taskId}_${tpIdx}`;
+                                    const q = (platformSearch[searchKey] || "").trim().toLowerCase();
+                                    const filteredPlatforms = q
+                                      ? PLATFORM_OPTIONS.filter(p => p.toLowerCase().includes(q))
+                                      : PLATFORM_OPTIONS;
+                                    return (
+                                      <div>
+                                        <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5">
+                                          <span className="text-destructive">*</span> 发布平台（多选）
+                                        </label>
+                                        <Popover>
+                                          <PopoverTrigger asChild>
+                                            <button
+                                              type="button"
+                                              className="w-full mt-1 min-h-[32px] px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground hover:border-primary/50 flex items-center justify-between gap-2"
+                                            >
+                                              {selectedPlatforms.length === 0 ? (
+                                                <span className="text-muted-foreground">请选择发布平台（共 {PLATFORM_OPTIONS.length} 个）</span>
+                                              ) : (
+                                                <div className="flex flex-wrap gap-1 flex-1 overflow-hidden">
+                                                  {selectedPlatforms.slice(0, 6).map(p => (
+                                                    <Badge key={p} className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{p}</Badge>
+                                                  ))}
+                                                  {selectedPlatforms.length > 6 && (
+                                                    <Badge className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-0">
+                                                      +{selectedPlatforms.length - 6}
+                                                    </Badge>
+                                                  )}
+                                                </div>
+                                              )}
+                                              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                            </button>
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-80 p-0" align="start">
+                                            <div className="p-2 border-b border-border">
+                                              <div className="relative">
+                                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                                                <input
+                                                  value={platformSearch[searchKey] || ""}
+                                                  onChange={e => setPlatformSearch(prev => ({ ...prev, [searchKey]: e.target.value }))}
+                                                  placeholder="搜索平台..."
+                                                  className="w-full pl-7 pr-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
+                                                />
+                                              </div>
+                                              <div className="flex items-center justify-between mt-2 px-1">
+                                                <span className="text-[10px] text-muted-foreground">已选 {selectedPlatforms.length} / {PLATFORM_OPTIONS.length}</span>
+                                                <div className="flex items-center gap-2">
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => updateTaskParam(ds.taskId, tpIdx, { platforms: filteredPlatforms })}
+                                                    className="text-[10px] text-primary hover:underline"
+                                                  >
+                                                    全选{q ? "（结果）" : ""}
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => updateTaskParam(ds.taskId, tpIdx, { platforms: [] })}
+                                                    className="text-[10px] text-muted-foreground hover:text-destructive"
+                                                  >
+                                                    清空
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="max-h-64 overflow-y-auto p-1">
+                                              {filteredPlatforms.length === 0 ? (
+                                                <div className="py-6 text-center text-[11px] text-muted-foreground">无匹配平台</div>
+                                              ) : (
+                                                filteredPlatforms.map(p => {
+                                                  const checked = selectedPlatforms.includes(p);
+                                                  return (
+                                                    <button
+                                                      key={p}
+                                                      type="button"
+                                                      onClick={() => toggleTaskParamPlatform(ds.taskId, tpIdx, p)}
+                                                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-xs text-left hover:bg-muted/50 ${
+                                                        checked ? "text-primary" : "text-foreground"
+                                                      }`}
+                                                    >
+                                                      <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                                                        checked ? "bg-primary border-primary" : "border-border"
+                                                      }`}>
+                                                        {checked && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+                                                      </span>
+                                                      {p}
+                                                    </button>
+                                                  );
+                                                })
+                                              )}
+                                            </div>
+                                          </PopoverContent>
+                                        </Popover>
+                                      </div>
+                                    );
+                                  })()}
 
                                   {/* Topics (tag input) */}
                                   <div>
