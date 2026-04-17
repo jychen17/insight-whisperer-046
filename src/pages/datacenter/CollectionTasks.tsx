@@ -16,7 +16,7 @@ interface DataSourceRow {
   taskName: string;
   themeId: string;
   themeName: string;
-  taskType: "话题" | "账号" | "关键词" | "链接";
+  taskType: "话题" | "账号" | "关键词";
   platforms: string[];
   schedule: string;
   enabled: boolean;
@@ -34,15 +34,15 @@ const mockSources: DataSourceRow[] = [
     targets: ["@黑猫投诉官方", "@消费保官方"] },
   { taskId: "ds_t004", taskName: "机票退改关键词", themeId: "flight_refund", themeName: "机票退改舆情", taskType: "关键词", platforms: ["新浪微博", "今日头条", "百度"], schedule: "每 1 小时", enabled: false,
     targets: ["机票退票", "改签难", "退款慢"] },
-  { taskId: "ds_t005", taskName: "度假产品口碑链接", themeId: "vacation_review", themeName: "度假产品口碑", taskType: "链接", platforms: ["小红书", "B站"], schedule: "每 12 小时", enabled: true,
-    targets: ["运营手动维护的 200 条 URL"] },
+  { taskId: "ds_t005", taskName: "度假产品口碑账号", themeId: "vacation_review", themeName: "度假产品口碑", taskType: "账号", platforms: ["小红书", "B站"], schedule: "每 12 小时", enabled: true,
+    targets: ["@小红书旅行", "@B站旅游官方"] },
   { taskId: "ds_t006", taskName: "高铁出行话题", themeId: "train_topic", themeName: "高铁出行洞察", taskType: "话题", platforms: ["新浪微博"], schedule: "每 6 小时", enabled: true,
     targets: ["#高铁出行#", "#五一返程#"] },
   { taskId: "ds_t007", taskName: "民宿差评关键词", themeId: "hotel_quality", themeName: "酒店服务质量", taskType: "关键词", platforms: ["小红书", "抖音", "快手"], schedule: "每 3 小时", enabled: true,
     targets: ["民宿踩坑", "民宿差评", "民宿避雷"] },
 ];
 
-const TASK_TYPES = ["话题", "账号", "关键词", "链接"];
+const TASK_TYPES = ["关键词", "话题", "账号"];
 const ALL_THEMES = Array.from(new Set(mockSources.map((s) => s.themeName)));
 
 export default function CollectionTasks() {
@@ -76,12 +76,7 @@ export default function CollectionTasks() {
     setRows((prev) => prev.map((r) => (r.taskId === taskId ? { ...r, enabled: !r.enabled } : r)));
   };
 
-  const targetTypeLabel = (t: DataSourceRow["taskType"]) => {
-    if (t === "关键词") return "关键词";
-    if (t === "话题") return "话题";
-    if (t === "账号") return "账号";
-    return "链接";
-  };
+  const targetTypeLabel = (t: DataSourceRow["taskType"]) => t;
 
   return (
     <div className="space-y-6">
@@ -159,7 +154,6 @@ export default function CollectionTasks() {
                 <TableHead>所属主题</TableHead>
                 <TableHead>任务类型</TableHead>
                 <TableHead>采集平台</TableHead>
-                <TableHead>抓取目标</TableHead>
                 <TableHead>调度方式</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead className="text-right">操作</TableHead>
@@ -195,16 +189,6 @@ export default function CollectionTasks() {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1 max-w-[260px]">
-                      {r.targets.slice(0, 3).map((t) => (
-                        <Badge key={t} variant="outline" className="text-xs font-normal bg-muted/40">{t}</Badge>
-                      ))}
-                      {r.targets.length > 3 && (
-                        <Badge variant="outline" className="text-xs">+{r.targets.length - 3}</Badge>
-                      )}
-                    </div>
-                  </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
                     <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />{r.schedule}</span>
                   </TableCell>
@@ -231,7 +215,7 @@ export default function CollectionTasks() {
               ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">暂无符合条件的数据源</TableCell>
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">暂无符合条件的数据源</TableCell>
                 </TableRow>
               )}
             </TableBody>
