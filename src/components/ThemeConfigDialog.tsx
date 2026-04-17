@@ -215,9 +215,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
     updateDataSource(taskId, { extendedParams: ds.extendedParams.filter((_, i) => i !== idx) });
   };
 
-  const [editingDS, setEditingDS] = useState<string | null>(null);
-  const [topicInput, setTopicInput] = useState<Record<string, string>>({});
-
   // ── Condition Tree (per data source) ──
   const updateDSConditionTree = (taskId: string, tree: ConditionNode) => {
     setForm(f => ({
