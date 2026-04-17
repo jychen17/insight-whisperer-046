@@ -400,7 +400,39 @@ export default function EventDetail() {
             <TableBody>
               {event.posts.map(post => (
                 <TableRow key={post.id}>
-                  <TableCell className="text-xs font-medium max-w-[250px] truncate">{post.title}</TableCell>
+                  <TableCell className="text-xs font-medium max-w-[250px] truncate">
+                    <button
+                      className="text-left hover:text-primary truncate w-full"
+                      onClick={() => navigate(`/sentiment/article/${post.id}`, {
+                        state: {
+                          item: {
+                            id: post.id,
+                            title: post.title,
+                            platform: post.platform,
+                            author: post.author,
+                            contentType: "图文",
+                            userType: "普通用户",
+                            fans: "粉丝 1.2k",
+                            publishTime: post.publishTime,
+                            collectTime: post.publishTime,
+                            region: "上海",
+                            riskLevel: "一般",
+                            speed: "中",
+                            business: "同程旅行-国内机票",
+                            sentiment: post.sentiment,
+                            issueType: "客服态度",
+                            summary: `事件「${event.title}」内文章：${post.title}。用户反馈相关问题，请查看完整内容了解详情。`,
+                            comments: post.comments,
+                            likes: post.likes,
+                            collects: post.collects,
+                            shares: post.shares,
+                            handleStatus: post.handleStatus,
+                            handleRecords: post.handleRecords,
+                          },
+                        },
+                      })}
+                    >{post.title}</button>
+                  </TableCell>
                   <TableCell className="text-xs">{post.platform}</TableCell>
                   <TableCell className="text-xs">{post.author}</TableCell>
                   <TableCell className="text-xs">{post.publishTime}</TableCell>
