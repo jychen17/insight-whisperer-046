@@ -626,10 +626,118 @@ function DashboardBuilderDialog({ theme, onClose, onSave }: { theme: ThemeConfig
 
 // ── Data Permission Dialog ──────────────────────────────────
 
-const ALL_USERS = [
-  "张三", "李四", "王五", "赵六", "孙七", "周八", "吴九", "郑十",
-  "客服A-小张", "客服B-小李", "客服C-小王", "业务-赵总监", "公关-孙总监",
+interface OrgUser { name: string; employeeId: string; dept?: string; }
+
+const ALL_ORG_USERS: OrgUser[] = [
+  { name: "张三", employeeId: "E001", dept: "舆情中心" },
+  { name: "李四", employeeId: "E002", dept: "市场部" },
+  { name: "王五", employeeId: "E003", dept: "运营部" },
+  { name: "赵六", employeeId: "E004", dept: "产品部" },
+  { name: "孙七", employeeId: "E005", dept: "客服部" },
+  { name: "周八", employeeId: "E006", dept: "公关部" },
+  { name: "吴九", employeeId: "E007", dept: "技术部" },
+  { name: "郑十", employeeId: "E008", dept: "数据部" },
+  { name: "小张", employeeId: "E101", dept: "客服A组" },
+  { name: "小李", employeeId: "E102", dept: "客服B组" },
+  { name: "小王", employeeId: "E103", dept: "客服C组" },
+  { name: "赵总监", employeeId: "M001", dept: "业务" },
+  { name: "孙总监", employeeId: "M002", dept: "公关" },
+  { name: "陈经理", employeeId: "M003", dept: "运营" },
+  { name: "刘工", employeeId: "E201", dept: "技术" },
+  { name: "杨工", employeeId: "E202", dept: "技术" },
+  { name: "黄分析师", employeeId: "A001", dept: "数据" },
+  { name: "周分析师", employeeId: "A002", dept: "数据" },
 ];
+
+const findUser = (key: string): OrgUser | undefined =>
+  ALL_ORG_USERS.find(u => u.name === key || u.employeeId === key);
+
+const userLabel = (key: string): string => {
+  const u = findUser(key);
+  return u ? `${u.name} (${u.employeeId})` : key;
+};
+
+function UserMultiPicker({
+  value, onChange, disabled, placeholder, accentClass,
+}: {
+  value: string[];
+  onChange: (next: string[]) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  accentClass?: string;
+}) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const suggestions = query.trim()
+    ? ALL_ORG_USERS.filter(u =>
+        !value.includes(u.name) &&
+        (u.name.includes(query) || u.employeeId.toLowerCase().includes(query.toLowerCase()) || (u.dept ?? "").includes(query))
+      ).slice(0, 8)
+    : ALL_ORG_USERS.filter(u => !value.includes(u.name)).slice(0, 8);
+
+  const add = (name: string) => {
+    if (!value.includes(name)) onChange([...value, name]);
+    setQuery("");
+  };
+  const remove = (name: string) => onChange(value.filter(v => v !== name));
+
+  const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && query.trim()) {
+      e.preventDefault();
+      const match = ALL_ORG_USERS.find(u => u.name === query.trim() || u.employeeId.toLowerCase() === query.trim().toLowerCase());
+      if (match) add(match.name);
+      else if (suggestions[0]) add(suggestions[0].name);
+    } else if (e.key === "Backspace" && !query && value.length > 0) {
+      remove(value[value.length - 1]);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <div className={`flex flex-wrap gap-1.5 min-h-[40px] p-1.5 border border-input rounded-md bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 ${disabled ? "opacity-60 pointer-events-none" : ""}`}>
+        {value.map(v => (
+          <Badge key={v} className={`text-[10px] gap-1 pr-1 ${accentClass ?? "bg-primary/15 text-primary border-0"}`}>
+            {userLabel(v)}
+            <button type="button" onClick={() => remove(v)} className="hover:text-destructive">
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </Badge>
+        ))}
+        <input
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          onKeyDown={handleKey}
+          placeholder={value.length === 0 ? (placeholder ?? "输入姓名或工号，回车添加") : ""}
+          disabled={disabled}
+          className="flex-1 min-w-[140px] bg-transparent text-xs px-1 outline-none placeholder:text-muted-foreground"
+        />
+      </div>
+      {open && suggestions.length > 0 && (
+        <div className="absolute z-50 mt-1 w-full max-h-56 overflow-y-auto bg-popover border border-border rounded-md shadow-md">
+          {suggestions.map(u => (
+            <button
+              type="button"
+              key={u.employeeId}
+              onMouseDown={(e) => { e.preventDefault(); add(u.name); }}
+              className="w-full flex items-center justify-between px-3 py-1.5 text-xs hover:bg-accent text-left"
+            >
+              <span className="text-foreground">{u.name}</span>
+              <span className="text-muted-foreground">{u.employeeId} · {u.dept}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {open && query.trim() && suggestions.length === 0 && (
+        <div className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-md shadow-md px-3 py-2 text-xs text-muted-foreground">
+          未找到匹配的用户
+        </div>
+      )}
+    </div>
+  );
+}
 
 function DataPermissionDialog({
   theme, currentUser, onClose, onSave,
@@ -641,32 +749,23 @@ function DataPermissionDialog({
 }) {
   const [mode, setMode] = useState<"global" | "selected">(theme.permissionMode || "global");
   const [allowedUsers, setAllowedUsers] = useState<string[]>(theme.allowedUsers || []);
-  const [themeAdmins, setThemeAdmins] = useState<string[]>(theme.themeAdmins || [theme.owner]);
-  const [userQuery, setUserQuery] = useState("");
-  const [adminQuery, setAdminQuery] = useState("");
+  const [themeAdmins, setThemeAdmins] = useState<string[]>(theme.themeAdmins || []);
 
-  const canManage = currentUser.isSuperAdmin || themeAdmins.includes(currentUser.name) || theme.owner === currentUser.name;
-
-  const filteredUsers = ALL_USERS.filter(u => u.includes(userQuery));
-  const filteredAdmins = ALL_USERS.filter(u => u.includes(adminQuery));
-
-  const toggleUser = (u: string) => {
-    setAllowedUsers(prev => prev.includes(u) ? prev.filter(x => x !== u) : [...prev, u]);
-  };
-  const toggleAdmin = (u: string) => {
-    setThemeAdmins(prev => prev.includes(u) ? prev.filter(x => x !== u) : [...prev, u]);
-  };
+  const isThemeAdmin = themeAdmins.includes(currentUser.name);
+  const canEditAdmins = currentUser.isSuperAdmin;
+  const canEditUsers = currentUser.isSuperAdmin || isThemeAdmin;
+  const canSave = canEditAdmins || canEditUsers;
 
   const handleSave = () => {
-    if (!canManage) {
-      toast({ title: "无权限", description: "仅主题管理员或超管可修改数据权限", variant: "destructive" });
+    if (!canSave) {
+      toast({ title: "无权限", description: "仅超管或主题管理员可修改数据权限", variant: "destructive" });
       return;
     }
     onSave({
       ...theme,
       permissionMode: mode,
       allowedUsers: mode === "selected" ? allowedUsers : [],
-      themeAdmins,
+      themeAdmins: mode === "selected" ? themeAdmins : [],
       updatedAt: new Date().toISOString().slice(0, 10),
     });
     toast({ title: "已保存", description: `「${theme.name}」数据权限已更新` });
@@ -680,7 +779,7 @@ function DataPermissionDialog({
             <Shield className="w-4 h-4 text-primary" /> 数据权限管理 — {theme.name}
           </DialogTitle>
           <DialogDescription className="text-xs">
-            超管默认拥有所有主题的数据权限；主题管理员可为该主题授权用户。
+            超管默认拥有所有主题的数据权限；选定开放模式下，超管指定主题管理员，主题管理员可为该主题授权用户。
           </DialogDescription>
         </DialogHeader>
 
@@ -690,10 +789,10 @@ function DataPermissionDialog({
           <span className="text-muted-foreground">当前身份：</span>
           <span className="font-medium text-foreground">{currentUser.name}</span>
           {currentUser.isSuperAdmin && <Badge className="text-[10px] bg-amber-500/15 text-amber-600 border-0">超管</Badge>}
-          {!currentUser.isSuperAdmin && themeAdmins.includes(currentUser.name) && (
+          {!currentUser.isSuperAdmin && isThemeAdmin && (
             <Badge className="text-[10px] bg-primary/15 text-primary border-0">主题管理员</Badge>
           )}
-          {!canManage && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/40">只读</Badge>}
+          {!canSave && <Badge variant="outline" className="text-[10px] text-destructive border-destructive/40">只读</Badge>}
         </div>
 
         {/* Permission mode */}
@@ -701,121 +800,71 @@ function DataPermissionDialog({
           <Label className="text-xs font-medium">数据可见范围</Label>
           <RadioGroup value={mode} onValueChange={(v) => setMode(v as "global" | "selected")} className="space-y-2">
             <label className="flex items-start gap-2 p-3 border border-border rounded-md cursor-pointer hover:bg-muted/40 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-              <RadioGroupItem value="global" id="perm-global" className="mt-0.5" />
+              <RadioGroupItem value="global" id="perm-global" className="mt-0.5" disabled={!canEditAdmins} />
               <div className="flex-1">
                 <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
                   <Shield className="w-3.5 h-3.5" /> 全局开放
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">所有登录用户均可查看本主题数据</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">所有登录用户均可查看本主题数据，无需指定管理员</div>
               </div>
             </label>
             <label className="flex items-start gap-2 p-3 border border-border rounded-md cursor-pointer hover:bg-muted/40 has-[:checked]:border-primary has-[:checked]:bg-primary/5">
-              <RadioGroupItem value="selected" id="perm-selected" className="mt-0.5" />
+              <RadioGroupItem value="selected" id="perm-selected" className="mt-0.5" disabled={!canEditAdmins} />
               <div className="flex-1">
                 <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
                   <UserPlus className="w-3.5 h-3.5" /> 选定人员开放
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">仅授权用户与超管、主题管理员可查看本主题数据</div>
+                <div className="text-[11px] text-muted-foreground mt-0.5">
+                  仅授权用户、主题管理员与超管可查看；由超管指定主题管理员，主题管理员可添加授权用户
+                </div>
               </div>
             </label>
           </RadioGroup>
+          {!canEditAdmins && (
+            <div className="text-[11px] text-muted-foreground">仅超管可切换数据可见范围</div>
+          )}
         </div>
 
-        {/* Allowed users picker */}
         {mode === "selected" && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-medium">授权用户（{allowedUsers.length}）</Label>
-              <Input
-                value={userQuery}
-                onChange={(e) => setUserQuery(e.target.value)}
-                placeholder="搜索用户"
-                className="h-7 w-40 text-xs"
+          <>
+            {/* Theme admins (super admin manages) */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium flex items-center gap-1">
+                <Crown className="w-3 h-3 text-amber-500" /> 主题管理员（{themeAdmins.length}）
+                {!canEditAdmins && <Badge variant="outline" className="text-[10px] ml-1">仅超管可设置</Badge>}
+              </Label>
+              <div className="text-[11px] text-muted-foreground">由超管指定。主题管理员可为该主题添加/移除授权用户</div>
+              <UserMultiPicker
+                value={themeAdmins}
+                onChange={setThemeAdmins}
+                disabled={!canEditAdmins}
+                placeholder="输入姓名或工号指定主题管理员"
+                accentClass="bg-amber-500/15 text-amber-600 border-0"
               />
             </div>
-            {allowedUsers.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 rounded-md">
-                {allowedUsers.map(u => (
-                  <Badge key={u} variant="outline" className="text-[10px] gap-1 pr-1">
-                    {u}
-                    <button onClick={() => toggleUser(u)} className="hover:text-destructive" disabled={!canManage}>
-                      <X className="w-2.5 h-2.5" />
-                    </button>
-                  </Badge>
-                ))}
+
+            {/* Allowed users (theme admin or super admin manages) */}
+            <div className="space-y-2">
+              <Label className="text-xs font-medium">授权用户（{allowedUsers.length}）</Label>
+              <div className="text-[11px] text-muted-foreground">
+                支持输入姓名或工号，回车确认；可批量添加多个用户
               </div>
-            )}
-            <div className="border border-border rounded-md max-h-40 overflow-y-auto divide-y divide-border">
-              {filteredUsers.map(u => {
-                const checked = allowedUsers.includes(u);
-                return (
-                  <label key={u} className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted/40 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleUser(u)}
-                      disabled={!canManage}
-                      className="accent-primary"
-                    />
-                    <span className="text-foreground">{u}</span>
-                  </label>
-                );
-              })}
-              {filteredUsers.length === 0 && (
-                <div className="px-3 py-4 text-xs text-muted-foreground text-center">无匹配用户</div>
+              <UserMultiPicker
+                value={allowedUsers}
+                onChange={setAllowedUsers}
+                disabled={!canEditUsers}
+                placeholder="输入姓名或工号添加授权用户"
+              />
+              {!canEditUsers && (
+                <div className="text-[11px] text-muted-foreground">仅超管或主题管理员可添加授权用户</div>
               )}
             </div>
-          </div>
+          </>
         )}
-
-        {/* Theme admins */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs font-medium flex items-center gap-1">
-              <Crown className="w-3 h-3 text-amber-500" /> 主题管理员（{themeAdmins.length}）
-            </Label>
-            <Input
-              value={adminQuery}
-              onChange={(e) => setAdminQuery(e.target.value)}
-              placeholder="搜索用户"
-              className="h-7 w-40 text-xs"
-            />
-          </div>
-          <div className="text-[11px] text-muted-foreground">主题管理员可为该主题授权其他用户的数据权限</div>
-          {themeAdmins.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 p-2 bg-muted/30 rounded-md">
-              {themeAdmins.map(u => (
-                <Badge key={u} className="text-[10px] gap-1 pr-1 bg-amber-500/15 text-amber-600 border-0">
-                  {u}
-                  <button onClick={() => toggleAdmin(u)} className="hover:text-destructive" disabled={!canManage}>
-                    <X className="w-2.5 h-2.5" />
-                  </button>
-                </Badge>
-              ))}
-            </div>
-          )}
-          <div className="border border-border rounded-md max-h-32 overflow-y-auto divide-y divide-border">
-            {filteredAdmins.map(u => {
-              const checked = themeAdmins.includes(u);
-              return (
-                <label key={u} className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted/40 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => toggleAdmin(u)}
-                    disabled={!canManage}
-                    className="accent-primary"
-                  />
-                  <span className="text-foreground">{u}</span>
-                </label>
-              );
-            })}
-          </div>
-        </div>
 
         <DialogFooter>
           <Button variant="outline" size="sm" onClick={onClose}>取消</Button>
-          <Button size="sm" onClick={handleSave} disabled={!canManage}>保存权限</Button>
+          <Button size="sm" onClick={handleSave} disabled={!canSave}>保存权限</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
