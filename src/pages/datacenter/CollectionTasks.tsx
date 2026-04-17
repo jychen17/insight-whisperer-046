@@ -25,6 +25,12 @@ interface DataSourceRow {
   owner: string;
   yesterdayCount: number;
   updatedAt: string;
+  // 详情用：第二步数据源完整配置
+  taskParams?: { label: string; value: string }[];
+  extendedParams?: { label: string; value: string }[];
+  conditionExpr?: string;
+  fields?: string[];
+  description?: string;
 }
 
 // Mock 数据：所有主题里第二步配置的数据源汇总
