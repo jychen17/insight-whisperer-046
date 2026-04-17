@@ -180,7 +180,7 @@ const defaultDS = (partial: Partial<DataSourceConfig> & { taskId: string; taskNa
   ...partial,
 });
 
-const defaultThemes: ThemeConfig[] = [
+export const defaultThemes: ThemeConfig[] = [
   {
     id: "sentiment", name: "舆情主题", description: "品牌声誉风险监测与预警", owner: "张三",
     type: "builtin", status: "active", icon: "🛡️",

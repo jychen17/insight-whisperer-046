@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink, FileText, CheckCircle2, XCircle, ArrowUpRight, ClipboardList, History, User, MessageSquarePlus } from "lucide-react";
+import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink, FileText, CheckCircle2, XCircle, ArrowUpRight, ClipboardList, History, User, MessageSquarePlus, Download, Settings } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import ThemeConfigDialog from "@/components/ThemeConfigDialog";
+import { defaultThemes, type ThemeConfig } from "@/pages/ThemeSettings";
 
 const filters = {
   brands: ["同程旅行", "携程", "美团", "飞猪", "去哪儿"],
@@ -221,6 +223,8 @@ export default function SentimentDetail() {
   const [remarkText, setRemarkText] = useState("");
   // Handle filter for events
   const [eventFilterHandleStatus, setEventFilterHandleStatus] = useState<"all" | HandleStatus>("all");
+
+  const [themeConfigOpen, setThemeConfigOpen] = useState(false);
 
   const displayItems = useMemo(() => {
     const filtered = items.filter(item => {
@@ -863,7 +867,7 @@ export default function SentimentDetail() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold text-foreground">舆情详情</h1>
+          <h1 className="text-xl font-semibold text-foreground">舆情列表</h1>
           <div className="flex rounded-md border border-border overflow-hidden">
             {([["sentiment", "舆情内容"], ["all", "全部内容"]] as const).map(([key, label]) => (
               <button
@@ -877,10 +881,10 @@ export default function SentimentDetail() {
           </div>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground">导出所选数据</button>
-          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground">导出全部数据</button>
-          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground">预警设置</button>
-          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground">报告设置</button>
+          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1"><Download className="w-3 h-3" />导出数据</button>
+          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/sentiment/event-alert")}><Bell className="w-3 h-3" />预警设置</button>
+          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/analysis/report-config")}><FileText className="w-3 h-3" />报告设置</button>
+          <button className="px-3 py-1.5 border border-border rounded-md bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1" onClick={() => setThemeConfigOpen(true)}><Settings className="w-3 h-3" />主题配置</button>
         </div>
       </div>
 
@@ -902,16 +906,6 @@ export default function SentimentDetail() {
               原始文章
             </button>
           </div>
-          {sentimentView === "events" && (
-            <div className="flex items-center gap-2 ml-auto">
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setAutoClusterOpen(true)}>
-                <Settings2 className="w-3 h-3" /> 聚类设置
-              </Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => navigate("/sentiment/event-alert")}>
-                <Bell className="w-3 h-3" /> 事件预警
-              </Button>
-            </div>
-          )}
         </div>
       )}
 
@@ -1670,6 +1664,13 @@ export default function SentimentDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ThemeConfigDialog
+        open={themeConfigOpen}
+        onOpenChange={setThemeConfigOpen}
+        theme={defaultThemes.find(t => t.id === "sentiment") ?? null}
+        onSave={() => setThemeConfigOpen(false)}
+      />
 
     </div>
   );
