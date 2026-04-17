@@ -92,6 +92,12 @@ export interface ThemeConfig {
   dashboardWidgets: DashboardWidget[];
   createdAt: string;
   updatedAt: string;
+  /** Data permission scope: "global" = all users; "selected" = only allowedUsers */
+  permissionMode?: "global" | "selected";
+  /** Users explicitly granted access when permissionMode === "selected" */
+  allowedUsers?: string[];
+  /** Theme-level admins who can manage this theme's data permissions */
+  themeAdmins?: string[];
 }
 
 export interface TaskParamConfig {
