@@ -502,6 +502,20 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                   placeholder="例如：张三" maxLength={20} />
                 {errors.owner && <p className="text-[11px] text-destructive mt-1">{errors.owner}</p>}
               </div>
+              <div>
+                <label className="text-xs font-medium text-foreground">主题类型 *</label>
+                <select
+                  value={form.type}
+                  onChange={e => setForm(f => ({ ...f, type: e.target.value as ThemeConfig["type"] }))}
+                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
+                >
+                  <option value="builtin">内置主题</option>
+                  <option value="custom">自定义主题</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {form.type === "builtin" ? "内置主题由平台维护，通常不可删除" : "自定义主题由用户创建，可自由编辑和删除"}
+                </p>
+              </div>
             </div>
           )}
 
