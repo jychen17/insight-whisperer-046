@@ -489,6 +489,10 @@ export default function ThemeSettings() {
                         className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors" title="复制">
                         <Copy className="w-3.5 h-3.5" />
                       </button>
+                      <button onClick={e => { e.stopPropagation(); setPermissionDialogTheme(theme); }}
+                        className="p-1.5 rounded-md hover:bg-accent text-muted-foreground hover:text-primary transition-colors" title="数据权限管理">
+                        <Shield className="w-3.5 h-3.5" />
+                      </button>
                       {theme.type === "custom" && (
                         <button onClick={e => { e.stopPropagation(); handleDeleteTheme(theme.id); }}
                           className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors" title="删除">
@@ -508,6 +512,14 @@ export default function ThemeSettings() {
       {dashboardDialogTheme && (
         <DashboardBuilderDialog theme={dashboardDialogTheme} onClose={() => setDashboardDialogTheme(null)}
           onSave={updated => { handleSaveTheme(updated); setDashboardDialogTheme(null); }} />
+      )}
+      {permissionDialogTheme && (
+        <DataPermissionDialog
+          theme={permissionDialogTheme}
+          currentUser={currentUser}
+          onClose={() => setPermissionDialogTheme(null)}
+          onSave={updated => { handleSaveTheme(updated); setPermissionDialogTheme(null); }}
+        />
       )}
     </div>
   );
