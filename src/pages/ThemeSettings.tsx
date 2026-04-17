@@ -417,15 +417,38 @@ export default function ThemeSettings() {
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="flex items-center gap-3">
+        <div className="relative w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="搜索主题名称或描述..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-8 h-9"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-32 h-9">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部状态</SelectItem>
+            <SelectItem value="active">启用</SelectItem>
+            <SelectItem value="inactive">停用</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="bg-card rounded-lg border border-border overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-[280px]">主题名称</TableHead>
               <TableHead className="text-center w-[80px]">数据源</TableHead>
-              <TableHead className="text-center w-[80px]">展示字段</TableHead>
               <TableHead className="text-center w-[80px]">合并节点</TableHead>
               <TableHead className="w-[100px]">负责人</TableHead>
+              <TableHead className="w-[100px]">更新人</TableHead>
               <TableHead className="w-[110px]">数据权限</TableHead>
               <TableHead className="w-[90px]">状态</TableHead>
               <TableHead className="w-[110px]">更新时间</TableHead>
@@ -433,7 +456,7 @@ export default function ThemeSettings() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {themes.map(theme => {
+            {filteredThemes.map(theme => {
               const activeNodes = (theme.mergeNodes || []).filter(n => n.enabled);
               const isSelected = selectedTheme?.id === theme.id;
               return (
