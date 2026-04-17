@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Trash2, GripVertical, GitMerge, ArrowUp, ArrowDown, Search, ChevronDown, ChevronRight, Check, Copy, Calendar } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import type {
   ThemeConfig,
   DataSourceConfig,
