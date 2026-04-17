@@ -103,7 +103,7 @@ export default function ThemeList() {
               <span className="text-destructive text-sm">⚠</span>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">待处理预警</p>
+              <p className="text-xs text-muted-foreground">昨日预警</p>
               <p className="text-xl font-bold text-foreground">{totalAlerts}</p>
             </div>
           </CardContent>
