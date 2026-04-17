@@ -416,9 +416,10 @@ export default function ThemeSettings() {
               <TableHead className="text-center w-[80px]">展示字段</TableHead>
               <TableHead className="text-center w-[80px]">合并节点</TableHead>
               <TableHead className="w-[100px]">负责人</TableHead>
-              <TableHead className="w-[100px]">状态</TableHead>
+              <TableHead className="w-[110px]">数据权限</TableHead>
+              <TableHead className="w-[90px]">状态</TableHead>
               <TableHead className="w-[110px]">更新时间</TableHead>
-              <TableHead className="text-right w-[140px]">操作</TableHead>
+              <TableHead className="text-right w-[170px]">操作</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -453,6 +454,17 @@ export default function ThemeSettings() {
                     ) : <span className="text-sm text-muted-foreground">0</span>}
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">{theme.owner}</TableCell>
+                  <TableCell>
+                    {theme.permissionMode === "selected" ? (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-amber-600 border-amber-500/40">
+                        <UserPlus className="w-2.5 h-2.5 mr-0.5" />指定 {theme.allowedUsers?.length ?? 0} 人
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-primary border-primary/30">
+                        <Shield className="w-2.5 h-2.5 mr-0.5" />全局开放
+                      </Badge>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <button onClick={e => { e.stopPropagation(); handleToggleStatus(theme.id); }} className="shrink-0">
                       {theme.status === "active" ? <ToggleRight className="w-5 h-5 text-primary" /> : <ToggleLeft className="w-5 h-5 text-muted-foreground" />}
