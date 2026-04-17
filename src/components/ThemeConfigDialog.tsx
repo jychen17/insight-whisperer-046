@@ -110,7 +110,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
 
   // ── Data Sources ──
   const addDataSource = () => {
-    const id = `ds_${Date.now()}`;
+    const id = `ds_t${Date.now()}`;
     const newDs: DataSourceConfig = {
       taskId: id, taskName: "", taskType: "话题", owner: "",
       executionPeriodStart: new Date().toISOString().slice(0, 10),
@@ -510,6 +510,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                           <div className="flex items-center gap-2">
                             {isExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
                             <span className="text-xs font-medium text-foreground">{ds.taskName || `任务 ${dsIdx + 1}`}</span>
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 font-mono text-muted-foreground border-border" title="任务ID（保存后可在『采集任务管理』中搜索）">{ds.taskId}</Badge>
                             <Badge className="text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-0">{ds.taskType}</Badge>
                             {ds.platforms.length > 0 && (
                               <div className="flex gap-1">
@@ -525,6 +526,12 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                         {/* Task form (expanded) */}
                         {isExpanded && (
                           <div className="p-4 space-y-4 border-t border-border">
+                            {/* Task ID (read-only, auto-generated) */}
+                            <div className="flex items-center gap-2 px-2.5 py-1.5 bg-muted/40 rounded-md border border-dashed border-border">
+                              <span className="text-[10px] text-muted-foreground">任务ID</span>
+                              <code className="text-[11px] font-mono text-foreground">{ds.taskId}</code>
+                              <span className="text-[10px] text-muted-foreground ml-auto">系统自动生成，保存后可在『采集任务管理』中按此ID搜索</span>
+                            </div>
                             {/* Row 1: Type + Name */}
                             <div className="grid grid-cols-2 gap-3">
                               <div>
