@@ -1441,7 +1441,7 @@ export default function SentimentDetail() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate">{item.title}</h3>
+                          <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate" onClick={() => setArticleDetailId(item.id)}>{item.title}</h3>
                           {renderStatusBadge(item.handleStatus)}
                           {item.isNoise && (
                             <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
