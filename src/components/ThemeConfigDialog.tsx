@@ -23,10 +23,22 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   theme: ThemeConfig | null;
   onSave: (theme: ThemeConfig) => void;
+  /** Optional: jump directly to a step (0-indexed) when the dialog opens */
+  initialStep?: number;
+  /** Optional: auto-expand a specific data source's edit panel on open */
+  initialDataSourceId?: string;
 }
 
 const TASK_TYPES = ["话题", "账号", "关键词", "链接"];
-const PLATFORM_OPTIONS = ["新浪微博", "小红书", "抖音", "快手", "B站", "知乎", "百度", "今日头条", "黑猫投诉", "京东", "淘宝", "快手app", "消费保"];
+// 发布平台：覆盖主流社媒、资讯、电商、投诉、视频、垂类等几十个平台
+const PLATFORM_OPTIONS = [
+  "新浪微博", "微信公众号", "微信视频号", "小红书", "抖音", "抖音极速版", "快手", "快手极速版",
+  "B站", "知乎", "百度", "百度贴吧", "百度知道", "今日头条", "西瓜视频", "腾讯新闻", "网易新闻",
+  "凤凰新闻", "搜狐新闻", "新浪新闻", "界面新闻", "36氪", "虎嗅", "钛媒体", "雪球", "脉脉",
+  "豆瓣", "天涯", "猫扑", "黑猫投诉", "消费保", "聚投诉", "12315", "京东", "淘宝", "天猫",
+  "拼多多", "苏宁易购", "唯品会", "携程", "去哪儿", "马蜂窝", "飞猪", "美团", "大众点评",
+  "Twitter", "Facebook", "Instagram", "YouTube", "TikTok", "LinkedIn", "Reddit",
+];
 const SORT_OPTIONS = ["默认排序", "时间倒序", "热度排序", "相关度排序"];
 const OWNER_OPTIONS = ["张三", "李四", "王五", "赵六", "陈佳燕-1227152"];
 const BRAND_OPTIONS = ["同程旅行", "万达酒店", "同程金服", "携程", "飞猪", "美团"];
