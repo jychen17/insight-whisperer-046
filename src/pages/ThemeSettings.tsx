@@ -375,10 +375,18 @@ export default function ThemeSettings() {
   const [editingTheme, setEditingTheme] = useState<ThemeConfig | null>(null);
   const [dashboardDialogTheme, setDashboardDialogTheme] = useState<ThemeConfig | null>(null);
   const [permissionDialogTheme, setPermissionDialogTheme] = useState<ThemeConfig | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   // Mock current user role — in real app this comes from auth context.
   // Super admin sees all data by default and can manage permissions on every theme.
   const currentUser = { name: "当前用户", isSuperAdmin: true };
+
+  const filteredThemes = themes.filter(t => {
+    const matchSearch = !search || t.name.includes(search) || t.description.includes(search);
+    const matchStatus = statusFilter === "all" || t.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
   const handleCreateTheme = () => { setEditingTheme(null); setDialogOpen(true); };
   const handleEditTheme = (theme: ThemeConfig) => { setEditingTheme(theme); setDialogOpen(true); };
