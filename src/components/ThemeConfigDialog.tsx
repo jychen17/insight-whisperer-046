@@ -71,7 +71,7 @@ const emptyTheme: ThemeConfig = {
   createdAt: "", updatedAt: "",
 };
 
-export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }: Props) {
+export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, initialStep, initialDataSourceId }: Props) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<ThemeConfig>(emptyTheme);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -80,13 +80,18 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [activeConditionDS, setActiveConditionDS] = useState<string>("");
   const [mergeFieldSearch, setMergeFieldSearch] = useState("");
+  const [editingDS, setEditingDS] = useState<string | null>(null);
+  const [topicInput, setTopicInput] = useState<Record<string, string>>({});
+  const [platformSearch, setPlatformSearch] = useState<Record<string, string>>({});
 
   const isEdit = !!theme;
   const steps = ["基本信息", "数据源", "入主题条件与字段", "合并管线"];
 
   useEffect(() => {
     if (open) {
-      setStep(0); setErrors({}); setDsSearch(""); setFieldSearch("");
+      const stepCount = 4;
+      setStep(typeof initialStep === "number" ? Math.max(0, Math.min(initialStep, stepCount - 1)) : 0);
+      setErrors({}); setDsSearch(""); setFieldSearch("");
       setCollapsedGroups({}); setActiveConditionDS("");
       const initForm = theme ? {
         ...theme,
@@ -102,8 +107,14 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
       if (initForm.dataSources.length > 0) {
         setActiveConditionDS(initForm.dataSources[0].taskId);
       }
+      // Auto-expand a specific data source's edit panel when navigated from CollectionTasks
+      if (initialDataSourceId && initForm.dataSources.find(ds => ds.taskId === initialDataSourceId)) {
+        setEditingDS(initialDataSourceId);
+      } else {
+        setEditingDS(null);
+      }
     }
-  }, [open, theme]);
+  }, [open, theme, initialStep, initialDataSourceId]);
 
   const validateStep = (s: number): boolean => {
     const e: Record<string, string> = {};
