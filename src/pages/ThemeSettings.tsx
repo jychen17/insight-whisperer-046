@@ -374,18 +374,27 @@ export default function ThemeSettings() {
   const [selectedTheme, setSelectedTheme] = useState<ThemeConfig | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTheme, setEditingTheme] = useState<ThemeConfig | null>(null);
+  // When navigated from CollectionTasks, optionally jump to a specific step + auto-expand a data source
+  const [dialogInitialStep, setDialogInitialStep] = useState<number | undefined>(undefined);
+  const [dialogInitialDsId, setDialogInitialDsId] = useState<string | undefined>(undefined);
 
   // Auto-open edit dialog or focus row when navigated with query params (e.g. from CollectionTasks edit button)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const themeId = params.get("themeId");
     const action = params.get("action");
+    const stepParam = params.get("step");
+    const dsTaskId = params.get("dsTaskId");
     if (themeId) {
       const target = themes.find(t => t.id === themeId);
       if (target) {
         setSelectedTheme(target);
         if (action === "edit") {
           setEditingTheme(target);
+          // step param is 1-indexed in URL for clarity (1=基本信息, 2=数据源, 3=条件字段, 4=合并管线)
+          const parsedStep = stepParam ? Math.max(0, parseInt(stepParam, 10) - 1) : undefined;
+          setDialogInitialStep(Number.isFinite(parsedStep as number) ? parsedStep : undefined);
+          setDialogInitialDsId(dsTaskId || undefined);
           setDialogOpen(true);
         }
       }
