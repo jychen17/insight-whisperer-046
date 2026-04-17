@@ -488,8 +488,11 @@ export default function TagSystem() {
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {selectedTag.enumValues!.map((v) => (
-                        <Badge key={v} variant="secondary" className="text-xs">{v}</Badge>
+                        <Badge key={v.key} variant="secondary" className="text-xs">{v.key} · {v.label}</Badge>
                       ))}
+                      {selectedTag.otherLabel && (
+                        <Badge variant="outline" className="text-xs">其它：{selectedTag.otherLabel}</Badge>
+                      )}
                     </div>
                   )}
                 </DetailRow>
@@ -581,8 +584,15 @@ export default function TagSystem() {
             </div>
             {form.dataType === "字符串" && (
               <div className="space-y-1.5">
-                <Label>枚举值配置 <span className="text-xs text-muted-foreground font-normal">（可选，用于约束取值范围）</span></Label>
-                <EnumValuesEditor values={form.enumValues} onChange={(v) => setForm({ ...form, enumValues: v })} />
+                <Label>枚举值配置</Label>
+                <EnumValuesEditor
+                  enabled={form.enableEnum}
+                  onEnabledChange={(b) => setForm({ ...form, enableEnum: b })}
+                  values={form.enumValues}
+                  onChange={(v) => setForm({ ...form, enumValues: v })}
+                  otherLabel={form.otherLabel}
+                  onOtherLabelChange={(v) => setForm({ ...form, otherLabel: v })}
+                />
               </div>
             )}
             {form.category === "calc" && (
@@ -674,8 +684,15 @@ export default function TagSystem() {
             </div>
             {form.dataType === "字符串" && (
               <div className="space-y-1.5">
-                <Label>枚举值配置 <span className="text-xs text-muted-foreground font-normal">（可选，用于约束取值范围）</span></Label>
-                <EnumValuesEditor values={form.enumValues} onChange={(v) => setForm({ ...form, enumValues: v })} />
+                <Label>枚举值配置</Label>
+                <EnumValuesEditor
+                  enabled={form.enableEnum}
+                  onEnabledChange={(b) => setForm({ ...form, enableEnum: b })}
+                  values={form.enumValues}
+                  onChange={(v) => setForm({ ...form, enumValues: v })}
+                  otherLabel={form.otherLabel}
+                  onOtherLabelChange={(v) => setForm({ ...form, otherLabel: v })}
+                />
               </div>
             )}
             {form.category === "calc" && (
@@ -700,7 +717,7 @@ export default function TagSystem() {
 
       {/* 配置枚举值弹窗 */}
       <Dialog open={enumOpen} onOpenChange={setEnumOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>配置枚举值</DialogTitle>
             <DialogDescription>
@@ -708,7 +725,14 @@ export default function TagSystem() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-2">
-            <EnumValuesEditor values={enumDraft} onChange={setEnumDraft} />
+            <EnumValuesEditor
+              enabled={enumDraftEnabled}
+              onEnabledChange={setEnumDraftEnabled}
+              values={enumDraft}
+              onChange={setEnumDraft}
+              otherLabel={enumDraftOther}
+              onOtherLabelChange={setEnumDraftOther}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEnumOpen(false)}>取消</Button>
