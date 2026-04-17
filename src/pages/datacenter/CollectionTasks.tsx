@@ -221,7 +221,7 @@ export default function CollectionTasks() {
                         size="icon"
                         className="h-8 w-8"
                         title="编辑配置（跳转对应主题）"
-                        onClick={() => navigate(`/datacenter/themes?themeId=${r.themeId}&action=edit`)}
+                        onClick={() => navigate(`/datacenter/themes?themeId=${r.themeId}&action=edit&step=2&dsTaskId=${r.taskId}`)}
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
