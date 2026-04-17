@@ -429,6 +429,9 @@ export default function EventDetail() {
                             handleStatus: post.handleStatus,
                             handleRecords: post.handleRecords,
                           },
+                          from: "event",
+                          eventId: event.id,
+                          eventTitle: event.title,
                         },
                       })}
                     >{post.title}</button>
