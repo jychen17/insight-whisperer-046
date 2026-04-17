@@ -16,6 +16,7 @@ import ThemeList from "@/pages/ThemeList";
 import ThemeSettings from "@/pages/ThemeSettings";
 import ThemeDetail from "@/pages/ThemeDetail";
 import EventDetail from "@/pages/EventDetail";
+import ArticleDetail from "@/pages/ArticleDetail";
 import EventAlert from "@/pages/EventAlert";
 import NotFound from "./pages/NotFound.tsx";
 import AIChatBot from "@/components/AIChatBot";
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/sentiment/overview" element={<SentimentOverview />} />
             <Route path="/sentiment/detail" element={<SentimentDetail />} />
             <Route path="/sentiment/event-detail" element={<EventDetail />} />
+            <Route path="/sentiment/article/:id" element={<ArticleDetail />} />
             <Route path="/sentiment/event-alert" element={<EventAlert />} />
             {/* 洞察主题 - 行业资讯 */}
             <Route path="/industry/overview" element={<IndustryOverview />} />
