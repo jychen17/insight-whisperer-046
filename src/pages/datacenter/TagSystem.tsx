@@ -299,7 +299,9 @@ export default function TagSystem() {
   const [editOpen, setEditOpen] = useState(false);
   const [enumOpen, setEnumOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<TagItem | null>(null);
-  const [enumDraft, setEnumDraft] = useState<string[]>([]);
+  const [enumDraft, setEnumDraft] = useState<EnumPair[]>([]);
+  const [enumDraftEnabled, setEnumDraftEnabled] = useState(false);
+  const [enumDraftOther, setEnumDraftOther] = useState("");
   const [form, setForm] = useState<typeof emptyForm>({ ...emptyForm });
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [filters, setFilters] = useState<Filters>({ search: "", dataType: "", source: "", status: "" });
@@ -317,13 +319,16 @@ export default function TagSystem() {
 
   const openEdit = (tag: TagItem) => {
     setSelectedTag(tag);
+    const enumVals = tag.enumValues ?? [];
     setForm({
       name: tag.name,
       description: tag.description,
       category: tag.category,
       dataType: tag.dataType,
       source: tag.source,
-      enumValues: tag.enumValues ?? [],
+      enableEnum: enumVals.length > 0,
+      enumValues: enumVals,
+      otherLabel: tag.otherLabel ?? "",
     });
     setErrors({});
     setEditOpen(true);
@@ -331,7 +336,10 @@ export default function TagSystem() {
 
   const openConfigEnum = (tag: TagItem) => {
     setSelectedTag(tag);
-    setEnumDraft(tag.enumValues ?? []);
+    const enumVals = tag.enumValues ?? [];
+    setEnumDraft(enumVals);
+    setEnumDraftEnabled(enumVals.length > 0);
+    setEnumDraftOther(tag.otherLabel ?? "");
     setEnumOpen(true);
   };
 
