@@ -906,16 +906,6 @@ export default function SentimentDetail() {
               原始文章
             </button>
           </div>
-          {sentimentView === "events" && (
-            <div className="flex items-center gap-2 ml-auto">
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => setAutoClusterOpen(true)}>
-                <Settings2 className="w-3 h-3" /> 聚类设置
-              </Button>
-              <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => navigate("/sentiment/event-alert")}>
-                <Bell className="w-3 h-3" /> 事件预警
-              </Button>
-            </div>
-          )}
         </div>
       )}
 
