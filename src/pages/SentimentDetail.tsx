@@ -227,6 +227,52 @@ export default function SentimentDetail() {
 
   const [themeConfigOpen, setThemeConfigOpen] = useState(false);
 
+  // Export dialog state
+  const sentimentTheme = useMemo(() => defaultThemes.find(t => t.id === "sentiment") ?? null, []);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportScope, setExportScope] = useState<"all" | "selected">("all");
+  const [exportFormat, setExportFormat] = useState<"xlsx" | "csv">("xlsx");
+  const [exportFields, setExportFields] = useState<string[]>([]);
+  const [exportFieldSearch, setExportFieldSearch] = useState("");
+
+  const FIELD_LABELS_LOCAL: Record<string, string> = {
+    title: "标题", content: "正文", platform: "平台", author: "作者", publish_time: "发布时间",
+    sentiment: "情感倾向", topic: "话题分类", region: "地域", likes: "点赞数", comments: "评论数",
+    shares: "转发数", risk_level: "风险等级", intent: "用户意图",
+    risk_score: "风险分数", ferment_level: "发酵等级",
+  };
+
+  const openExportDialog = (scope: "all" | "selected") => {
+    const count = scope === "selected"
+      ? (sentimentView === "events" ? selectedEventIds.length : selectedIds.length)
+      : (sentimentView === "events" ? mergedEvents.length : items.length);
+    if (scope === "selected" && count === 0) {
+      toast({ title: "请先选择数据", variant: "destructive" });
+      return;
+    }
+    setExportScope(scope);
+    setExportFields((sentimentTheme?.fieldConfigs || []).map(fc => fc.key));
+    setExportFieldSearch("");
+    setExportFormat("xlsx");
+    setExportDialogOpen(true);
+  };
+
+  const confirmExport = () => {
+    if (exportFields.length === 0) {
+      toast({ title: "请至少选择一个字段", variant: "destructive" });
+      return;
+    }
+    const count = exportScope === "selected"
+      ? (sentimentView === "events" ? selectedEventIds.length : selectedIds.length)
+      : (sentimentView === "events" ? mergedEvents.length : items.length);
+    toast({
+      title: `导出${exportScope === "all" ? "全部" : "所选"}数据`,
+      description: `已开始导出 ${count} 条${sentimentView === "events" ? "事件" : "舆情"}（${exportFormat.toUpperCase()}，${exportFields.length} 个字段）`,
+    });
+    setExportDialogOpen(false);
+  };
+
+
   const displayItems = useMemo(() => {
     const filtered = items.filter(item => {
       if (showNoiseFilter === "normal") return !item.isNoise;
