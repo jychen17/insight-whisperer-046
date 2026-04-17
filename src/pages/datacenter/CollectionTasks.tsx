@@ -26,19 +26,19 @@ interface DataSourceRow {
 
 // Mock 数据：所有主题里第二步配置的数据源汇总
 const mockSources: DataSourceRow[] = [
-  { taskId: "ds_t001", taskName: "同程品牌全网监控", themeId: "brand_safety", themeName: "品牌安全监测", taskType: "关键词", platforms: ["新浪微博", "小红书", "抖音"], schedule: "每 6 小时", enabled: true,
+  { taskId: "ds_t001", taskName: "同程品牌全网监控", themeId: "brand_safety", themeName: "品牌安全监测", taskType: "关键词", platforms: ["新浪微博", "小红书", "抖音"], schedule: "每隔 6 小时", enabled: true,
     targets: ["同程旅行", "同程艺龙", "Tongcheng"] },
-  { taskId: "ds_t002", taskName: "竞品话题追踪", themeId: "brand_safety", themeName: "品牌安全监测", taskType: "话题", platforms: ["新浪微博", "知乎"], schedule: "每 2 小时", enabled: true,
+  { taskId: "ds_t002", taskName: "竞品话题追踪", themeId: "brand_safety", themeName: "品牌安全监测", taskType: "话题", platforms: ["新浪微博", "知乎"], schedule: "每隔 2 小时", enabled: true,
     targets: ["#携程酒店#", "#飞猪机票#", "#去哪儿网#"] },
-  { taskId: "ds_t003", taskName: "酒店投诉账号监控", themeId: "hotel_quality", themeName: "酒店服务质量", taskType: "账号", platforms: ["黑猫投诉", "消费保"], schedule: "每 4 小时", enabled: true,
+  { taskId: "ds_t003", taskName: "酒店投诉账号监控", themeId: "hotel_quality", themeName: "酒店服务质量", taskType: "账号", platforms: ["黑猫投诉", "消费保"], schedule: "每天 09:00", enabled: true,
     targets: ["@黑猫投诉官方", "@消费保官方"] },
-  { taskId: "ds_t004", taskName: "机票退改关键词", themeId: "flight_refund", themeName: "机票退改舆情", taskType: "关键词", platforms: ["新浪微博", "今日头条", "百度"], schedule: "每 1 小时", enabled: false,
+  { taskId: "ds_t004", taskName: "机票退改关键词", themeId: "flight_refund", themeName: "机票退改舆情", taskType: "关键词", platforms: ["新浪微博", "今日头条", "百度"], schedule: "每隔 1 小时", enabled: false,
     targets: ["机票退票", "改签难", "退款慢"] },
-  { taskId: "ds_t005", taskName: "度假产品口碑账号", themeId: "vacation_review", themeName: "度假产品口碑", taskType: "账号", platforms: ["小红书", "B站"], schedule: "每 12 小时", enabled: true,
+  { taskId: "ds_t005", taskName: "度假产品口碑账号", themeId: "vacation_review", themeName: "度假产品口碑", taskType: "账号", platforms: ["小红书", "B站"], schedule: "每天 08:00、20:00", enabled: true,
     targets: ["@小红书旅行", "@B站旅游官方"] },
-  { taskId: "ds_t006", taskName: "高铁出行话题", themeId: "train_topic", themeName: "高铁出行洞察", taskType: "话题", platforms: ["新浪微博"], schedule: "每 6 小时", enabled: true,
+  { taskId: "ds_t006", taskName: "高铁出行话题", themeId: "train_topic", themeName: "高铁出行洞察", taskType: "话题", platforms: ["新浪微博"], schedule: "每天 10:00", enabled: true,
     targets: ["#高铁出行#", "#五一返程#"] },
-  { taskId: "ds_t007", taskName: "民宿差评关键词", themeId: "hotel_quality", themeName: "酒店服务质量", taskType: "关键词", platforms: ["小红书", "抖音", "快手"], schedule: "每 3 小时", enabled: true,
+  { taskId: "ds_t007", taskName: "民宿差评关键词", themeId: "hotel_quality", themeName: "酒店服务质量", taskType: "关键词", platforms: ["小红书", "抖音", "快手"], schedule: "每隔 3 小时", enabled: true,
     targets: ["民宿踩坑", "民宿差评", "民宿避雷"] },
 ];
 
@@ -65,12 +65,18 @@ export default function CollectionTasks() {
     });
   }, [rows, search, themeFilter, typeFilter, statusFilter]);
 
-  const stats = useMemo(() => ([
-    { label: "采集任务总数", value: rows.length, color: "text-foreground" },
-    { label: "运行中", value: rows.filter((r) => r.enabled).length, color: "text-emerald-500" },
-    { label: "覆盖主题", value: new Set(rows.map((r) => r.themeId)).size, color: "text-primary" },
-    { label: "覆盖平台", value: new Set(rows.flatMap((r) => r.platforms)).size, color: "text-foreground" },
-  ]), [rows]);
+  const typeDistribution = useMemo(() => {
+    const total = rows.length || 1;
+    const types: Array<{ key: DataSourceRow["taskType"]; label: string; colorClass: string; bgClass: string }> = [
+      { key: "关键词", label: "关键词", colorClass: "text-primary", bgClass: "bg-primary" },
+      { key: "话题", label: "话题", colorClass: "text-emerald-600", bgClass: "bg-emerald-500" },
+      { key: "账号", label: "账号", colorClass: "text-amber-600", bgClass: "bg-amber-500" },
+    ];
+    return types.map((t) => {
+      const count = rows.filter((r) => r.taskType === t.key).length;
+      return { ...t, count, percent: Math.round((count / total) * 100) };
+    });
+  }, [rows]);
 
   const toggleStatus = (taskId: string) => {
     setRows((prev) => prev.map((r) => (r.taskId === taskId ? { ...r, enabled: !r.enabled } : r)));
@@ -85,16 +91,38 @@ export default function CollectionTasks() {
         <p className="text-sm text-muted-foreground mt-1">主题配置中已添加的所有数据源汇总，统一查看调度方式、采集平台与抓取目标</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <Card key={s.label}>
-            <CardContent className="p-4">
-              <p className="text-sm text-muted-foreground">{s.label}</p>
-              <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm text-muted-foreground">按任务类型分布</p>
+              <p className="text-xs text-muted-foreground/70 mt-0.5">共 {rows.length} 个采集任务</p>
+            </div>
+            <div className="flex items-center gap-4 text-xs">
+              {typeDistribution.map((t) => (
+                <div key={t.key} className="flex items-center gap-1.5">
+                  <span className={`inline-block w-2 h-2 rounded-sm ${t.bgClass}`} />
+                  <span className="text-muted-foreground">{t.label}</span>
+                  <span className={`font-semibold ${t.colorClass}`}>{t.count}</span>
+                  <span className="text-muted-foreground/60">({t.percent}%)</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
+            {typeDistribution.map((t) => (
+              t.count > 0 && (
+                <div
+                  key={t.key}
+                  className={`${t.bgClass} h-full transition-all`}
+                  style={{ width: `${t.percent}%` }}
+                  title={`${t.label} ${t.count} 个 (${t.percent}%)`}
+                />
+              )
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-3">
