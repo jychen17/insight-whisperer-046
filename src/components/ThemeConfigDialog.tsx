@@ -788,10 +788,14 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 </div>
               )}
             </div>
-          )}
+          </section>
 
-          {/* ═══════ Step 3: Conditions & Fields ═══════ */}
-          {step === 2 && (
+          {/* ═══════ Section 3: Conditions & Fields ═══════ */}
+          <section id="section-fields" className="scroll-mt-4">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">3</span>
+              <h3 className="text-sm font-semibold text-foreground">入主题条件与字段</h3>
+            </div>
             <div className="space-y-5">
               {/* Per-datasource condition builder */}
               <div>
@@ -992,10 +996,14 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 )}
               </div>
             </div>
-          )}
+          </section>
 
-          {/* ═══════ Step 4: Merge Pipeline ═══════ */}
-          {step === 3 && (
+          {/* ═══════ Section 4: Merge Pipeline ═══════ */}
+          <section id="section-merge" className="scroll-mt-4">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">4</span>
+              <h3 className="text-sm font-semibold text-foreground">合并管线</h3>
+            </div>
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground flex items-center gap-2">
@@ -1184,20 +1192,16 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 </div>
               )}
             </div>
-          )}
+          </section>
+          </div>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between p-5 border-t border-border shrink-0">
-          <div className="text-[11px] text-muted-foreground">步骤 {step + 1} / {steps.length}</div>
+          <div className="text-[11px] text-muted-foreground">{Object.keys(errors).length > 0 ? <span className="text-destructive">请补全必填项后保存</span> : "所有配置在同一页面，可随时滚动调整"}</div>
           <div className="flex gap-2">
             <button onClick={() => onOpenChange(false)} className="px-4 py-2 text-xs border border-border rounded-md bg-card text-foreground hover:bg-muted transition-colors">取消</button>
-            {step > 0 && <button onClick={handlePrev} className="px-4 py-2 text-xs border border-border rounded-md bg-card text-foreground hover:bg-muted transition-colors">上一步</button>}
-            {step < steps.length - 1 ? (
-              <button onClick={handleNext} className="px-4 py-2 text-xs gradient-primary text-primary-foreground rounded-md font-medium">下一步</button>
-            ) : (
-              <button onClick={handleSave} className="px-4 py-2 text-xs gradient-primary text-primary-foreground rounded-md font-medium">{isEdit ? "保存修改" : "创建主题"}</button>
-            )}
+            <button onClick={handleSave} className="px-4 py-2 text-xs gradient-primary text-primary-foreground rounded-md font-medium">{isEdit ? "保存修改" : "创建主题"}</button>
           </div>
         </div>
       </div>
