@@ -1725,9 +1725,131 @@ export default function SentimentDetail() {
       <ThemeConfigDialog
         open={themeConfigOpen}
         onOpenChange={setThemeConfigOpen}
-        theme={defaultThemes.find(t => t.id === "sentiment") ?? null}
+        theme={sentimentTheme}
         onSave={() => setThemeConfigOpen(false)}
       />
+
+      {/* Export Dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Download className="w-4 h-4 text-primary" />
+              导出{exportScope === "all" ? "全部" : "所选"}数据
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Scope summary */}
+            <div className="flex items-center justify-between p-3 bg-muted/40 rounded-md text-xs">
+              <div className="flex items-center gap-2">
+                <Badge className="bg-primary/10 text-primary border-0">
+                  {exportScope === "all" ? "全部数据" : "所选数据"}
+                </Badge>
+                <span className="text-muted-foreground">
+                  共 {exportScope === "all"
+                    ? (sentimentView === "events" ? mergedEvents.length : items.length)
+                    : (sentimentView === "events" ? selectedEventIds.length : selectedIds.length)} 条{sentimentView === "events" ? "事件" : "舆情"}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                {(["xlsx", "csv"] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setExportFormat(f)}
+                    className={`px-2.5 py-1 rounded text-xs border ${exportFormat === f ? "bg-primary text-primary-foreground border-primary" : "bg-card text-muted-foreground border-border"}`}
+                  >
+                    {f.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Field selection */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-sm font-medium text-foreground">
+                  导出字段 <span className="text-xs text-muted-foreground">({exportFields.length}/{(sentimentTheme?.fieldConfigs || []).length})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center border border-border rounded-md bg-card px-2">
+                    <Search className="w-3 h-3 text-muted-foreground" />
+                    <input
+                      value={exportFieldSearch}
+                      onChange={e => setExportFieldSearch(e.target.value)}
+                      placeholder="搜索字段"
+                      className="px-1.5 py-1 text-xs bg-transparent text-foreground outline-none w-28"
+                    />
+                  </div>
+                  <button
+                    className="text-xs text-primary hover:underline"
+                    onClick={() => setExportFields((sentimentTheme?.fieldConfigs || []).map(fc => fc.key))}
+                  >全选</button>
+                  <button
+                    className="text-xs text-muted-foreground hover:underline"
+                    onClick={() => setExportFields([])}
+                  >清空</button>
+                </div>
+              </div>
+
+              {(["ai", "raw", "calc"] as const).map(group => {
+                const groupLabel = { ai: "AI 标签", raw: "原始字段", calc: "计算字段" }[group];
+                const fields = (sentimentTheme?.fieldConfigs || []).filter(fc =>
+                  fc.fieldType === group &&
+                  (FIELD_LABELS_LOCAL[fc.key] || fc.key).includes(exportFieldSearch)
+                );
+                if (fields.length === 0) return null;
+                const groupKeys = fields.map(f => f.key);
+                const allSelected = groupKeys.every(k => exportFields.includes(k));
+                return (
+                  <div key={group} className="mb-3 border border-border rounded-md">
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <Badge className={`text-[10px] border-0 ${
+                          group === "ai" ? "bg-primary/10 text-primary"
+                          : group === "raw" ? "bg-emerald-500/10 text-emerald-600"
+                          : "bg-amber-500/10 text-amber-600"
+                        }`}>{groupLabel}</Badge>
+                        <span className="text-xs text-muted-foreground">{fields.length} 个</span>
+                      </div>
+                      <button
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => {
+                          if (allSelected) setExportFields(prev => prev.filter(k => !groupKeys.includes(k)));
+                          else setExportFields(prev => [...new Set([...prev, ...groupKeys])]);
+                        }}
+                      >{allSelected ? "取消全选" : "全选本组"}</button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-x-3 gap-y-1.5 p-3">
+                      {fields.map(fc => (
+                        <label key={fc.key} className="flex items-center gap-2 text-xs cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={exportFields.includes(fc.key)}
+                            onChange={e => {
+                              if (e.target.checked) setExportFields(prev => [...prev, fc.key]);
+                              else setExportFields(prev => prev.filter(k => k !== fc.key));
+                            }}
+                            className="rounded border-border"
+                          />
+                          <span className="text-foreground">{FIELD_LABELS_LOCAL[fc.key] || fc.key}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportDialogOpen(false)}>取消</Button>
+            <Button onClick={confirmExport}>
+              <Download className="w-3.5 h-3.5" />确认导出
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
