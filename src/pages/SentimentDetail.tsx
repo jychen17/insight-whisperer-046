@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink, FileText, CheckCircle2, XCircle, ArrowUpRight, ClipboardList, History, User, MessageSquarePlus, Download, Settings } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -234,6 +234,11 @@ export default function SentimentDetail() {
   const [exportFormat, setExportFormat] = useState<"xlsx" | "csv">("xlsx");
   const [exportFields, setExportFields] = useState<string[]>([]);
   const [exportFieldSearch, setExportFieldSearch] = useState("");
+
+  // Custom visible columns for article list
+  const [visibleColumns, setVisibleColumns] = useState<string[]>([
+    "title", "platform", "author", "publish_time", "sentiment", "likes", "comments",
+  ]);
 
   const FIELD_LABELS_LOCAL: Record<string, string> = {
     title: "标题", content: "正文", platform: "平台", author: "作者", publish_time: "发布时间",
@@ -960,7 +965,7 @@ export default function SentimentDetail() {
               onClick={() => setSentimentView("articles")}
               className={`px-4 py-1.5 border-l border-border font-medium ${sentimentView === "articles" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted/50"}`}
             >
-              原始文章
+              全部文章
             </button>
           </div>
         </div>
@@ -1347,19 +1352,44 @@ export default function SentimentDetail() {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <div className="flex rounded-md border border-border overflow-hidden text-xs">
-                {([["normal", "有效舆情"], ["noise", "噪音帖"], ["all", "全部"]] as const).map(([key, label]) => (
-                  <button
-                    key={key}
-                    onClick={() => setShowNoiseFilter(key)}
-                    className={`px-3 py-1 ${showNoiseFilter === key ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"} ${key !== "normal" ? "border-l border-border" : ""}`}
-                  >{label}{key === "noise" && <span className="ml-1">({items.filter(i => i.isNoise).length})</span>}</button>
-                ))}
-              </div>
               <div className="flex rounded-md border border-border overflow-hidden">
                 <button onClick={() => setViewMode("card")} className={`px-3 py-1 text-xs ${viewMode === "card" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"}`}>卡片模式</button>
                 <button onClick={() => setViewMode("list")} className={`px-3 py-1 text-xs border-l border-border ${viewMode === "list" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"}`}>列表模式</button>
               </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
+                    <Settings2 className="w-3 h-3" /> 自定义列 ({visibleColumns.length})
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 max-h-80 overflow-y-auto bg-popover">
+                  {(["ai", "raw", "calc"] as const).map(group => {
+                    const groupLabel = { ai: "AI 标签", raw: "原始字段", calc: "计算字段" }[group];
+                    const fields = (sentimentTheme?.fieldConfigs || []).filter(fc => fc.fieldType === group);
+                    if (fields.length === 0) return null;
+                    return (
+                      <div key={group}>
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">{groupLabel}</DropdownMenuLabel>
+                        {fields.map(fc => (
+                          <DropdownMenuCheckboxItem
+                            key={fc.key}
+                            checked={visibleColumns.includes(fc.key)}
+                            onCheckedChange={(checked) => {
+                              setVisibleColumns(prev =>
+                                checked ? [...prev, fc.key] : prev.filter(k => k !== fc.key)
+                              );
+                            }}
+                            onSelect={(e) => e.preventDefault()}
+                          >
+                            {FIELD_LABELS_LOCAL[fc.key] || fc.key}
+                          </DropdownMenuCheckboxItem>
+                        ))}
+                        <DropdownMenuSeparator />
+                      </div>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
