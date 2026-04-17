@@ -513,7 +513,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                   <option value="custom">自定义主题</option>
                 </select>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  {form.type === "builtin" ? "内置主题由平台维护，通常不可删除" : "自定义主题由用户创建，可自由编辑和删除"}
+                  {form.type === "builtin" ? "内置主题只能由超管创建和编辑" : "自定义主题可以由该主题的管理员编辑"}
                 </p>
               </div>
             </div>
