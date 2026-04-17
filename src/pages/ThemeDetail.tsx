@@ -48,7 +48,7 @@ export default function ThemeDetail() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dashboardDialogTheme, setDashboardDialogTheme] = useState<ThemeConfig | null>(null);
   const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(theme || null);
-  const [activeTab, setActiveTab] = useState("posts");
+  const [activeTab, setActiveTab] = useState<string>("");
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
 
   if (!currentTheme) {
