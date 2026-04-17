@@ -868,17 +868,6 @@ export default function SentimentDetail() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold text-foreground">舆情列表</h1>
-          <div className="flex rounded-md border border-border overflow-hidden">
-            {([["sentiment", "舆情内容"], ["all", "全部内容"]] as const).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setMainTab(key)}
-                className={`px-3 py-1 text-xs ${mainTab === key ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground"} ${key !== "sentiment" ? "border-l border-border" : ""}`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1"><Download className="w-3 h-3" />导出数据</button>
