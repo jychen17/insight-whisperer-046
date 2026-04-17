@@ -523,10 +523,14 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                 {errors.owner && <p className="text-[11px] text-destructive mt-1">{errors.owner}</p>}
               </div>
             </div>
-          )}
+          </section>
 
-          {/* ═══════ Step 2: Data Sources (inline task config) ═══════ */}
-          {step === 1 && (
+          {/* ═══════ Section 2: Data Sources (built-in OR custom) ═══════ */}
+          <section id="section-datasources" className="scroll-mt-4">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
+              <h3 className="text-sm font-semibold text-foreground">采集任务配置</h3>
+            </div>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground">配置采集任务</label>
