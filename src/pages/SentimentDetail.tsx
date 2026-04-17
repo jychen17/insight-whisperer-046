@@ -871,7 +871,40 @@ export default function SentimentDetail() {
           <h1 className="text-xl font-semibold text-foreground">舆情列表</h1>
         </div>
         <div className="flex items-center gap-2 text-xs">
-          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1"><Download className="w-3 h-3" />导出数据</button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1"><Download className="w-3 h-3" />导出数据<ChevronDown className="w-3 h-3" /></button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuItem
+                onClick={() => {
+                  const total = sentimentView === "events" ? mergedEvents.length : items.length;
+                  toast({ title: "导出全部数据", description: `已开始导出全部 ${total} 条${sentimentView === "events" ? "事件" : "舆情"}数据` });
+                }}
+              >
+                <FileText className="w-3.5 h-3.5" />导出全部数据
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={sentimentView === "events" ? selectedEventIds.length === 0 : selectedIds.length === 0}
+                onClick={() => {
+                  const count = sentimentView === "events" ? selectedEventIds.length : selectedIds.length;
+                  if (count === 0) {
+                    toast({ title: "请先选择数据", variant: "destructive" });
+                    return;
+                  }
+                  toast({ title: "导出所选数据", description: `已开始导出 ${count} 条已选${sentimentView === "events" ? "事件" : "舆情"}数据` });
+                }}
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                导出所选数据
+                {(sentimentView === "events" ? selectedEventIds.length : selectedIds.length) > 0 && (
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {sentimentView === "events" ? selectedEventIds.length : selectedIds.length}
+                  </span>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/sentiment/event-alert")}><Bell className="w-3 h-3" />预警设置</button>
           <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/analysis/report-config")}><FileText className="w-3 h-3" />报告设置</button>
           <button className="px-3 py-1.5 border border-border rounded-md bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1" onClick={() => setThemeConfigOpen(true)}><Settings className="w-3 h-3" />主题配置</button>
