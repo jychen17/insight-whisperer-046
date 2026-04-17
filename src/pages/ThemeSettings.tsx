@@ -1,8 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, Edit2, Copy, ToggleLeft, ToggleRight, GitMerge, LayoutDashboard, X, Eye } from "lucide-react";
+import { Plus, Trash2, Edit2, Copy, ToggleLeft, ToggleRight, GitMerge, LayoutDashboard, X, Eye, Shield, UserPlus, Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 import ThemeConfigDialog from "@/components/ThemeConfigDialog";
 
 // ── Data Model ──────────────────────────────────────────────
