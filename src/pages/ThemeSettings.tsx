@@ -581,7 +581,17 @@ export default function ThemeSettings() {
         </Table>
       </div>
 
-      <ThemeConfigDialog open={dialogOpen} onOpenChange={setDialogOpen} theme={editingTheme} onSave={handleSaveTheme} />
+      <ThemeConfigDialog
+        open={dialogOpen}
+        onOpenChange={(o) => {
+          setDialogOpen(o);
+          if (!o) { setDialogInitialStep(undefined); setDialogInitialDsId(undefined); }
+        }}
+        theme={editingTheme}
+        onSave={handleSaveTheme}
+        initialStep={dialogInitialStep}
+        initialDataSourceId={dialogInitialDsId}
+      />
       {dashboardDialogTheme && (
         <DashboardBuilderDialog theme={dashboardDialogTheme} onClose={() => setDashboardDialogTheme(null)}
           onSave={updated => { handleSaveTheme(updated); setDashboardDialogTheme(null); }} />
