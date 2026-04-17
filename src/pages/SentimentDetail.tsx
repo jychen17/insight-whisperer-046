@@ -1665,6 +1665,8 @@ export default function SentimentDetail() {
         </DialogContent>
       </Dialog>
 
+      <SentimentThemeConfig open={themeConfigOpen} onOpenChange={setThemeConfigOpen} />
+
     </div>
   );
 }
