@@ -416,8 +416,18 @@ export default function ThemeSettings() {
     return matchSearch && matchStatus;
   });
 
-  const handleCreateTheme = () => { setEditingTheme(null); setDialogOpen(true); };
-  const handleEditTheme = (theme: ThemeConfig) => { setEditingTheme(theme); setDialogOpen(true); };
+  const handleCreateTheme = () => {
+    setEditingTheme(null);
+    setDialogInitialStep(undefined);
+    setDialogInitialDsId(undefined);
+    setDialogOpen(true);
+  };
+  const handleEditTheme = (theme: ThemeConfig) => {
+    setEditingTheme(theme);
+    setDialogInitialStep(undefined);
+    setDialogInitialDsId(undefined);
+    setDialogOpen(true);
+  };
   const handleSaveTheme = (theme: ThemeConfig) => {
     setThemes(prev => {
       const exists = prev.find(t => t.id === theme.id);
@@ -425,6 +435,8 @@ export default function ThemeSettings() {
     });
     setSelectedTheme(theme);
     setDialogOpen(false);
+    setDialogInitialStep(undefined);
+    setDialogInitialDsId(undefined);
   };
   const handleToggleStatus = (id: string) => setThemes(prev => prev.map(t => t.id === id ? { ...t, status: t.status === "active" ? "inactive" : "active" } : t));
   const handleDeleteTheme = (id: string) => { setThemes(prev => prev.filter(t => t.id !== id)); if (selectedTheme?.id === id) setSelectedTheme(null); };
