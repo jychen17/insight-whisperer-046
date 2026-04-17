@@ -455,32 +455,40 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/30">
-      <div className="bg-card rounded-xl border border-border shadow-2xl w-[900px] max-h-[88vh] flex flex-col animate-fade-in">
+      <div className="bg-card rounded-xl border border-border shadow-2xl w-[1100px] max-w-[95vw] max-h-[92vh] flex flex-col animate-fade-in">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-border shrink-0">
           <h2 className="text-base font-semibold text-foreground">{isEdit ? "编辑主题" : "新建主题"}</h2>
           <button onClick={() => onOpenChange(false)} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         </div>
 
-        {/* Steps */}
-        <div className="flex items-center gap-1 px-5 py-3 border-b border-border shrink-0">
-          {steps.map((s, i) => (
-            <button key={s} onClick={() => { if (i < step || validateStep(step)) setStep(i); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-colors ${
-                i === step ? "gradient-primary text-primary-foreground font-medium" : i < step ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-              }`}>
-              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                i === step ? "bg-primary-foreground/20" : i < step ? "bg-primary/20" : "bg-muted-foreground/20"
-              }`}>{i + 1}</span>{s}
-            </button>
-          ))}
-        </div>
+        {/* Body: sidebar nav + scrollable content */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Anchor sidebar */}
+          <nav className="w-44 shrink-0 border-r border-border bg-muted/20 p-3 overflow-y-auto">
+            <p className="text-[10px] font-medium text-muted-foreground px-2 mb-2 uppercase tracking-wider">配置导航</p>
+            {sections.map(s => (
+              <button key={s.id} onClick={() => scrollToSection(s.id)}
+                className={`w-full flex items-center gap-2 px-2.5 py-2 rounded-md text-xs text-left mb-1 transition-colors ${
+                  activeSection === s.id ? "bg-primary/10 text-primary font-medium" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                }`}>
+                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                  activeSection === s.id ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20 text-muted-foreground"
+                }`}>{s.num}</span>
+                {s.label}
+              </button>
+            ))}
+          </nav>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-8">
 
-          {/* ═══════ Step 1: Basic Info ═══════ */}
-          {step === 0 && (
+          {/* ═══════ Section 1: Basic Info ═══════ */}
+          <section id="section-basic" className="scroll-mt-4">
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-border">
+              <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
+              <h3 className="text-sm font-semibold text-foreground">基本信息</h3>
+            </div>
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-medium text-foreground">主题图标</label>
