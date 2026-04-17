@@ -1665,7 +1665,12 @@ export default function SentimentDetail() {
         </DialogContent>
       </Dialog>
 
-      <SentimentThemeConfig open={themeConfigOpen} onOpenChange={setThemeConfigOpen} />
+      <ThemeConfigDialog
+        open={themeConfigOpen}
+        onOpenChange={setThemeConfigOpen}
+        theme={defaultThemes.find(t => t.id === "sentiment") ?? null}
+        onSave={() => setThemeConfigOpen(false)}
+      />
 
     </div>
   );
