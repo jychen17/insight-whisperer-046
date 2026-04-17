@@ -374,18 +374,27 @@ export default function ThemeSettings() {
   const [selectedTheme, setSelectedTheme] = useState<ThemeConfig | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTheme, setEditingTheme] = useState<ThemeConfig | null>(null);
+  // When navigated from CollectionTasks, optionally jump to a specific step + auto-expand a data source
+  const [dialogInitialStep, setDialogInitialStep] = useState<number | undefined>(undefined);
+  const [dialogInitialDsId, setDialogInitialDsId] = useState<string | undefined>(undefined);
 
   // Auto-open edit dialog or focus row when navigated with query params (e.g. from CollectionTasks edit button)
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const themeId = params.get("themeId");
     const action = params.get("action");
+    const stepParam = params.get("step");
+    const dsTaskId = params.get("dsTaskId");
     if (themeId) {
       const target = themes.find(t => t.id === themeId);
       if (target) {
         setSelectedTheme(target);
         if (action === "edit") {
           setEditingTheme(target);
+          // step param is 1-indexed in URL for clarity (1=基本信息, 2=数据源, 3=条件字段, 4=合并管线)
+          const parsedStep = stepParam ? Math.max(0, parseInt(stepParam, 10) - 1) : undefined;
+          setDialogInitialStep(Number.isFinite(parsedStep as number) ? parsedStep : undefined);
+          setDialogInitialDsId(dsTaskId || undefined);
           setDialogOpen(true);
         }
       }
@@ -407,8 +416,18 @@ export default function ThemeSettings() {
     return matchSearch && matchStatus;
   });
 
-  const handleCreateTheme = () => { setEditingTheme(null); setDialogOpen(true); };
-  const handleEditTheme = (theme: ThemeConfig) => { setEditingTheme(theme); setDialogOpen(true); };
+  const handleCreateTheme = () => {
+    setEditingTheme(null);
+    setDialogInitialStep(undefined);
+    setDialogInitialDsId(undefined);
+    setDialogOpen(true);
+  };
+  const handleEditTheme = (theme: ThemeConfig) => {
+    setEditingTheme(theme);
+    setDialogInitialStep(undefined);
+    setDialogInitialDsId(undefined);
+    setDialogOpen(true);
+  };
   const handleSaveTheme = (theme: ThemeConfig) => {
     setThemes(prev => {
       const exists = prev.find(t => t.id === theme.id);
@@ -416,6 +435,8 @@ export default function ThemeSettings() {
     });
     setSelectedTheme(theme);
     setDialogOpen(false);
+    setDialogInitialStep(undefined);
+    setDialogInitialDsId(undefined);
   };
   const handleToggleStatus = (id: string) => setThemes(prev => prev.map(t => t.id === id ? { ...t, status: t.status === "active" ? "inactive" : "active" } : t));
   const handleDeleteTheme = (id: string) => { setThemes(prev => prev.filter(t => t.id !== id)); if (selectedTheme?.id === id) setSelectedTheme(null); };
@@ -560,7 +581,17 @@ export default function ThemeSettings() {
         </Table>
       </div>
 
-      <ThemeConfigDialog open={dialogOpen} onOpenChange={setDialogOpen} theme={editingTheme} onSave={handleSaveTheme} />
+      <ThemeConfigDialog
+        open={dialogOpen}
+        onOpenChange={(o) => {
+          setDialogOpen(o);
+          if (!o) { setDialogInitialStep(undefined); setDialogInitialDsId(undefined); }
+        }}
+        theme={editingTheme}
+        onSave={handleSaveTheme}
+        initialStep={dialogInitialStep}
+        initialDataSourceId={dialogInitialDsId}
+      />
       {dashboardDialogTheme && (
         <DashboardBuilderDialog theme={dashboardDialogTheme} onClose={() => setDashboardDialogTheme(null)}
           onSave={updated => { handleSaveTheme(updated); setDashboardDialogTheme(null); }} />

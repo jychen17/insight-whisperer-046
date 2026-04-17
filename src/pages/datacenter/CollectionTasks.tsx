@@ -169,7 +169,14 @@ export default function CollectionTasks() {
               {filtered.map((r) => (
                 <TableRow key={r.taskId}>
                   <TableCell>
-                    <span className="font-mono text-xs text-muted-foreground">{r.taskId}</span>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/datacenter/themes?themeId=${r.themeId}&action=edit&step=2&dsTaskId=${r.taskId}`)}
+                      className="font-mono text-xs text-primary hover:underline"
+                      title="点击跳转到对应主题配置第 2 步并展开此数据源"
+                    >
+                      {r.taskId}
+                    </button>
                   </TableCell>
                   <TableCell className="font-medium">{r.taskName}</TableCell>
                   <TableCell>
@@ -214,7 +221,7 @@ export default function CollectionTasks() {
                         size="icon"
                         className="h-8 w-8"
                         title="编辑配置（跳转对应主题）"
-                        onClick={() => navigate(`/datacenter/themes?themeId=${r.themeId}&action=edit`)}
+                        onClick={() => navigate(`/datacenter/themes?themeId=${r.themeId}&action=edit&step=2&dsTaskId=${r.taskId}`)}
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
@@ -301,7 +308,7 @@ export default function CollectionTasks() {
                 <Button
                   size="sm"
                   onClick={() => {
-                    navigate(`/datacenter/themes?themeId=${detailRow.themeId}&action=edit`);
+                    navigate(`/datacenter/themes?themeId=${detailRow.themeId}&action=edit&step=2&dsTaskId=${detailRow.taskId}`);
                     setDetailRow(null);
                   }}
                 >

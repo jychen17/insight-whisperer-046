@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Trash2, GripVertical, GitMerge, ArrowUp, ArrowDown, Search, ChevronDown, ChevronRight, Check, Copy, Calendar } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import type {
   ThemeConfig,
   DataSourceConfig,
@@ -22,10 +23,22 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   theme: ThemeConfig | null;
   onSave: (theme: ThemeConfig) => void;
+  /** Optional: jump directly to a step (0-indexed) when the dialog opens */
+  initialStep?: number;
+  /** Optional: auto-expand a specific data source's edit panel on open */
+  initialDataSourceId?: string;
 }
 
 const TASK_TYPES = ["话题", "账号", "关键词", "链接"];
-const PLATFORM_OPTIONS = ["新浪微博", "小红书", "抖音", "快手", "B站", "知乎", "百度", "今日头条", "黑猫投诉", "京东", "淘宝", "快手app", "消费保"];
+// 发布平台：覆盖主流社媒、资讯、电商、投诉、视频、垂类等几十个平台
+const PLATFORM_OPTIONS = [
+  "新浪微博", "微信公众号", "微信视频号", "小红书", "抖音", "抖音极速版", "快手", "快手极速版",
+  "B站", "知乎", "百度", "百度贴吧", "百度知道", "今日头条", "西瓜视频", "腾讯新闻", "网易新闻",
+  "凤凰新闻", "搜狐新闻", "新浪新闻", "界面新闻", "36氪", "虎嗅", "钛媒体", "雪球", "脉脉",
+  "豆瓣", "天涯", "猫扑", "黑猫投诉", "消费保", "聚投诉", "12315", "京东", "淘宝", "天猫",
+  "拼多多", "苏宁易购", "唯品会", "携程", "去哪儿", "马蜂窝", "飞猪", "美团", "大众点评",
+  "Twitter", "Facebook", "Instagram", "YouTube", "TikTok", "LinkedIn", "Reddit",
+];
 const SORT_OPTIONS = ["默认排序", "时间倒序", "热度排序", "相关度排序"];
 const OWNER_OPTIONS = ["张三", "李四", "王五", "赵六", "陈佳燕-1227152"];
 const BRAND_OPTIONS = ["同程旅行", "万达酒店", "同程金服", "携程", "飞猪", "美团"];
@@ -58,7 +71,7 @@ const emptyTheme: ThemeConfig = {
   createdAt: "", updatedAt: "",
 };
 
-export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }: Props) {
+export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, initialStep, initialDataSourceId }: Props) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<ThemeConfig>(emptyTheme);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -67,13 +80,18 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [activeConditionDS, setActiveConditionDS] = useState<string>("");
   const [mergeFieldSearch, setMergeFieldSearch] = useState("");
+  const [editingDS, setEditingDS] = useState<string | null>(null);
+  const [topicInput, setTopicInput] = useState<Record<string, string>>({});
+  const [platformSearch, setPlatformSearch] = useState<Record<string, string>>({});
 
   const isEdit = !!theme;
   const steps = ["基本信息", "数据源", "入主题条件与字段", "合并管线"];
 
   useEffect(() => {
     if (open) {
-      setStep(0); setErrors({}); setDsSearch(""); setFieldSearch("");
+      const stepCount = 4;
+      setStep(typeof initialStep === "number" ? Math.max(0, Math.min(initialStep, stepCount - 1)) : 0);
+      setErrors({}); setDsSearch(""); setFieldSearch("");
       setCollapsedGroups({}); setActiveConditionDS("");
       const initForm = theme ? {
         ...theme,
@@ -89,8 +107,14 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
       if (initForm.dataSources.length > 0) {
         setActiveConditionDS(initForm.dataSources[0].taskId);
       }
+      // Auto-expand a specific data source's edit panel when navigated from CollectionTasks
+      if (initialDataSourceId && initForm.dataSources.find(ds => ds.taskId === initialDataSourceId)) {
+        setEditingDS(initialDataSourceId);
+      } else {
+        setEditingDS(null);
+      }
     }
-  }, [open, theme]);
+  }, [open, theme, initialStep, initialDataSourceId]);
 
   const validateStep = (s: number): boolean => {
     const e: Record<string, string> = {};
@@ -190,9 +214,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
     if (!ds || ds.extendedParams.length <= 1) return;
     updateDataSource(taskId, { extendedParams: ds.extendedParams.filter((_, i) => i !== idx) });
   };
-
-  const [editingDS, setEditingDS] = useState<string | null>(null);
-  const [topicInput, setTopicInput] = useState<Record<string, string>>({});
 
   // ── Condition Tree (per data source) ──
   const updateDSConditionTree = (taskId: string, tree: ConditionNode) => {
@@ -633,26 +654,104 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                                     </select>
                                   </div>
 
-                                  {/* Platforms (multi-select) */}
-                                  <div>
-                                    <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 发布平台（多选）</label>
-                                    <div className="flex flex-wrap gap-1.5 mt-1.5">
-                                      {PLATFORM_OPTIONS.map(p => {
-                                        const selected = (Array.isArray(tp.platforms) ? tp.platforms : []).includes(p);
-                                        return (
-                                          <button key={p} onClick={() => toggleTaskParamPlatform(ds.taskId, tpIdx, p)}
-                                            className={`px-2 py-1 text-[10px] rounded-md border transition-colors ${
-                                              selected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-muted/30"
-                                            }`}>
-                                            {selected && <Check className="w-2.5 h-2.5 inline mr-0.5" />}{p}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                    {(Array.isArray(tp.platforms) ? tp.platforms : []).length > 0 && (
-                                      <p className="text-[10px] text-primary mt-1">已选 {(Array.isArray(tp.platforms) ? tp.platforms : []).length} 个平台</p>
-                                    )}
-                                  </div>
+                                  {/* Platforms (multi-select dropdown — 发布平台数十个，使用下拉选择) */}
+                                  {(() => {
+                                    const selectedPlatforms = Array.isArray(tp.platforms) ? tp.platforms : [];
+                                    const searchKey = `${ds.taskId}_${tpIdx}`;
+                                    const q = (platformSearch[searchKey] || "").trim().toLowerCase();
+                                    const filteredPlatforms = q
+                                      ? PLATFORM_OPTIONS.filter(p => p.toLowerCase().includes(q))
+                                      : PLATFORM_OPTIONS;
+                                    return (
+                                      <div>
+                                        <label className="text-[10px] font-medium text-foreground flex items-center gap-0.5">
+                                          <span className="text-destructive">*</span> 发布平台（多选）
+                                        </label>
+                                        <Popover>
+                                          <PopoverTrigger asChild>
+                                            <button
+                                              type="button"
+                                              className="w-full mt-1 min-h-[32px] px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground hover:border-primary/50 flex items-center justify-between gap-2"
+                                            >
+                                              {selectedPlatforms.length === 0 ? (
+                                                <span className="text-muted-foreground">请选择发布平台（共 {PLATFORM_OPTIONS.length} 个）</span>
+                                              ) : (
+                                                <div className="flex flex-wrap gap-1 flex-1 overflow-hidden">
+                                                  {selectedPlatforms.slice(0, 6).map(p => (
+                                                    <Badge key={p} className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{p}</Badge>
+                                                  ))}
+                                                  {selectedPlatforms.length > 6 && (
+                                                    <Badge className="text-[10px] px-1.5 py-0 bg-muted text-muted-foreground border-0">
+                                                      +{selectedPlatforms.length - 6}
+                                                    </Badge>
+                                                  )}
+                                                </div>
+                                              )}
+                                              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                            </button>
+                                          </PopoverTrigger>
+                                          <PopoverContent className="w-80 p-0" align="start">
+                                            <div className="p-2 border-b border-border">
+                                              <div className="relative">
+                                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground" />
+                                                <input
+                                                  value={platformSearch[searchKey] || ""}
+                                                  onChange={e => setPlatformSearch(prev => ({ ...prev, [searchKey]: e.target.value }))}
+                                                  placeholder="搜索平台..."
+                                                  className="w-full pl-7 pr-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground focus:ring-1 focus:ring-primary outline-none"
+                                                />
+                                              </div>
+                                              <div className="flex items-center justify-between mt-2 px-1">
+                                                <span className="text-[10px] text-muted-foreground">已选 {selectedPlatforms.length} / {PLATFORM_OPTIONS.length}</span>
+                                                <div className="flex items-center gap-2">
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => updateTaskParam(ds.taskId, tpIdx, { platforms: filteredPlatforms })}
+                                                    className="text-[10px] text-primary hover:underline"
+                                                  >
+                                                    全选{q ? "（结果）" : ""}
+                                                  </button>
+                                                  <button
+                                                    type="button"
+                                                    onClick={() => updateTaskParam(ds.taskId, tpIdx, { platforms: [] })}
+                                                    className="text-[10px] text-muted-foreground hover:text-destructive"
+                                                  >
+                                                    清空
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            </div>
+                                            <div className="max-h-64 overflow-y-auto p-1">
+                                              {filteredPlatforms.length === 0 ? (
+                                                <div className="py-6 text-center text-[11px] text-muted-foreground">无匹配平台</div>
+                                              ) : (
+                                                filteredPlatforms.map(p => {
+                                                  const checked = selectedPlatforms.includes(p);
+                                                  return (
+                                                    <button
+                                                      key={p}
+                                                      type="button"
+                                                      onClick={() => toggleTaskParamPlatform(ds.taskId, tpIdx, p)}
+                                                      className={`w-full flex items-center gap-2 px-2 py-1.5 rounded-sm text-xs text-left hover:bg-muted/50 ${
+                                                        checked ? "text-primary" : "text-foreground"
+                                                      }`}
+                                                    >
+                                                      <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${
+                                                        checked ? "bg-primary border-primary" : "border-border"
+                                                      }`}>
+                                                        {checked && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
+                                                      </span>
+                                                      {p}
+                                                    </button>
+                                                  );
+                                                })
+                                              )}
+                                            </div>
+                                          </PopoverContent>
+                                        </Popover>
+                                      </div>
+                                    );
+                                  })()}
 
                                   {/* Topics (tag input) */}
                                   <div>
