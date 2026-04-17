@@ -960,7 +960,7 @@ export default function SentimentDetail() {
               onClick={() => setSentimentView("articles")}
               className={`px-4 py-1.5 border-l border-border font-medium ${sentimentView === "articles" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted/50"}`}
             >
-              原始文章
+              全部文章
             </button>
           </div>
         </div>
