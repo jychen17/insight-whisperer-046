@@ -184,8 +184,8 @@ const sourceOptions: Record<string, string[]> = {
 
 const allSources = ["舆情模型", "情感模型", "主题模型", "风控模型", "NER模型", "采集字段", "加权计算", "时序计算", "规则计算", "评论量"];
 
-const emptyForm: { name: string; description: string; category: string; dataType: DataType | ""; source: string; enumValues: string[] } = {
-  name: "", description: "", category: "ai", dataType: "", source: "", enumValues: [],
+const emptyForm: { name: string; description: string; category: string; dataType: DataType | ""; source: string; enableEnum: boolean; enumValues: EnumPair[]; otherLabel: string } = {
+  name: "", description: "", category: "ai", dataType: "", source: "", enableEnum: false, enumValues: [], otherLabel: "",
 };
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
@@ -197,43 +197,96 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-function EnumValuesEditor({ values, onChange }: { values: string[]; onChange: (v: string[]) => void }) {
-  const [draft, setDraft] = useState("");
-  const add = () => {
-    const v = draft.trim();
-    if (!v || values.includes(v)) { setDraft(""); return; }
-    onChange([...values, v]);
-    setDraft("");
+function EnumValuesEditor({
+  enabled, onEnabledChange, values, onChange, otherLabel, onOtherLabelChange,
+}: {
+  enabled: boolean;
+  onEnabledChange: (v: boolean) => void;
+  values: EnumPair[];
+  onChange: (v: EnumPair[]) => void;
+  otherLabel: string;
+  onOtherLabelChange: (v: string) => void;
+}) {
+  const updateRow = (idx: number, patch: Partial<EnumPair>) => {
+    onChange(values.map((it, i) => i === idx ? { ...it, ...patch } : it));
   };
+  const removeRow = (idx: number) => onChange(values.filter((_, i) => i !== idx));
+  const addRow = () => onChange([...values, { key: "", label: "" }]);
+
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
-        <Input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-          placeholder="输入枚举值后回车或点击添加"
-          className="h-9"
-        />
-        <Button type="button" variant="outline" size="sm" onClick={add}>添加</Button>
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <span className="text-sm">是否设置枚举值：</span>
+        <RadioGroup
+          value={enabled ? "yes" : "no"}
+          onValueChange={(v) => onEnabledChange(v === "yes")}
+          className="flex items-center gap-4"
+        >
+          <div className="flex items-center gap-1.5">
+            <RadioGroupItem value="yes" id="enum-yes" />
+            <Label htmlFor="enum-yes" className="text-sm font-normal cursor-pointer">是</Label>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <RadioGroupItem value="no" id="enum-no" />
+            <Label htmlFor="enum-no" className="text-sm font-normal cursor-pointer">否</Label>
+          </div>
+        </RadioGroup>
       </div>
-      {values.length === 0 ? (
-        <p className="text-xs text-muted-foreground">尚未配置任何枚举值</p>
-      ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {values.map((v) => (
-            <Badge key={v} variant="secondary" className="gap-1 pr-1">
-              {v}
-              <button
+
+      {enabled && (
+        <div className="space-y-2">
+          <div className="flex items-start gap-3">
+            <Label className="w-16 shrink-0 pt-2 text-sm">枚举值：</Label>
+            <div className="flex-1 space-y-2">
+              {values.map((row, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Input
+                    value={row.key}
+                    onChange={(e) => updateRow(idx, { key: e.target.value })}
+                    placeholder="值"
+                    className="h-9 flex-1"
+                  />
+                  <Input
+                    value={row.label}
+                    onChange={(e) => updateRow(idx, { label: e.target.value })}
+                    placeholder="显示名称"
+                    className="h-9 flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-destructive hover:text-destructive"
+                    onClick={() => removeRow(idx)}
+                    aria-label="删除"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button
                 type="button"
-                onClick={() => onChange(values.filter((x) => x !== v))}
-                className="ml-0.5 rounded-sm hover:bg-muted-foreground/20 p-0.5"
-                aria-label={`删除 ${v}`}
+                variant="outline"
+                size="sm"
+                onClick={addRow}
+                className="w-full border-dashed h-9 gap-1"
               >
-                <X className="w-3 h-3" />
-              </button>
-            </Badge>
-          ))}
+                <Plus className="w-3.5 h-3.5" /> 添加枚举值
+              </Button>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-1">
+            <Label className="w-24 shrink-0 text-sm">
+              <span className="text-destructive">*</span> 其它枚举值：
+            </Label>
+            <Input
+              value={otherLabel}
+              onChange={(e) => onOtherLabelChange(e.target.value)}
+              placeholder="未匹配上述枚举时的默认显示名称"
+              className="h-9 flex-1"
+            />
+          </div>
         </div>
       )}
     </div>
