@@ -92,7 +92,7 @@ export default function ThemeList() {
               <LayoutDashboard className="w-4 h-4 text-blue-500" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">今日数据总量</p>
+              <p className="text-xs text-muted-foreground">昨日数据总量</p>
               <p className="text-xl font-bold text-foreground">{totalData.toLocaleString()}</p>
             </div>
           </CardContent>
