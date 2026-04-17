@@ -570,7 +570,64 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                         {/* Task form (expanded) */}
                         {isExpanded && (
                           <div className="p-4 space-y-4 border-t border-border">
-                            {/* Row 1: Type + Name */}
+                            {/* Mode toggle: Built-in vs Custom */}
+                            <div className="flex items-center gap-3 p-2.5 bg-muted/40 rounded-md border border-border">
+                              <span className="text-[11px] font-medium text-foreground shrink-0">任务来源：</span>
+                              <div className="flex gap-2 flex-1">
+                                <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+                                  <input type="radio" name={`mode_${ds.taskId}`} checked={(ds.taskMode || "custom") === "builtin"}
+                                    onChange={() => updateDataSource(ds.taskId, { taskMode: "builtin" })} className="accent-primary" />
+                                  <span className="text-foreground">选择已有任务</span>
+                                  <span className="text-[10px] text-muted-foreground">（内置）</span>
+                                </label>
+                                <label className="flex items-center gap-1.5 cursor-pointer text-xs ml-3">
+                                  <input type="radio" name={`mode_${ds.taskId}`} checked={(ds.taskMode || "custom") === "custom"}
+                                    onChange={() => updateDataSource(ds.taskId, { taskMode: "custom" })} className="accent-primary" />
+                                  <span className="text-foreground">自定义任务</span>
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Built-in task picker */}
+                            {(ds.taskMode || "custom") === "builtin" && (
+                              <div className="space-y-3">
+                                <div>
+                                  <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 选择已有采集任务</label>
+                                  <select value={ds.builtinTaskId || ""} onChange={e => applyBuiltinTask(ds.taskId, e.target.value)}
+                                    className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
+                                    <option value="">从数据中心已配置的任务中选择...</option>
+                                    {BUILTIN_TASKS.map(t => (
+                                      <option key={t.id} value={t.id}>{t.name} · {t.platform} · {t.frequency}</option>
+                                    ))}
+                                  </select>
+                                  <p className="text-[10px] text-muted-foreground mt-1">复用「数据中心 → 采集任务」中已配置的任务，无需重复填写参数</p>
+                                </div>
+
+                                {ds.builtinTaskId && (() => {
+                                  const bt = BUILTIN_TASKS.find(t => t.id === ds.builtinTaskId);
+                                  if (!bt) return null;
+                                  return (
+                                    <div className="border border-primary/20 bg-primary/5 rounded-md p-3 space-y-1.5">
+                                      <div className="flex items-center gap-2">
+                                        <Badge className="text-[10px] px-1.5 py-0 bg-primary/15 text-primary border-0">已关联</Badge>
+                                        <span className="text-xs font-medium text-foreground">{bt.name}</span>
+                                      </div>
+                                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] text-muted-foreground">
+                                        <div>任务ID：<span className="text-foreground">{bt.id}</span></div>
+                                        <div>平台：<span className="text-foreground">{bt.platform}</span></div>
+                                        <div>类型：<span className="text-foreground">{bt.taskType}</span></div>
+                                        <div>归属人：<span className="text-foreground">{bt.owner}</span></div>
+                                        <div>采集频率：<span className="text-foreground">{bt.frequency}</span></div>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            )}
+
+                            {/* Custom task form (existing inline config) */}
+                            {(ds.taskMode || "custom") === "custom" && (
+                            <>
                             <div className="grid grid-cols-2 gap-3">
                               <div>
                                 <label className="text-[11px] font-medium text-foreground flex items-center gap-0.5"><span className="text-destructive">*</span> 任务类型</label>
