@@ -241,6 +241,33 @@ export default function SentimentDetail() {
     "title", "platform", "author", "publish_time", "sentiment", "likes", "comments",
   ]);
 
+  // Article detail dialog
+  const [articleDetailId, setArticleDetailId] = useState<number | null>(null);
+  const articleDetail = useMemo(
+    () => items.find(i => i.id === articleDetailId) || null,
+    [items, articleDetailId]
+  );
+  const updateArticleField = <K extends keyof SentimentItem>(field: K, value: SentimentItem[K]) => {
+    if (articleDetailId == null) return;
+    setItems(prev => prev.map(i => i.id === articleDetailId ? { ...i, [field]: value } : i));
+    toast({ title: "已更新", description: `字段「${field}」已手动调整` });
+  };
+
+  // AI tag option lists
+  const SENTIMENT_OPTIONS = [
+    "负向情感-客户投诉", "负向情感-媒体曝光", "负向情感-用户吐槽",
+    "中性", "正向情感-用户好评", "正向情感-媒体报道",
+  ];
+  const ISSUE_TYPE_OPTIONS = [
+    "票价吐槽", "机票退改", "金融服务", "酒店投诉", "客服态度", "退款问题", "其他",
+  ];
+  const BUSINESS_OPTIONS = [
+    "同程旅行-国际机票", "同程旅行-国内机票", "同程旅行-国内酒店",
+    "同程旅行-旅游", "同程旅行-金服", "同程旅行-用车", "同程旅行-人资",
+  ];
+  const RISK_LEVEL_OPTIONS = ["无", "低", "一般", "高", "紧急"];
+  const SPEED_OPTIONS = ["低", "中", "高"];
+
   const FIELD_LABELS_LOCAL: Record<string, string> = {
     title: "标题", content: "正文", platform: "平台", author: "作者", publish_time: "发布时间",
     sentiment: "情感倾向", topic: "话题分类", region: "地域", likes: "点赞数", comments: "评论数",
