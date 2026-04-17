@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
-import { Plus, Brain, FileText, Calculator, Tag, Search, Eye, Pencil, Settings2, Trash2, RadioIcon } from "lucide-react";
+import { Plus, Brain, FileText, Calculator, Tag, Search, Eye, Pencil, Settings2, Trash2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 type DataType = "数字" | "字符串" | "时间";
