@@ -261,7 +261,7 @@ export default function ThemeDetail() {
         <h3 className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
           <span className="w-1 h-4 rounded-full gradient-primary inline-block" /> 数据展示
         </h3>
-        <Tabs value={activeTab} onValueChange={v => { setActiveTab(v); setExpandedEvent(null); }}>
+        <Tabs value={activeTab || (enabledNodes.length > 0 ? `node_${enabledNodes[enabledNodes.length - 1].id}` : "posts")} onValueChange={v => { setActiveTab(v); setExpandedEvent(null); }}>
           <TabsList>
             {[...enabledNodes].map((node, i) => ({ node, i })).reverse().map(({ node, i }) => (
               <TabsTrigger key={node.id} value={`node_${node.id}`}>
