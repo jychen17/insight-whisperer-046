@@ -80,7 +80,11 @@ export default function ArticleDetail() {
   const location = useLocation();
   const { id } = useParams<{ id: string }>();
 
-  const passedItem = (location.state as { item?: SentimentItem } | null)?.item || null;
+  const navState = (location.state as { item?: SentimentItem; from?: "sentiment" | "event"; eventId?: string; eventTitle?: string } | null) || null;
+  const passedItem = navState?.item || null;
+  const fromSource = navState?.from || "sentiment";
+  const eventId = navState?.eventId;
+  const eventTitle = navState?.eventTitle;
   const [item, setItem] = useState<SentimentItem | null>(passedItem);
 
   // AI noise label state (independent from "manual mark as noise")
@@ -139,8 +143,22 @@ export default function ArticleDetail() {
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink onClick={() => navigate(-1)} className="cursor-pointer">舆情列表</BreadcrumbLink>
+              <BreadcrumbLink onClick={() => navigate("/sentiment/overview")} className="cursor-pointer">舆情列表</BreadcrumbLink>
             </BreadcrumbItem>
+            {fromSource === "event" && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbLink
+                    onClick={() => eventId ? navigate(`/sentiment/event/${eventId}`) : navigate(-1)}
+                    className="cursor-pointer max-w-[220px] truncate inline-block align-bottom"
+                    title={eventTitle}
+                  >
+                    {eventTitle ? `事件详情：${eventTitle}` : "事件详情"}
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+              </>
+            )}
             <BreadcrumbSeparator />
             <BreadcrumbItem>
               <BreadcrumbPage>文章详情</BreadcrumbPage>
