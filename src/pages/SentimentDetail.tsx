@@ -8,6 +8,7 @@ import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ThemeConfigDialog from "@/components/ThemeConfigDialog";
 import { defaultThemes, type ThemeConfig } from "@/pages/ThemeSettings";
 
@@ -239,6 +240,33 @@ export default function SentimentDetail() {
   const [visibleColumns, setVisibleColumns] = useState<string[]>([
     "title", "platform", "author", "publish_time", "sentiment", "likes", "comments",
   ]);
+
+  // Article detail dialog
+  const [articleDetailId, setArticleDetailId] = useState<number | null>(null);
+  const articleDetail = useMemo(
+    () => items.find(i => i.id === articleDetailId) || null,
+    [items, articleDetailId]
+  );
+  const updateArticleField = <K extends keyof SentimentItem>(field: K, value: SentimentItem[K]) => {
+    if (articleDetailId == null) return;
+    setItems(prev => prev.map(i => i.id === articleDetailId ? { ...i, [field]: value } : i));
+    toast({ title: "已更新", description: `字段「${field}」已手动调整` });
+  };
+
+  // AI tag option lists
+  const SENTIMENT_OPTIONS = [
+    "负向情感-客户投诉", "负向情感-媒体曝光", "负向情感-用户吐槽",
+    "中性", "正向情感-用户好评", "正向情感-媒体报道",
+  ];
+  const ISSUE_TYPE_OPTIONS = [
+    "票价吐槽", "机票退改", "金融服务", "酒店投诉", "客服态度", "退款问题", "其他",
+  ];
+  const BUSINESS_OPTIONS = [
+    "同程旅行-国际机票", "同程旅行-国内机票", "同程旅行-国内酒店",
+    "同程旅行-旅游", "同程旅行-金服", "同程旅行-用车", "同程旅行-人资",
+  ];
+  const RISK_LEVEL_OPTIONS = ["无", "低", "一般", "高", "紧急"];
+  const SPEED_OPTIONS = ["低", "中", "高"];
 
   const FIELD_LABELS_LOCAL: Record<string, string> = {
     title: "标题", content: "正文", platform: "平台", author: "作者", publish_time: "发布时间",
@@ -1413,7 +1441,7 @@ export default function SentimentDetail() {
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate">{item.title}</h3>
+                          <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate" onClick={() => setArticleDetailId(item.id)}>{item.title}</h3>
                           {renderStatusBadge(item.handleStatus)}
                           {item.isNoise && (
                             <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
@@ -1877,6 +1905,152 @@ export default function SentimentDetail() {
             <Button onClick={confirmExport}>
               <Download className="w-3.5 h-3.5" />确认导出
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Article Detail Dialog */}
+      <Dialog open={articleDetailId !== null} onOpenChange={(o) => !o && setArticleDetailId(null)}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 pr-8">
+              <FileText className="w-4 h-4 text-primary" />
+              <span className="truncate">{articleDetail?.title || "文章详情"}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          {articleDetail && (
+            <div className="grid grid-cols-3 gap-4 py-2">
+              {/* Left: full info */}
+              <div className="col-span-2 space-y-4">
+                <div className="space-y-1.5 text-xs">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
+                    <span>发布平台：<span className="text-foreground">{articleDetail.platform}</span></span>
+                    <span>发布者：<span className="text-foreground">{articleDetail.author}</span></span>
+                    <span>内容类型：<span className="text-foreground">{articleDetail.contentType}</span></span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{articleDetail.userType}</Badge>
+                    <Badge className="text-[10px] px-1.5 py-0 bg-primary/80">{articleDetail.fans}</Badge>
+                  </div>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground">
+                    <span>发布时间：<span className="text-foreground">{articleDetail.publishTime}</span></span>
+                    <span>收录时间：<span className="text-foreground">{articleDetail.collectTime}</span></span>
+                    <span>收录地区：<span className="text-foreground">{articleDetail.region}</span></span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <span className="text-muted-foreground shrink-0">初始等级：</span>
+                  <Select value={articleDetail.riskLevel} onValueChange={(v) => updateArticleField("riskLevel", v)}>
+                    <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {RISK_LEVEL_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <span className="text-muted-foreground shrink-0 ml-2">发酵速度：</span>
+                  <Select value={articleDetail.speed} onValueChange={(v) => updateArticleField("speed", v)}>
+                    <SelectTrigger className="h-7 w-20 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      {SPEED_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <div className="text-xs font-medium text-foreground mb-1.5">文本：</div>
+                  <div className="text-xs text-foreground bg-muted/30 rounded-md p-3 leading-relaxed whitespace-pre-wrap">
+                    {articleDetail.summary}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-1 text-xs font-medium text-foreground mb-2">
+                    <History className="w-3.5 h-3.5" /> 处理记录
+                  </div>
+                  {(articleDetail.handleRecords || []).length === 0 ? (
+                    <div className="text-[11px] text-muted-foreground py-2">暂无处理记录</div>
+                  ) : (
+                    <div className="space-y-2">
+                      {(articleDetail.handleRecords || []).map(r => (
+                        <div key={r.id} className="flex gap-2 text-[11px] border-l-2 border-primary/40 pl-2 py-1">
+                          <Clock className="w-3 h-3 text-muted-foreground shrink-0 mt-0.5" />
+                          <div className="text-muted-foreground">
+                            <span className="text-foreground font-medium">{r.operator}</span> 于 {r.time} {renderRecordDesc(r)}
+                            {r.remark && <div className="mt-0.5">备注：{r.remark}</div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-2 flex gap-2">
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => { const id = articleDetail.id; setArticleDetailId(null); openHandleDialog("article", id); }}>
+                      <ClipboardList className="w-3 h-3" /> 处置该文章
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: AI panel */}
+              <div className="col-span-1 space-y-4">
+                <div className="bg-primary/5 rounded-md p-3 border border-primary/20">
+                  <div className="flex items-center gap-1 text-xs font-medium text-primary mb-1.5">
+                    <Sparkles className="w-3.5 h-3.5" /> AI 摘要
+                  </div>
+                  <div className="text-xs text-foreground leading-relaxed">{articleDetail.summary}</div>
+                </div>
+
+                <div className="bg-muted/30 rounded-md p-3 border border-border">
+                  <div className="text-xs font-medium text-foreground mb-1.5">AI 命中原因</div>
+                  <div className="text-xs text-muted-foreground leading-relaxed">
+                    根据「{articleDetail.business}」业务范畴及内容关键词，命中{articleDetail.issueType}问题，情感判定为{articleDetail.sentiment}。
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground shrink-0">业务分类：</span>
+                    <Select value={articleDetail.business} onValueChange={(v) => updateArticleField("business", v)}>
+                      <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {BUSINESS_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground shrink-0">情感分类：</span>
+                    <Select value={articleDetail.sentiment} onValueChange={(v) => updateArticleField("sentiment", v)}>
+                      <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {SENTIMENT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-muted-foreground shrink-0">舆情问题分类：</span>
+                    <Select value={articleDetail.issueType} onValueChange={(v) => updateArticleField("issueType", v)}>
+                      <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {ISSUE_TYPE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {!articleDetail.isNoise && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                    onClick={() => { const id = articleDetail.id; setArticleDetailId(null); openNoiseDialog([id]); }}
+                  >
+                    <Ban className="w-3 h-3 mr-1" /> 从舆情移出（标记噪音）
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setArticleDetailId(null)}>关闭</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
