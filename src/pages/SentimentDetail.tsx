@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import ThemeConfigDialog from "@/components/ThemeConfigDialog";
-import type { ThemeConfig } from "@/pages/ThemeSettings";
+import { defaultThemes, type ThemeConfig } from "@/pages/ThemeSettings";
 
 const filters = {
   brands: ["同程旅行", "携程", "美团", "飞猪", "去哪儿"],
