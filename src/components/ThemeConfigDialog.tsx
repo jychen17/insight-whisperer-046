@@ -837,6 +837,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave }:
                                 </div>
                               ))}
                             </div>
+                            </>
+                            )}
                           </div>
                         )}
                       </div>
