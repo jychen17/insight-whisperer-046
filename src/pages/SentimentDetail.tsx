@@ -1126,7 +1126,7 @@ export default function SentimentDetail() {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredEvents.map(event => {
+              {filteredEvents.slice((eventPage - 1) * PAGE_SIZE, eventPage * PAGE_SIZE).map(event => {
                 const posts = getEventPosts(event.id);
                 const isExpanded = expandedEventId === event.id;
                 const importanceColors = {
