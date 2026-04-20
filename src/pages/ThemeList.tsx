@@ -188,12 +188,13 @@ export default function ThemeList() {
                 <TableHead className="text-right">昨日数据</TableHead>
                 <TableHead className="text-right">昨日预警</TableHead>
                 <TableHead>状态</TableHead>
+                <TableHead>更新人</TableHead>
                 <TableHead>更新时间</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((theme) => {
+              {pagedThemes.map((theme) => {
                 const sc = statusConfig[theme.status];
                 const tc = typeConfig[theme.type];
                 return (
@@ -212,7 +213,8 @@ export default function ThemeList() {
                       )}
                     </TableCell>
                     <TableCell><Badge variant={sc.variant} className="text-xs">{sc.label}</Badge></TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{theme.updatedAt}</TableCell>
+                    <TableCell className="text-sm">{theme.updatedBy}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">{theme.updatedAt}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button
@@ -240,13 +242,76 @@ export default function ThemeList() {
               })}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={11} className="text-center text-muted-foreground py-8">
                     没有找到匹配的主题
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
+
+          {filtered.length > 0 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                共 {filtered.length} 条，第 {currentPage} / {totalPages} 页
+              </p>
+              <Pagination className="mx-0 w-auto justify-end">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) setPage(currentPage - 1);
+                      }}
+                      className={currentPage <= 1 ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                  {Array.from({ length: totalPages }).map((_, i) => {
+                    const p = i + 1;
+                    const showPage =
+                      p === 1 ||
+                      p === totalPages ||
+                      (p >= currentPage - 1 && p <= currentPage + 1);
+                    const showEllipsisBefore = p === currentPage - 2 && p > 1;
+                    const showEllipsisAfter = p === currentPage + 2 && p < totalPages;
+                    if (showEllipsisBefore || showEllipsisAfter) {
+                      return (
+                        <PaginationItem key={`e-${p}`}>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      );
+                    }
+                    if (!showPage) return null;
+                    return (
+                      <PaginationItem key={p}>
+                        <PaginationLink
+                          href="#"
+                          isActive={p === currentPage}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setPage(p);
+                          }}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    );
+                  })}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) setPage(currentPage + 1);
+                      }}
+                      className={currentPage >= totalPages ? "pointer-events-none opacity-50" : ""}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
