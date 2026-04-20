@@ -95,7 +95,7 @@ export default function ArticleDetail() {
 
   // AI noise label state (independent from "manual mark as noise")
   const [aiNoiseLabel, setAiNoiseLabel] = useState<string>(passedItem?.isNoise ? "low_quality" : "not_noise");
-  // Editable AI fields
+  // Editable AI fields — committed values
   const [aiSummary, setAiSummary] = useState<string>(passedItem?.summary || "");
   const [aiJudgement, setAiJudgement] = useState<string>(
     passedItem ? `根据「${passedItem.business}」业务范畴及内容关键词，命中${passedItem.issueType}问题，情感判定为${passedItem.sentiment}。` : ""
@@ -103,6 +103,39 @@ export default function ArticleDetail() {
   const [isNegativeLabel, setIsNegativeLabel] = useState<string>(
     passedItem?.sentiment?.includes("负向") ? "yes" : "no"
   );
+  // Editable AI fields — draft values (in textarea while editing)
+  const [draftSummary, setDraftSummary] = useState<string>(aiSummary);
+  const [draftJudgement, setDraftJudgement] = useState<string>(aiJudgement);
+
+  // AI field edit history
+  interface AiEditRecord { id: string; field: string; from: string; to: string; operator: string; time: string; }
+  const [aiEditHistory, setAiEditHistory] = useState<AiEditRecord[]>([]);
+
+  // Pending change confirmation dialog
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingChange, setPendingChange] = useState<{ field: string; from: string; to: string; apply: () => void } | null>(null);
+
+  const requestAiChange = (field: string, from: string, to: string, apply: () => void) => {
+    if (from === to) {
+      toast({ title: "未做修改" });
+      return;
+    }
+    setPendingChange({ field, from, to, apply });
+    setConfirmOpen(true);
+  };
+
+  const confirmAiChange = () => {
+    if (!pendingChange) return;
+    pendingChange.apply();
+    const now = new Date().toLocaleString("zh-CN", { hour12: false });
+    setAiEditHistory(prev => [
+      { id: `${Date.now()}`, field: pendingChange.field, from: pendingChange.from, to: pendingChange.to, operator: "当前用户", time: now },
+      ...prev,
+    ]);
+    setConfirmOpen(false);
+    setPendingChange(null);
+    toast({ title: "已确认修改" });
+  };
 
   // Image preview
   const [previewIdx, setPreviewIdx] = useState<number | null>(null);
@@ -118,6 +151,14 @@ export default function ArticleDetail() {
       toast({ title: "未找到文章数据", description: "请从舆情列表进入", variant: "destructive" });
     }
   }, [item]);
+
+  // Wrap AI tag (Select) updates with confirmation
+  const updateAiSelect = <K extends keyof SentimentItem>(field: K, label: string, newValue: SentimentItem[K]) => {
+    const currentValue = item?.[field] as unknown as string;
+    requestAiChange(label, String(currentValue ?? ""), String(newValue ?? ""), () => {
+      setItem(prev => prev ? { ...prev, [field]: newValue } : prev);
+    });
+  };
 
   const updateField = <K extends keyof SentimentItem>(field: K, value: SentimentItem[K]) => {
     setItem(prev => prev ? { ...prev, [field]: value } : prev);
