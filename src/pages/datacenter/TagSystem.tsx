@@ -118,6 +118,7 @@ function TagTable({
           <TableHead className="w-20">标签ID</TableHead>
           <TableHead>标签名称</TableHead>
           <TableHead>数据类型</TableHead>
+          <TableHead>实体类型</TableHead>
           <TableHead>枚举值</TableHead>
           <TableHead>来源</TableHead>
           <TableHead>状态</TableHead>
@@ -127,7 +128,7 @@ function TagTable({
       <TableBody>
         {filtered.length === 0 ? (
           <TableRow>
-            <TableCell colSpan={7} className="text-center text-muted-foreground py-8">暂无匹配的标签</TableCell>
+            <TableCell colSpan={8} className="text-center text-muted-foreground py-8">暂无匹配的标签</TableCell>
           </TableRow>
         ) : (
           filtered.map((t) => {
@@ -146,6 +147,7 @@ function TagTable({
                   </div>
                 </TableCell>
                 <TableCell><Badge variant="outline" className="text-xs">{t.dataType}</Badge></TableCell>
+                <TableCell><Badge variant="secondary" className="text-xs">{t.entityType}</Badge></TableCell>
                 <TableCell>
                   {!canHaveEnum ? (
                     <span className="text-xs text-muted-foreground">—</span>
