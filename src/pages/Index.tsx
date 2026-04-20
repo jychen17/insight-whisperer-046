@@ -82,9 +82,8 @@ const utilModules = [
 ];
 
 const quickStats = [
-  { label: "今日数据总量", value: "4,963", icon: TrendingUp, change: "+12.3%" },
+  { label: "昨日数据总量", value: "4,963", icon: TrendingUp, change: "+12.3%" },
   { label: "活跃洞察主题", value: "4", icon: Eye, change: "" },
-  { label: "待处理预警", value: "6", icon: Bell, change: "-2" },
   { label: "专项监控任务", value: "3", icon: Monitor, change: "" },
 ];
 
