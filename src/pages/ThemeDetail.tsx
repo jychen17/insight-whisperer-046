@@ -252,8 +252,9 @@ export default function ThemeDetail() {
                     )}
                     {(node.displayFields || []).length > 0 && (
                       <div className="flex gap-1 mt-1 flex-wrap">
-                        {(node.displayFields || []).map(df => (
+                        {(node.displayFields || []).map((df, dfIdx) => (
                           <Badge key={df.key} className="text-[9px] px-1 py-0 bg-muted text-muted-foreground border-0">
+                            <span className="text-primary font-semibold mr-0.5">#{dfIdx + 1}</span>
                             {FIELD_LABELS[df.key] || df.key}·{DISPLAY_POS_LABELS[df.position]}
                             {df.isFilter && "·筛选"}
                             {df.isSortable && "·排序"}
