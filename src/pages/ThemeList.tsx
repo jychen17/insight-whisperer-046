@@ -64,12 +64,21 @@ export default function ThemeList() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
 
-  const filtered = allThemes.filter((t) => {
-    const matchSearch = !search || t.name.includes(search) || t.description.includes(search);
-    const matchStatus = statusFilter === "all" || t.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const filtered = useMemo(
+    () =>
+      allThemes.filter((t) => {
+        const matchSearch = !search || t.name.includes(search) || t.description.includes(search);
+        const matchStatus = statusFilter === "all" || t.status === statusFilter;
+        return matchSearch && matchStatus;
+      }),
+    [search, statusFilter],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pagedThemes = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const activeCount = allThemes.filter((t) => t.status === "active").length;
   const totalData = allThemes.reduce((s, t) => s + t.dataCount, 0);
