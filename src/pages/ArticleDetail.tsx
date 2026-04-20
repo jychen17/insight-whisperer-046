@@ -241,11 +241,30 @@ export default function ArticleDetail() {
         </Button>
       </div>
 
-      {/* Title */}
+      {/* Title + 关键词搜索 */}
       <div className="flex items-start gap-3 pb-3 border-b">
         <FileText className="w-5 h-5 text-primary mt-1 shrink-0" />
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-semibold text-foreground">{item.title}</h1>
+          <h1 className="text-lg font-semibold text-foreground">{highlightText(item.title, searchQuery)}</h1>
+        </div>
+        <div className="relative shrink-0 w-64">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="在文章内搜索关键词高亮"
+            className="w-full h-8 pl-7 pr-7 text-xs border border-border rounded-md bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground"
+              aria-label="清除搜索"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </div>
 
