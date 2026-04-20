@@ -367,6 +367,37 @@ export default function EventDetail() {
         </CardContent>
       </Card>
 
+      {/* Event Processing Records */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><History className="w-4 h-4" /> 事件处理记录</CardTitle></CardHeader>
+        <CardContent>
+          {event.handleRecords.length === 0 ? (
+            <p className="text-sm text-muted-foreground">暂无处理记录</p>
+          ) : (
+            <div className="space-y-3">
+              {event.handleRecords.map((r, idx) => (
+                <div key={r.id} className="flex gap-3 items-start">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-2.5 h-2.5 rounded-full ${idx === 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
+                    {idx < event.handleRecords.length - 1 && <div className="w-px h-8 bg-border" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-foreground">{r.operator}</span>
+                      <span className="text-[11px] text-muted-foreground">{r.time}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      操作: <span className="text-foreground">{renderRecordDesc(r)}</span>
+                      {r.remark && <span className="ml-2">备注: {r.remark}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Post list */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">事件内文章列表 ({event.posts.length})</CardTitle></CardHeader>
@@ -448,29 +479,6 @@ export default function EventDetail() {
         </CardContent>
       </Card>
 
-      {/* Per-post processing records */}
-      {event.posts.filter(p => p.handleRecords.length > 0).map(post => (
-        <Card key={`records-${post.id}`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <History className="w-4 h-4" /> 文章处理记录 - {post.title.slice(0, 20)}{post.title.length > 20 ? "..." : ""}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {post.handleRecords.map(r => (
-                <div key={r.id} className="flex items-center gap-3 text-xs">
-                  <User className="w-3 h-3 text-muted-foreground shrink-0" />
-                  <span className="font-medium text-foreground">{r.operator}</span>
-                  <span className="text-muted-foreground">{r.time}</span>
-                  <span className="text-foreground">{renderRecordDesc(r)}</span>
-                  {r.remark && <span className="text-muted-foreground">（{r.remark}）</span>}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
 
       {/* Handle Dialog */}
       <Dialog open={handleDialogOpen} onOpenChange={setHandleDialogOpen}>
