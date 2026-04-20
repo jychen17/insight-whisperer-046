@@ -85,11 +85,11 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
   const [platformSearch, setPlatformSearch] = useState<Record<string, string>>({});
 
   const isEdit = !!theme;
-  const steps = ["基本信息", "数据源", "入主题条件与字段", "合并管线"];
+  const steps = ["基本信息", "数据源", "入主题条件", "字段配置", "合并管线"];
 
   useEffect(() => {
     if (open) {
-      const stepCount = 4;
+      const stepCount = 5;
       setStep(typeof initialStep === "number" ? Math.max(0, Math.min(initialStep, stepCount - 1)) : 0);
       setErrors({}); setDsSearch(""); setFieldSearch("");
       setCollapsedGroups({}); setActiveConditionDS("");
@@ -101,6 +101,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
         dataSources: (theme.dataSources || []).map(ds => ({
           ...ds,
           conditionTree: ds.conditionTree || { ...emptyConditionTree },
+          includeWords: Array.isArray(ds.includeWords) ? ds.includeWords : [],
+          excludeWords: Array.isArray(ds.excludeWords) ? ds.excludeWords : [],
         })),
       } : { ...emptyTheme, id: `custom_${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10) };
       setForm(initForm);
@@ -144,6 +146,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
       extendedParams: [{ platform: "" }],
       platforms: [], timeRange: "近7天", enabled: true,
       conditionTree: { ...emptyConditionTree, id: `root_${id}` },
+      includeWords: [], excludeWords: [],
     };
     setForm(f => {
       if (f.dataSources.length === 0) setActiveConditionDS(id);
@@ -865,13 +868,12 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
             </div>
           )}
 
-          {/* ═══════ Step 3: Conditions & Fields ═══════ */}
+          {/* ═══════ Step 3: Entry Conditions (basic + advanced) ═══════ */}
           {step === 2 && (
             <div className="space-y-5">
-              {/* Per-datasource condition builder */}
               <div>
                 <label className="text-xs font-medium text-foreground mb-1 block">各数据源入主题条件</label>
-                <p className="text-[11px] text-muted-foreground mb-3">每个数据源可独立配置入主题规则，支持 AND/OR 组合与括号嵌套</p>
+                <p className="text-[11px] text-muted-foreground mb-3">每个数据源可独立配置入主题规则。基础过滤适用于关键词精准匹配，高级配置支持标签条件组合。</p>
 
                 {form.dataSources.length === 0 ? (
                   <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
@@ -887,70 +889,161 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                               ? "border-primary bg-primary/10 text-primary font-medium"
                               : "border-border text-muted-foreground hover:bg-muted/50"
                           }`}>
-                          {ds.taskName}
+                          {ds.taskName || "未命名"}
                           <span className="ml-1 text-[10px] opacity-60">({ds.platforms.slice(0, 2).join("、")}{ds.platforms.length > 2 ? "…" : ""})</span>
                         </button>
                       ))}
                     </div>
 
-                    {getActiveDS() && (
-                      <div className="border border-primary/20 rounded-lg p-3 bg-primary/5">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">{getActiveDS()?.taskName}</Badge>
-                            <span className="text-[10px] text-muted-foreground">平台：{getActiveDS()?.platforms.join("、")}</span>
-                          </div>
-                          {form.dataSources.length > 1 && (
-                            <div className="flex items-center gap-1">
-                              <Copy className="w-3 h-3 text-muted-foreground" />
-                              <select
-                                value=""
-                                onChange={(e) => {
-                                  const sourceDS = form.dataSources.find(ds => ds.taskId === e.target.value);
-                                  if (sourceDS?.conditionTree) {
-                                    const cloneTree = JSON.parse(JSON.stringify(sourceDS.conditionTree));
-                                    const reId = (node: any) => {
-                                      node.id = `${node.id}_copy_${Date.now()}`;
-                                      (node.children || []).forEach(reId);
-                                    };
-                                    reId(cloneTree);
-                                    updateDSConditionTree(activeConditionDS, cloneTree);
-                                  }
-                                }}
-                                className="px-1.5 py-1 text-[10px] border border-border rounded bg-card text-foreground"
-                              >
-                                <option value="">复制规则自...</option>
-                                {form.dataSources.filter(ds => ds.taskId !== activeConditionDS).map(ds => (
-                                  <option key={ds.taskId} value={ds.taskId}>{ds.taskName}</option>
-                                ))}
-                              </select>
+                    {getActiveDS() && (() => {
+                      const activeDS = getActiveDS()!;
+                      const includeWords = activeDS.includeWords || [];
+                      const excludeWords = activeDS.excludeWords || [];
+                      const advCollapsed = collapsedGroups[`adv_${activeDS.taskId}`] !== false; // collapsed by default
+                      return (
+                        <div className="space-y-3">
+                          {/* Basic filter — include / exclude words */}
+                          <div className="border border-border rounded-lg p-3 bg-card space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">基础过滤条件</Badge>
+                              <span className="text-[10px] text-muted-foreground">精准匹配 · 标题/正文/发布人昵称</span>
                             </div>
-                          )}
+
+                            <WordChipsInput
+                              label="包含词"
+                              hint="精准匹配，标题/正文/发布人昵称匹配到任意包含词的帖子将被收录"
+                              tone="success"
+                              words={includeWords}
+                              onChange={(words) => updateDataSource(activeDS.taskId, { includeWords: words })}
+                            />
+
+                            <WordChipsInput
+                              label="过滤词"
+                              hint="精准匹配，标题/正文/发布人昵称匹配到任意过滤词的帖子将被丢弃"
+                              tone="danger"
+                              words={excludeWords}
+                              onChange={(words) => updateDataSource(activeDS.taskId, { excludeWords: words })}
+                            />
+                          </div>
+
+                          {/* Advanced — tag condition tree */}
+                          <div className="border border-border rounded-lg overflow-hidden">
+                            <button
+                              onClick={() => setCollapsedGroups(prev => ({ ...prev, [`adv_${activeDS.taskId}`]: !advCollapsed ? true : false }))}
+                              className="w-full flex items-center justify-between px-3 py-2 bg-muted/40 hover:bg-muted/60 transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                {advCollapsed ? <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
+                                <span className="text-xs font-medium text-foreground">高级配置（标签条件）</span>
+                                <span className="text-[10px] text-muted-foreground">支持 AND/OR · 最多一层分组</span>
+                              </div>
+                              {form.dataSources.length > 1 && !advCollapsed && (
+                                <div onClick={(e) => e.stopPropagation()} className="flex items-center gap-1">
+                                  <Copy className="w-3 h-3 text-muted-foreground" />
+                                  <select
+                                    value=""
+                                    onChange={(e) => {
+                                      const sourceDS = form.dataSources.find(ds => ds.taskId === e.target.value);
+                                      if (sourceDS?.conditionTree) {
+                                        const cloneTree = JSON.parse(JSON.stringify(sourceDS.conditionTree));
+                                        const reId = (node: any) => {
+                                          node.id = `${node.id}_copy_${Date.now()}`;
+                                          (node.children || []).forEach(reId);
+                                        };
+                                        reId(cloneTree);
+                                        updateDSConditionTree(activeConditionDS, cloneTree);
+                                      }
+                                    }}
+                                    className="px-1.5 py-1 text-[10px] border border-border rounded bg-card text-foreground"
+                                  >
+                                    <option value="">复制规则自...</option>
+                                    {form.dataSources.filter(ds => ds.taskId !== activeConditionDS).map(ds => (
+                                      <option key={ds.taskId} value={ds.taskId}>{ds.taskName}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                            </button>
+                            {!advCollapsed && (
+                              <div className="p-3 bg-primary/5">
+                                <ConditionTreeEditor
+                                  node={getActiveDSTree()}
+                                  onAddCondition={addCondition}
+                                  onAddGroup={addGroup}
+                                  onRemove={removeConditionNode}
+                                  onUpdate={updateConditionNode}
+                                  depth={0}
+                                  isRoot
+                                  maxOneGroup
+                                />
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <ConditionTreeEditor
-                          node={getActiveDSTree()}
-                          onAddCondition={addCondition}
-                          onAddGroup={addGroup}
-                          onRemove={removeConditionNode}
-                          onUpdate={updateConditionNode}
-                          depth={0}
-                          isRoot
-                        />
-                      </div>
-                    )}
+                      );
+                    })()}
                   </>
                 )}
               </div>
+            </div>
+          )}
 
-              {/* Field selection with groups */}
+          {/* ═══════ Step 4: Field Configuration (with display order) ═══════ */}
+          {step === 3 && (
+            <div className="space-y-5">
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-medium text-foreground">展示字段配置</label>
-                  <span className="text-[11px] text-muted-foreground">已选 {form.fieldConfigs.length} 个</span>
+                  <span className="text-[11px] text-muted-foreground">已选 {form.fieldConfigs.length} 个 · 按下方顺序在主题列表展示</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-3">
-                  选择要展示的字段（AI标签/原生字段/计算字段），配置展示位置、筛选方式和排序。
+                  从下方字段池勾选要展示的字段。已选字段将按上下移动确定的顺序在主题列表中排列。
                 </p>
+
+                {/* Selected fields with ordering */}
+                {form.fieldConfigs.length > 0 && (
+                  <div className="border border-primary/20 rounded-lg p-3 bg-primary/5 mb-4 space-y-1.5">
+                    <div className="text-[11px] font-medium text-foreground mb-1">已选字段顺序（拖动按钮调整）</div>
+                    {form.fieldConfigs.map((fc, idx) => {
+                      const fdef = ALL_FIELDS.find(f => f.key === fc.key);
+                      return (
+                        <div key={fc.key} className="flex items-center gap-2 px-2 py-1.5 bg-card rounded border border-border">
+                          <span className="text-[10px] font-mono text-muted-foreground w-6">{idx + 1}</span>
+                          <Badge className={`text-[9px] px-1.5 py-0 border-0 ${
+                            fc.fieldType === "ai" ? "bg-purple-500/10 text-purple-600 dark:text-purple-300" :
+                            fc.fieldType === "calc" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                          }`}>{FIELD_TYPE_LABELS[fc.fieldType]}</Badge>
+                          <span className="text-xs text-foreground flex-1">{fdef?.label || fc.key}</span>
+                          <button
+                            disabled={idx === 0}
+                            onClick={() => setForm(f => {
+                              const arr = [...f.fieldConfigs];
+                              [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+                              return { ...f, fieldConfigs: arr };
+                            })}
+                            className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
+                            title="上移"
+                          ><ArrowUp className="w-3 h-3" /></button>
+                          <button
+                            disabled={idx === form.fieldConfigs.length - 1}
+                            onClick={() => setForm(f => {
+                              const arr = [...f.fieldConfigs];
+                              [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
+                              return { ...f, fieldConfigs: arr };
+                            })}
+                            className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
+                            title="下移"
+                          ><ArrowDown className="w-3 h-3" /></button>
+                          <button
+                            onClick={() => toggleField(fc.key)}
+                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                            title="移除"
+                          ><Trash2 className="w-3 h-3" /></button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <div className="flex items-center border border-border rounded-md bg-card px-3 mb-3">
                   <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -1056,7 +1149,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                   );
                 })}
 
-                {/* Default sort summary */}
                 {form.fieldConfigs.some(fc => fc.isDefaultSort) && (
                   <div className="bg-primary/5 border border-primary/20 rounded-lg p-2.5 mt-2">
                     <p className="text-[11px] text-primary">

@@ -108,6 +108,7 @@ const navGroups: NavGroup[] = [
         icon: <Tags className="w-4 h-4" />,
         children: [
           { label: "标签体系", path: "/datacenter/tags/system" },
+          { label: "模型管理", path: "/datacenter/tags/models" },
         ],
       },
       {
@@ -163,10 +164,8 @@ const navGroups: NavGroup[] = [
         label: "系统设置",
         icon: <Settings className="w-4 h-4" />,
         children: [
-          { label: "用户管理", path: "/settings/users" },
-          { label: "权限管理", path: "/settings/permissions" },
-          { label: "通知设置", path: "/settings/notifications" },
-          { label: "日志管理", path: "/settings/logs" },
+          { label: "字段管理", path: "/settings/fields" },
+          { label: "爬虫管理", path: "/settings/crawlers" },
         ],
       },
     ],

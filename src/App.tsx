@@ -24,6 +24,7 @@ import AIChatBot from "@/components/AIChatBot";
 import CollectionTasks from "@/pages/datacenter/CollectionTasks";
 import KeywordManage from "@/pages/datacenter/KeywordManage";
 import TagSystem from "@/pages/datacenter/TagSystem";
+import ModelManage from "@/pages/datacenter/ModelManage";
 import ThemeRules from "@/pages/datacenter/ThemeRules";
 import DashboardConfig from "@/pages/datacenter/DashboardConfig";
 // 分析工具
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/datacenter/tasks" element={<CollectionTasks />} />
             <Route path="/datacenter/keywords" element={<KeywordManage />} />
             <Route path="/datacenter/tags/system" element={<TagSystem />} />
+            <Route path="/datacenter/tags/models" element={<ModelManage />} />
             <Route path="/datacenter/themes/manage" element={<ThemeSettings />} />
             <Route path="/datacenter/themes/detail" element={<ThemeDetail />} />
             <Route path="/datacenter/themes/dashboard" element={<DashboardConfig />} />
@@ -83,10 +85,8 @@ const App = () => (
             <Route path="/analysis/report-manage" element={<ReportManagement />} />
             <Route path="/analysis/report-templates" element={<ReportTemplates />} />
             {/* 系统设置 */}
-            <Route path="/settings/users" element={<PlaceholderPage title="用户管理" />} />
-            <Route path="/settings/permissions" element={<PlaceholderPage title="权限管理" />} />
-            <Route path="/settings/notifications" element={<PlaceholderPage title="通知设置" />} />
-            <Route path="/settings/logs" element={<PlaceholderPage title="日志管理" />} />
+            <Route path="/settings/fields" element={<PlaceholderPage title="字段管理" />} />
+            <Route path="/settings/crawlers" element={<PlaceholderPage title="爬虫管理" />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
