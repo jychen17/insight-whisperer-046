@@ -188,6 +188,19 @@ const articleCode = (id: number) => {
   return `ART${s}`;
 };
 
+// 高亮匹配的关键词片段
+const highlightMatch = (text: string, query: string) => {
+  const q = query.trim();
+  if (!q) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "ig"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase()
+      ? <mark key={i} className="bg-primary/20 text-primary rounded-sm px-0.5">{part}</mark>
+      : <span key={i}>{part}</span>
+  );
+};
+
 export default function SentimentDetail() {
   const navigate = useNavigate();
   const [mainTab, setMainTab] = useState<"sentiment" | "all">("sentiment");
@@ -1763,8 +1776,8 @@ export default function SentimentDetail() {
                             mergeTargetEventId === e.id ? "bg-primary/10" : ""
                           }`}
                         >
-                          <span className="font-mono text-muted-foreground shrink-0">#{e.id}</span>
-                          <span className="truncate flex-1">{e.title}</span>
+                          <span className="font-mono text-muted-foreground shrink-0">#{highlightMatch(e.id, mergeTargetSearch)}</span>
+                          <span className="truncate flex-1">{highlightMatch(e.title, mergeTargetSearch)}</span>
                           <span className="text-muted-foreground shrink-0">{e.postIds.length}篇</span>
                         </button>
                       ));
