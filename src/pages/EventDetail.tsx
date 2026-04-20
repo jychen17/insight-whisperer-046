@@ -6,6 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
+  Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
+  BreadcrumbPage, BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
   ArrowLeft, Flame, Eye, Globe, ThumbsUp, MessageCircle, Share2, Bookmark,
   Clock, BarChart3, Bell, ClipboardList, XCircle, ArrowUpRight, History, User, ExternalLink, CheckCircle2, MessageSquarePlus
 } from "lucide-react";
@@ -252,6 +256,27 @@ export default function EventDetail() {
 
   return (
     <div className="space-y-5">
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink onClick={() => navigate("/")} className="cursor-pointer">首页</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink onClick={() => navigate("/sentiment/overview")} className="cursor-pointer">舆情主题</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink onClick={() => navigate("/sentiment/detail")} className="cursor-pointer">舆情列表</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>事件详情</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -259,7 +284,6 @@ export default function EventDetail() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <h1 className="text-xl font-semibold text-foreground">事件详情</h1>
-          {importanceBadge}
           {renderStatusBadge(event.handleStatus)}
         </div>
         <div className="flex items-center gap-2">
