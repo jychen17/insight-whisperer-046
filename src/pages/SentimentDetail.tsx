@@ -1483,96 +1483,142 @@ export default function SentimentDetail() {
               return <div className="text-center py-12 text-muted-foreground text-sm">暂无数据</div>;
             }
             return (
-              <div className="grid grid-cols-2 gap-4">
-                {displayItems.unmerged.map((item) => (
-                  <div
-                    key={item.id}
-                    className={`bg-card rounded-lg border p-4 space-y-3 animate-fade-in hover:shadow-md transition-shadow ${
-                      item.isNoise ? "border-muted opacity-60" : selectedIds.includes(item.id) ? "border-primary" : "border-border"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate" onClick={() => navigate(`/sentiment/article/${item.id}`, { state: { item, from: "sentiment" } })}>{item.title}</h3>
-                          {renderStatusBadge(item.handleStatus)}
-                          {item.isNoise && (
-                            <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
-                              <Ban className="w-2.5 h-2.5 mr-0.5" />
-                              {NOISE_CATEGORIES.find(c => c.value === item.noiseCategory)?.label || "噪音"}
-                            </Badge>
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  {displayItems.unmerged.slice((articlePage - 1) * PAGE_SIZE, articlePage * PAGE_SIZE).map((item) => (
+                    <div
+                      key={item.id}
+                      className={`bg-card rounded-lg border p-4 space-y-3 animate-fade-in hover:shadow-md transition-shadow ${
+                        item.isNoise ? "border-muted opacity-60" : selectedIds.includes(item.id) ? "border-primary" : "border-border"
+                      }`}
+                    >
+                      {/* Title row */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate" onClick={() => navigate(`/sentiment/article/${item.id}`, { state: { item, from: "sentiment" } })}>{item.title}</h3>
+                            {renderStatusBadge(item.handleStatus)}
+                            {item.isNoise && (
+                              <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
+                                <Ban className="w-2.5 h-2.5 mr-0.5" />
+                                {NOISE_CATEGORIES.find(c => c.value === item.noiseCategory)?.label || "噪音"}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {item.isNoise ? (
+                            <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
+                                <ClipboardList className="w-3 h-3" /> 处置
+                              </Button>
+                              <button
+                                className="text-muted-foreground hover:text-destructive"
+                                title="标记为噪音"
+                                onClick={() => openNoiseDialog([item.id])}
+                              >
+                                <Ban className="w-3.5 h-3.5" />
+                              </button>
+                              <input
+                                type="checkbox"
+                                className="rounded"
+                                checked={selectedIds.includes(item.id)}
+                                onChange={() => toggleSelect(item.id)}
+                              />
+                            </>
                           )}
                         </div>
-                        <div className="flex items-center gap-2 mt-1.5 text-[11px] text-muted-foreground flex-wrap">
-                          <span>{item.platform}</span>
-                          <span>发布者: {item.author}</span>
-                          <span>内容类型: {item.contentType}</span>
+                      </div>
+
+                      {/* 原始字段 */}
+                      <div className="rounded-md border border-border bg-muted/20 p-2">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Badge variant="outline" className="text-[9px] border-muted-foreground/40 text-muted-foreground px-1 py-0">原始字段</Badge>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                          <span>平台: <span className="text-foreground">{item.platform}</span></span>
+                          <span>发布者: <span className="text-foreground">{item.author}</span></span>
+                          <span>发布时间: <span className="text-foreground">{item.publishTime}</span></span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.contentType}</Badge>
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.userType}</Badge>
                           <Badge className="text-[10px] px-1.5 py-0 bg-primary/80">{item.fans}</Badge>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {item.isNoise ? (
-                          <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
-                        ) : (
-                          <>
-                            <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
-                              <ClipboardList className="w-3 h-3" /> 处置
-                            </Button>
-                            <button
-                              className="text-muted-foreground hover:text-destructive"
-                              title="标记为噪音"
-                              onClick={() => openNoiseDialog([item.id])}
-                            >
-                              <Ban className="w-3.5 h-3.5" />
-                            </button>
-                            <input
-                              type="checkbox"
-                              className="rounded"
-                              checked={selectedIds.includes(item.id)}
-                              onChange={() => toggleSelect(item.id)}
-                            />
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-[11px] text-muted-foreground space-y-0.5">
-                      <div>发布时间: {item.publishTime} &nbsp; 收录时间: {item.collectTime} &nbsp; 收录地区: {item.region}</div>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      <Badge variant="outline" className="text-[10px]">初始等级: {item.riskLevel}</Badge>
-                      <Badge variant="outline" className="text-[10px]">发酵速度: {item.speed}</Badge>
-                      <Badge className="text-[10px] bg-primary/20 text-primary border-0">{item.business}</Badge>
-                      <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">{item.sentiment}</Badge>
-                      <Badge variant="outline" className="text-[10px]">舆情问题分类: {item.issueType}</Badge>
-                    </div>
-                    <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.summary}</div>
-                    {!item.isNoise && (
-                      <div className="text-destructive text-xs font-medium">AI摘要：{item.summary}</div>
-                    )}
-                    <div className="flex gap-4 text-[11px] text-muted-foreground">
-                      <span>评论量: {item.comments}</span>
-                      <span>点赞量: {item.likes}</span>
-                      <span>收藏量: {item.collects}</span>
-                      <span>分享量: {item.shares}</span>
-                    </div>
-                    {/* Processing records */}
-                    {(item.handleRecords || []).length > 0 && (
-                      <div className="pt-2 border-t border-border">
-                        <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1">
-                          <History className="w-3 h-3" /> 处理记录
+
+                      {/* AI 标签字段 */}
+                      <div className="rounded-md border border-primary/20 bg-primary/5 p-2">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Badge variant="outline" className="text-[9px] border-primary/40 text-primary px-1 py-0">AI 标签</Badge>
                         </div>
-                        {(item.handleRecords || []).map(r => (
-                          <div key={r.id} className="text-[11px] text-muted-foreground">
-                            <span className="text-foreground">{r.operator}</span> 于 {r.time} {renderRecordDesc(r)}
-                            {r.remark && <span className="ml-1">（{r.remark}）</span>}
-                          </div>
-                        ))}
+                        <div className="flex flex-wrap gap-1.5">
+                          <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">情感: {item.sentiment}</Badge>
+                          <Badge className="text-[10px] bg-primary/20 text-primary border-0">业务: {item.business}</Badge>
+                          <Badge variant="outline" className="text-[10px]">所属OTA: {item.business?.split("-")[0]}</Badge>
+                          <Badge variant="outline" className="text-[10px]">问题分类: {item.issueType}</Badge>
+                        </div>
                       </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+
+                      {/* 计算字段 */}
+                      <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-600 px-1 py-0">计算字段</Badge>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant="outline" className="text-[10px]">初始等级: {item.riskLevel}</Badge>
+                          <Badge variant="outline" className="text-[10px]">发酵速度: {item.speed}</Badge>
+                          <span className="ml-auto flex gap-2 text-[10px] text-muted-foreground">
+                            <span>👍{item.likes}</span>
+                            <span>⭐{item.collects}</span>
+                            <span>💬{item.comments}</span>
+                            <span>↗{item.shares}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.summary}</div>
+                      {!item.isNoise && (
+                        <div className="text-destructive text-xs font-medium">AI摘要：{item.summary}</div>
+                      )}
+                      {/* Processing records */}
+                      {(item.handleRecords || []).length > 0 && (
+                        <div className="pt-2 border-t border-border">
+                          <div className="flex items-center gap-1 text-[11px] text-muted-foreground mb-1">
+                            <History className="w-3 h-3" /> 处理记录
+                          </div>
+                          {(item.handleRecords || []).map(r => (
+                            <div key={r.id} className="text-[11px] text-muted-foreground">
+                              <span className="text-foreground">{r.operator}</span> 于 {r.time} {renderRecordDesc(r)}
+                              {r.remark && <span className="ml-1">（{r.remark}）</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {displayItems.unmerged.length > PAGE_SIZE && (
+                  <Pagination className="mt-4">
+                    <PaginationContent>
+                      <PaginationItem>
+                        <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setArticlePage(p => Math.max(1, p - 1)); }} />
+                      </PaginationItem>
+                      {Array.from({ length: Math.ceil(displayItems.unmerged.length / PAGE_SIZE) }, (_, i) => i + 1).map(p => (
+                        <PaginationItem key={p}>
+                          <PaginationLink href="#" isActive={p === articlePage} onClick={(e) => { e.preventDefault(); setArticlePage(p); }}>{p}</PaginationLink>
+                        </PaginationItem>
+                      ))}
+                      <PaginationItem>
+                        <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setArticlePage(p => Math.min(Math.ceil(displayItems.unmerged.length / PAGE_SIZE), p + 1)); }} />
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                )}
+                <div className="text-[11px] text-muted-foreground text-center mt-2">
+                  共 {displayItems.unmerged.length} 条文章 · 第 {articlePage}/{Math.max(1, Math.ceil(displayItems.unmerged.length / PAGE_SIZE))} 页
+                </div>
+              </>
             );
           })()}
         </>
