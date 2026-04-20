@@ -307,7 +307,8 @@ export default function EventDetail() {
       {/* 计算字段 */}
       <Card className="border-emerald-500/20 bg-emerald-500/5">
         <CardContent className="pt-4">
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-6 gap-3">
+            {importanceBadge}
             <Badge variant="outline" className={`text-[10px] justify-center py-1.5 ${speedColor[event.fermentSpeed]}`}>发酵速度: {speedLabel[event.fermentSpeed]}</Badge>
             {[
               { label: "总点赞量", value: event.totalLikes, icon: ThumbsUp },
