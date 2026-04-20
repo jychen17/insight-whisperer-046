@@ -1132,7 +1132,7 @@ export default function SentimentDetail() {
                 return (
                   <div key={event.id} className={`bg-card rounded-lg border border-border overflow-hidden ${importanceColors[event.importance || "low"]}`}>
                     <div className="p-4 cursor-pointer hover:bg-muted/20 transition-colors" onClick={() => setExpandedEventId(isExpanded ? null : event.id)}>
-                      {/* Row 1: Title & badges & handle status */}
+                      {/* Row 1: Title & handle status */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -1146,29 +1146,6 @@ export default function SentimentDetail() {
                             {importanceBadgeMap[event.importance || "low"]}
                             {renderStatusBadge(event.handleStatus)}
                             <h3 className="text-sm font-semibold text-foreground">{event.title}</h3>
-                          </div>
-                          <div className="flex items-center gap-2 mt-2 flex-wrap">
-                            {event.sentimentBreakdown && (
-                              <>
-                                {event.sentimentBreakdown.negative > 0 && (
-                                  <Badge className="bg-destructive/10 text-destructive border-0 text-[10px]">负向</Badge>
-                                )}
-                                {event.sentimentBreakdown.neutral > 0 && (
-                                  <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">中性</Badge>
-                                )}
-                                {event.sentimentBreakdown.positive > 0 && (
-                                  <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">正向</Badge>
-                                )}
-                              </>
-                            )}
-                            {event.topBusiness && (
-                              <Badge className="bg-primary/10 text-primary border-0 text-[10px]">{event.topBusiness}</Badge>
-                            )}
-                            {event.fermentSpeed && (
-                              <Badge variant="outline" className={`text-[10px] ${speedColor[event.fermentSpeed]}`}>
-                                发酵速度: {speedLabel[event.fermentSpeed]}
-                              </Badge>
-                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
@@ -1185,54 +1162,104 @@ export default function SentimentDetail() {
                         </div>
                       </div>
 
-                      {/* Row 3: Key metrics */}
-                      <div className="grid grid-cols-7 gap-3 mt-3 bg-muted/20 rounded-md p-2.5">
-                        <div className="text-center">
-                          <div className="text-xs font-semibold text-foreground">{event.postIds.length}</div>
-                          <div className="text-[10px] text-muted-foreground">文章总量</div>
+                      {/* AI 标签字段 */}
+                      <div className="mt-3 rounded-md border border-primary/20 bg-primary/5 p-2.5">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Badge variant="outline" className="text-[9px] border-primary/40 text-primary px-1 py-0">AI 标签</Badge>
+                          <span className="text-[10px] text-muted-foreground">事件标签（基于文章相似度聚合）</span>
                         </div>
-                        <div className="text-center">
-                          <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
-                            <ThumbsUp className="w-3 h-3" /> {event.totalLikes || 0}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">总点赞量</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
-                            <Bookmark className="w-3 h-3" /> {event.totalCollects || 0}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">总收藏量</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
-                            <MessageCircle className="w-3 h-3" /> {event.totalComments || 0}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">总评论量</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
-                            <Share2 className="w-3 h-3" /> {event.totalShares || 0}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground">总分享量</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-[10px] text-foreground">{event.firstTime || "-"}</div>
-                          <div className="text-[10px] text-muted-foreground">首发时间</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-[10px] text-foreground">{event.latestTime || "-"}</div>
-                          <div className="text-[10px] text-muted-foreground">最新时间</div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {event.sentimentBreakdown && (
+                            <>
+                              {event.sentimentBreakdown.negative > 0 && (
+                                <Badge className="bg-destructive/10 text-destructive border-0 text-[10px]">负向</Badge>
+                              )}
+                              {event.sentimentBreakdown.neutral > 0 && (
+                                <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">中性</Badge>
+                              )}
+                              {event.sentimentBreakdown.positive > 0 && (
+                                <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">正向</Badge>
+                              )}
+                            </>
+                          )}
+                          {event.topBusiness && (
+                            <Badge className="bg-primary/10 text-primary border-0 text-[10px]">{event.topBusiness}</Badge>
+                          )}
+                          <span className="ml-auto text-[10px] text-muted-foreground">文章总量</span>
+                          <span className="text-xs font-semibold text-foreground">{event.postIds.length}</span>
                         </div>
                       </div>
 
-                      {/* Row 4: Platforms */}
-                      <div className="flex items-center gap-3 mt-2 text-[11px] text-muted-foreground">
-                        <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> 覆盖平台:</span>
-                        {(event.keyPlatforms || []).map(p => (
-                          <Badge key={p} variant="outline" className="text-[10px] px-1.5 py-0">{p}</Badge>
-                        ))}
-                        {event.trendDirection === "up" && <span className="flex items-center gap-0.5 text-destructive ml-auto"><TrendingUp className="w-3 h-3" />趋势上升</span>}
-                        {event.trendDirection === "down" && <span className="flex items-center gap-0.5 text-emerald-600 ml-auto"><TrendingDown className="w-3 h-3" />趋势下降</span>}
+                      {/* 计算字段 */}
+                      <div className="mt-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2.5">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-600 px-1 py-0">计算字段</Badge>
+                          <span className="text-[10px] text-muted-foreground">基于互动量聚合</span>
+                        </div>
+                        <div className="grid grid-cols-5 gap-3">
+                          {event.fermentSpeed && (
+                            <div className="text-center">
+                              <div className={`text-xs font-semibold ${speedColor[event.fermentSpeed]}`}>{speedLabel[event.fermentSpeed]}</div>
+                              <div className="text-[10px] text-muted-foreground">发酵速度</div>
+                            </div>
+                          )}
+                          <div className="text-center">
+                            <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
+                              <ThumbsUp className="w-3 h-3" /> {event.totalLikes || 0}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">总点赞量</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
+                              <Bookmark className="w-3 h-3" /> {event.totalCollects || 0}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">总收藏量</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
+                              <MessageCircle className="w-3 h-3" /> {event.totalComments || 0}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">总评论量</div>
+                          </div>
+                          <div className="text-center">
+                            <div className="text-xs font-semibold text-foreground flex items-center justify-center gap-0.5">
+                              <Share2 className="w-3 h-3" /> {event.totalShares || 0}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">总分享量</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 原始字段 */}
+                      <div className="mt-2 rounded-md border border-border bg-muted/20 p-2.5">
+                        <div className="flex items-center gap-1.5 mb-1.5">
+                          <Badge variant="outline" className="text-[9px] border-muted-foreground/40 text-muted-foreground px-1 py-0">原始字段</Badge>
+                          <span className="text-[10px] text-muted-foreground">采集自原始文章</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-3 text-[11px]">
+                          <div>
+                            <div className="text-muted-foreground text-[10px]">首发时间</div>
+                            <div className="text-foreground">{event.firstTime || "-"}</div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground text-[10px]">最新时间</div>
+                            <div className="text-foreground">{event.latestTime || "-"}</div>
+                          </div>
+                          <div>
+                            <div className="text-muted-foreground text-[10px] mb-0.5 flex items-center gap-1"><Globe className="w-3 h-3" />覆盖平台</div>
+                            <div className="flex gap-1 flex-wrap">
+                              {(event.keyPlatforms || []).map(p => (
+                                <Badge key={p} variant="outline" className="text-[10px] px-1.5 py-0">{p}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        {(event.trendDirection === "up" || event.trendDirection === "down") && (
+                          <div className="mt-2 pt-2 border-t border-border/50 text-[10px]">
+                            {event.trendDirection === "up" && <span className="flex items-center gap-0.5 text-destructive"><TrendingUp className="w-3 h-3" />趋势上升</span>}
+                            {event.trendDirection === "down" && <span className="flex items-center gap-0.5 text-emerald-600"><TrendingDown className="w-3 h-3" />趋势下降</span>}
+                          </div>
+                        )}
                       </div>
 
                       {/* Processing records preview */}
