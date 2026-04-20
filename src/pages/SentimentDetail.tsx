@@ -731,7 +731,7 @@ export default function SentimentDetail() {
       const methodLabel = clusterMethod === "text_similarity" ? "文本相似度" : clusterMethod === "title_same" ? "标题相同" : "正文相同";
       Object.entries(groups).forEach(([key, ids]) => {
         if (ids.length < 2) return;
-        const eid = `auto-${Date.now()}-${key}`;
+        const eid = `CLS-${Date.now().toString(36).toUpperCase()}-${key.slice(0, 4).toUpperCase()}`;
         const posts = updatedItems.filter(i => ids.includes(i.id));
         const meta = buildEventMeta(posts, methodLabel);
         newEvents.push({
