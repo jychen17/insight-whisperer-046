@@ -1181,6 +1181,7 @@ export default function SentimentDetail() {
                             />
                             {renderStatusBadge(event.handleStatus)}
                             <h3 className="text-sm font-semibold text-foreground">{event.title}</h3>
+                            <span className="text-[10px] text-muted-foreground/60 font-mono" title="聚类ID">#{event.id}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
