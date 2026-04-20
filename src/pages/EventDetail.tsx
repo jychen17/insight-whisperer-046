@@ -106,8 +106,8 @@ export default function EventDetail() {
   const [remarkText, setRemarkText] = useState("");
 
   const importanceBadge = event.importance === "high"
-    ? <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs gap-1"><Flame className="w-3 h-3" />重大</Badge>
-    : <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs gap-1"><Eye className="w-3 h-3" />一般</Badge>;
+    ? <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-[10px] justify-center py-1.5"><Flame className="w-3 h-3" />重大</Badge>
+    : <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] justify-center py-1.5"><Eye className="w-3 h-3" />一般</Badge>;
 
   const speedLabel: Record<string, string> = { high: "高", medium: "中", low: "低" };
   const speedColor: Record<string, string> = { high: "text-destructive", medium: "text-amber-600", low: "text-muted-foreground" };
@@ -307,7 +307,8 @@ export default function EventDetail() {
       {/* 计算字段 */}
       <Card className="border-emerald-500/20 bg-emerald-500/5">
         <CardContent className="pt-4">
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-6 gap-3">
+            {importanceBadge}
             <Badge variant="outline" className={`text-[10px] justify-center py-1.5 ${speedColor[event.fermentSpeed]}`}>发酵速度: {speedLabel[event.fermentSpeed]}</Badge>
             {[
               { label: "总点赞量", value: event.totalLikes, icon: ThumbsUp },
@@ -363,37 +364,6 @@ export default function EventDetail() {
               </div>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Event Processing Records */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><History className="w-4 h-4" /> 事件处理记录</CardTitle></CardHeader>
-        <CardContent>
-          {event.handleRecords.length === 0 ? (
-            <p className="text-sm text-muted-foreground">暂无处理记录</p>
-          ) : (
-            <div className="space-y-3">
-              {event.handleRecords.map((r, idx) => (
-                <div key={r.id} className="flex gap-3 items-start">
-                  <div className="flex flex-col items-center">
-                    <div className={`w-2.5 h-2.5 rounded-full ${idx === 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
-                    {idx < event.handleRecords.length - 1 && <div className="w-px h-8 bg-border" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-foreground">{r.operator}</span>
-                      <span className="text-[11px] text-muted-foreground">{r.time}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      操作: <span className="text-foreground">{renderRecordDesc(r)}</span>
-                      {r.remark && <span className="ml-2">备注: {r.remark}</span>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </CardContent>
       </Card>
 
