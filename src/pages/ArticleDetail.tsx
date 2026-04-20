@@ -338,7 +338,7 @@ export default function ArticleDetail() {
 
         {/* Right: AI panel */}
         <div className="col-span-1 space-y-4">
-          <div className="bg-primary/5 rounded-md p-3 border border-primary/20 space-y-1.5">
+          <div className="bg-primary/5 rounded-md p-3 border border-primary/20 space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1 text-xs font-medium text-primary">
                 <Sparkles className="w-3.5 h-3.5" /> AI 摘要
@@ -346,32 +346,60 @@ export default function ArticleDetail() {
               <span className="text-[10px] text-muted-foreground">可手动调整</span>
             </div>
             <Textarea
-              value={aiSummary}
-              onChange={(e) => setAiSummary(e.target.value)}
-              onBlur={() => toast({ title: "AI 摘要已更新" })}
+              value={draftSummary}
+              onChange={(e) => setDraftSummary(e.target.value)}
               className="text-xs min-h-[72px] bg-background"
             />
+            <div className="flex items-center justify-end gap-1.5">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 text-[11px]"
+                onClick={() => setDraftSummary(aiSummary)}
+                disabled={draftSummary === aiSummary}
+              >重置</Button>
+              <Button
+                size="sm"
+                className="h-6 text-[11px]"
+                onClick={() => requestAiChange("AI 摘要", aiSummary, draftSummary, () => setAiSummary(draftSummary))}
+                disabled={draftSummary === aiSummary}
+              >确定修改</Button>
+            </div>
           </div>
 
-          <div className="bg-primary/5 rounded-md p-3 border border-primary/20 space-y-1.5">
+          <div className="bg-primary/5 rounded-md p-3 border border-primary/20 space-y-2">
             <div className="flex items-center justify-between">
               <div className="text-xs font-medium text-primary">舆情判断依据</div>
               <span className="text-[10px] text-muted-foreground">可手动调整</span>
             </div>
             <Textarea
-              value={aiJudgement}
-              onChange={(e) => setAiJudgement(e.target.value)}
-              onBlur={() => toast({ title: "舆情判断依据已更新" })}
+              value={draftJudgement}
+              onChange={(e) => setDraftJudgement(e.target.value)}
               className="text-xs min-h-[72px] bg-background"
             />
+            <div className="flex items-center justify-end gap-1.5">
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 text-[11px]"
+                onClick={() => setDraftJudgement(aiJudgement)}
+                disabled={draftJudgement === aiJudgement}
+              >重置</Button>
+              <Button
+                size="sm"
+                className="h-6 text-[11px]"
+                onClick={() => requestAiChange("舆情判断依据", aiJudgement, draftJudgement, () => setAiJudgement(draftJudgement))}
+                disabled={draftJudgement === aiJudgement}
+              >确定修改</Button>
+            </div>
           </div>
 
           {/* AI 标签字段 */}
           <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-2">
-            <div className="text-[10px] text-muted-foreground text-right">所有 AI 标签均可手动调整</div>
+            <div className="text-[10px] text-muted-foreground text-right">所有 AI 标签均可手动调整（修改需二次确认）</div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground shrink-0">情感分类：</span>
-              <Select value={item.sentiment} onValueChange={(v) => updateField("sentiment", v)}>
+              <Select value={item.sentiment} onValueChange={(v) => updateAiSelect("sentiment", "情感分类", v)}>
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
                   {SENTIMENT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
@@ -380,7 +408,14 @@ export default function ArticleDetail() {
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground shrink-0">是否负面舆情：</span>
-              <Select value={isNegativeLabel} onValueChange={(v) => { setIsNegativeLabel(v); toast({ title: "已更新" }); }}>
+              <Select
+                value={isNegativeLabel}
+                onValueChange={(v) => {
+                  const fromLabel = NEGATIVE_OPTIONS.find(o => o.value === isNegativeLabel)?.label || isNegativeLabel;
+                  const toLabel = NEGATIVE_OPTIONS.find(o => o.value === v)?.label || v;
+                  requestAiChange("是否负面舆情", fromLabel, toLabel, () => setIsNegativeLabel(v));
+                }}
+              >
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
                   {NEGATIVE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -389,7 +424,7 @@ export default function ArticleDetail() {
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground shrink-0">业务类型：</span>
-              <Select value={item.business} onValueChange={(v) => updateField("business", v)}>
+              <Select value={item.business} onValueChange={(v) => updateAiSelect("business", "业务类型", v)}>
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
                   {BUSINESS_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
@@ -398,7 +433,14 @@ export default function ArticleDetail() {
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground shrink-0">所属 OTA：</span>
-              <Select value={item.business?.split("-")[0] || "同程旅行"} onValueChange={(v) => updateField("business", `${v}-${item.business?.split("-")[1] || "其他"}`)}>
+              <Select
+                value={item.business?.split("-")[0] || "同程旅行"}
+                onValueChange={(v) => {
+                  const fromOta = item.business?.split("-")[0] || "";
+                  const newBusiness = `${v}-${item.business?.split("-")[1] || "其他"}`;
+                  requestAiChange("所属 OTA", fromOta, v, () => setItem(prev => prev ? { ...prev, business: newBusiness } : prev));
+                }}
+              >
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
                   {["同程旅行", "携程", "美团", "飞猪", "去哪儿"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
@@ -407,7 +449,7 @@ export default function ArticleDetail() {
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground shrink-0">舆情问题分类：</span>
-              <Select value={item.issueType} onValueChange={(v) => updateField("issueType", v)}>
+              <Select value={item.issueType} onValueChange={(v) => updateAiSelect("issueType", "舆情问题分类", v)}>
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
                   {ISSUE_TYPE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
@@ -416,13 +458,50 @@ export default function ArticleDetail() {
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground shrink-0">AI 噪音标签：</span>
-              <Select value={aiNoiseLabel} onValueChange={setAiNoiseLabel}>
+              <Select
+                value={aiNoiseLabel}
+                onValueChange={(v) => {
+                  const fromLabel = AI_NOISE_OPTIONS.find(o => o.value === aiNoiseLabel)?.label || aiNoiseLabel;
+                  const toLabel = AI_NOISE_OPTIONS.find(o => o.value === v)?.label || v;
+                  requestAiChange("AI 噪音标签", fromLabel, toLabel, () => setAiNoiseLabel(v));
+                }}
+              >
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
                   {AI_NOISE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* AI 字段修改记录 */}
+          <div className="rounded-md border border-border bg-muted/20 p-3">
+            <div className="flex items-center gap-1 text-xs font-medium text-foreground mb-2">
+              <History className="w-3.5 h-3.5" /> AI 字段修改记录
+              {aiEditHistory.length > 0 && (
+                <span className="text-[10px] text-muted-foreground ml-1">（共 {aiEditHistory.length} 条）</span>
+              )}
+            </div>
+            {aiEditHistory.length === 0 ? (
+              <div className="text-[11px] text-muted-foreground py-2 text-center">暂无修改记录</div>
+            ) : (
+              <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                {aiEditHistory.map(r => (
+                  <div key={r.id} className="text-[11px] border-l-2 border-primary/40 pl-2 py-1 bg-background/60 rounded-r">
+                    <div className="text-foreground">
+                      <span className="font-medium">{r.operator}</span>
+                      <span className="text-muted-foreground"> 于 {r.time} 修改了 </span>
+                      <span className="text-primary font-medium">{r.field}</span>
+                    </div>
+                    <div className="text-muted-foreground mt-0.5 break-words">
+                      <span className="line-through opacity-70">{r.from || "（空）"}</span>
+                      <span className="mx-1">→</span>
+                      <span className="text-foreground">{r.to || "（空）"}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
