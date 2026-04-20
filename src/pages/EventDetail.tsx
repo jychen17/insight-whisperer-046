@@ -479,29 +479,6 @@ export default function EventDetail() {
         </CardContent>
       </Card>
 
-      {/* Per-post processing records */}
-      {event.posts.filter(p => p.handleRecords.length > 0).map(post => (
-        <Card key={`records-${post.id}`}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <History className="w-4 h-4" /> 文章处理记录 - {post.title.slice(0, 20)}{post.title.length > 20 ? "..." : ""}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {post.handleRecords.map(r => (
-                <div key={r.id} className="flex items-center gap-3 text-xs">
-                  <User className="w-3 h-3 text-muted-foreground shrink-0" />
-                  <span className="font-medium text-foreground">{r.operator}</span>
-                  <span className="text-muted-foreground">{r.time}</span>
-                  <span className="text-foreground">{renderRecordDesc(r)}</span>
-                  {r.remark && <span className="text-muted-foreground">（{r.remark}）</span>}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
 
       {/* Handle Dialog */}
       <Dialog open={handleDialogOpen} onOpenChange={setHandleDialogOpen}>
