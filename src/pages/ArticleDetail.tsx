@@ -260,6 +260,15 @@ export default function ArticleDetail() {
               <Badge variant="outline" className="text-[10px] px-1 py-0">地区: {item.region}</Badge>
             </div>
           </div>
+          <div className="col-span-2 md:col-span-4">
+            <div className="text-muted-foreground text-[10px] mb-1">互动数据</div>
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="outline" className="text-[10px]">点赞 {item.likes}</Badge>
+              <Badge variant="outline" className="text-[10px]">收藏 {item.collects}</Badge>
+              <Badge variant="outline" className="text-[10px]">评论 {item.comments}</Badge>
+              <Badge variant="outline" className="text-[10px]">分享 {item.shares}</Badge>
+            </div>
+          </div>
         </div>
       </div>
 
