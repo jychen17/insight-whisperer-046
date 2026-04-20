@@ -375,25 +375,40 @@ export default function SentimentDetail() {
   };
 
   const confirmMerge = () => {
-    const eventId = `evt-${Date.now()}`;
-    const selectedItems = items.filter(i => selectedIds.includes(i.id));
-    const meta = buildEventMeta(selectedItems);
-    const newEvent: MergedEvent = {
-      id: eventId,
-      title: mergeTitle || "未命名事件",
-      postIds: selectedIds,
-      createdAt: new Date().toLocaleString("zh-CN"),
-      summary: `合并了 ${selectedIds.length} 条相关舆情，涉及平台: ${[...new Set(selectedItems.map(i => i.platform))].join("、")}`,
-      handleStatus: "pending",
-      handleRecords: [],
-      ...meta,
-    };
-    setMergedEvents(prev => [...prev, newEvent]);
-    setItems(prev => prev.map(i => selectedIds.includes(i.id) ? { ...i, mergedEventId: eventId } : i));
+    if (mergeMode === "existing") {
+      if (!mergeTargetEventId) {
+        toast({ title: "请选择目标聚类", variant: "destructive" });
+        return;
+      }
+      const target = mergedEvents.find(e => e.id === mergeTargetEventId);
+      if (!target) return;
+      const newPostIds = [...new Set([...target.postIds, ...selectedIds])];
+      const updatedItems = items.map(i => newPostIds.includes(i.id) ? { ...i, mergedEventId: mergeTargetEventId } : i);
+      const meta = buildEventMeta(updatedItems.filter(p => newPostIds.includes(p.id)));
+      setItems(updatedItems);
+      setMergedEvents(prev => prev.map(e => e.id === mergeTargetEventId ? { ...e, postIds: newPostIds, ...meta } : e));
+      toast({ title: "合并成功", description: `已并入聚类 ${mergeTargetEventId}（共 ${selectedIds.length} 条）` });
+    } else {
+      const eventId = `CLS-${Date.now().toString(36).toUpperCase()}`;
+      const selectedItems = items.filter(i => selectedIds.includes(i.id));
+      const meta = buildEventMeta(selectedItems);
+      const newEvent: MergedEvent = {
+        id: eventId,
+        title: mergeTitle || "未命名事件",
+        postIds: selectedIds,
+        createdAt: new Date().toLocaleString("zh-CN"),
+        summary: `合并了 ${selectedIds.length} 条相关舆情，涉及平台: ${[...new Set(selectedItems.map(i => i.platform))].join("、")}`,
+        handleStatus: "pending",
+        handleRecords: [],
+        ...meta,
+      };
+      setMergedEvents(prev => [...prev, newEvent]);
+      setItems(prev => prev.map(i => selectedIds.includes(i.id) ? { ...i, mergedEventId: eventId } : i));
+      toast({ title: "合并成功", description: `已生成新聚类 ${eventId}` });
+    }
     setSelectedIds([]);
     setMergeDialogOpen(false);
     setMergeTitle("");
-    toast({ title: "合并成功", description: `已将 ${selectedIds.length} 条舆情合并为事件` });
   };
 
   const handleUnmerge = (eventId: string) => {
