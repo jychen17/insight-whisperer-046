@@ -1215,8 +1215,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
             </div>
           )}
 
-          {/* ═══════ Step 4: Merge Pipeline ═══════ */}
-          {step === 3 && (
+          {/* ═══════ Step 5: Merge Pipeline ═══════ */}
+          {step === 4 && (
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground flex items-center gap-2">
