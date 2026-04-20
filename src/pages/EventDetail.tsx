@@ -106,8 +106,8 @@ export default function EventDetail() {
   const [remarkText, setRemarkText] = useState("");
 
   const importanceBadge = event.importance === "high"
-    ? <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-xs gap-1"><Flame className="w-3 h-3" />重大</Badge>
-    : <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-xs gap-1"><Eye className="w-3 h-3" />一般</Badge>;
+    ? <Badge className="bg-destructive/10 text-destructive border-destructive/30 text-[10px] justify-center py-1.5"><Flame className="w-3 h-3" />重大</Badge>
+    : <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px] justify-center py-1.5"><Eye className="w-3 h-3" />一般</Badge>;
 
   const speedLabel: Record<string, string> = { high: "高", medium: "中", low: "低" };
   const speedColor: Record<string, string> = { high: "text-destructive", medium: "text-amber-600", low: "text-muted-foreground" };
