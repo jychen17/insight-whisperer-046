@@ -45,7 +45,10 @@ export default function ThemeDetail() {
   const location = useLocation();
   const navigate = useNavigate();
   const theme = location.state?.theme as ThemeConfig | undefined;
+  const fromPath = location.state?.from as string | undefined;
+  const fromLabel = location.state?.fromLabel as string | undefined;
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
   const [dashboardDialogTheme, setDashboardDialogTheme] = useState<ThemeConfig | null>(null);
   const [currentTheme, setCurrentTheme] = useState<ThemeConfig | null>(theme || null);
   const [activeTab, setActiveTab] = useState<string>("");
@@ -71,10 +74,19 @@ export default function ThemeDetail() {
     <div className="space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <button onClick={() => navigate("/")} className="hover:text-foreground transition-colors">数据中心</button>
-        <ChevronRight className="w-3 h-3" />
-        <button onClick={() => navigate("/datacenter/themes/manage")} className="hover:text-foreground transition-colors">主题配置</button>
-        <ChevronRight className="w-3 h-3" />
+        {fromPath ? (
+          <>
+            <button onClick={() => navigate(fromPath)} className="hover:text-foreground transition-colors">{fromLabel || "返回"}</button>
+            <ChevronRight className="w-3 h-3" />
+          </>
+        ) : (
+          <>
+            <button onClick={() => navigate("/")} className="hover:text-foreground transition-colors">数据中心</button>
+            <ChevronRight className="w-3 h-3" />
+            <button onClick={() => navigate("/datacenter/themes/manage")} className="hover:text-foreground transition-colors">主题配置</button>
+            <ChevronRight className="w-3 h-3" />
+          </>
+        )}
         <span className="text-foreground font-medium">{currentTheme.name}</span>
       </nav>
 
@@ -88,6 +100,10 @@ export default function ThemeDetail() {
           </div>
         </div>
         <div className="flex gap-2">
+          <button onClick={() => setPermissionDialogOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground hover:bg-accent transition-colors">
+            <Shield className="w-3 h-3" /> 数据权限
+          </button>
           <button onClick={() => setDashboardDialogTheme(currentTheme)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground hover:bg-accent transition-colors">
             <LayoutDashboard className="w-3 h-3" /> 看板搭建
