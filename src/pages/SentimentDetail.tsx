@@ -265,8 +265,7 @@ export default function SentimentDetail() {
   // Handle filter for events
   const [eventFilterHandleStatus, setEventFilterHandleStatus] = useState<"all" | HandleStatus>("all");
 
-  const [themeConfigOpen, setThemeConfigOpen] = useState(false);
-  const [currentSentimentTheme, setCurrentSentimentTheme] = useState<ThemeConfig | null>(null);
+  const [currentSentimentTheme] = useState<ThemeConfig | null>(null);
 
   // Export dialog state
   const sentimentTheme = useMemo(() => defaultThemes.find(t => t.id === "sentiment") ?? null, []);
