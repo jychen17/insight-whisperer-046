@@ -297,32 +297,52 @@ export default function ArticleDetail() {
 
         {/* Right: AI panel */}
         <div className="col-span-1 space-y-4">
-          <div className="bg-primary/5 rounded-md p-3 border border-primary/20">
-            <div className="flex items-center gap-1 text-xs font-medium text-primary mb-1.5">
-              <Sparkles className="w-3.5 h-3.5" /> AI 摘要
+          <div className="bg-primary/5 rounded-md p-3 border border-primary/20 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1 text-xs font-medium text-primary">
+                <Sparkles className="w-3.5 h-3.5" /> AI 摘要
+              </div>
+              <span className="text-[10px] text-muted-foreground">可手动调整</span>
             </div>
-            <div className="text-xs text-foreground leading-relaxed">{item.summary}</div>
+            <Textarea
+              value={aiSummary}
+              onChange={(e) => setAiSummary(e.target.value)}
+              onBlur={() => toast({ title: "AI 摘要已更新" })}
+              className="text-xs min-h-[72px] bg-background"
+            />
           </div>
 
-          <div className="bg-muted/30 rounded-md p-3 border border-border">
-            <div className="text-xs font-medium text-foreground mb-1.5">AI 命中原因</div>
-            <div className="text-xs text-muted-foreground leading-relaxed">
-              根据「{item.business}」业务范畴及内容关键词，命中{item.issueType}问题，情感判定为{item.sentiment}。
+          <div className="bg-primary/5 rounded-md p-3 border border-primary/20 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-medium text-primary">舆情判断依据</div>
+              <span className="text-[10px] text-muted-foreground">可手动调整</span>
             </div>
+            <Textarea
+              value={aiJudgement}
+              onChange={(e) => setAiJudgement(e.target.value)}
+              onBlur={() => toast({ title: "舆情判断依据已更新" })}
+              className="text-xs min-h-[72px] bg-background"
+            />
           </div>
 
           {/* AI 标签字段 */}
           <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-2">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">AI 标签</Badge>
-              <span className="text-[11px] text-muted-foreground">AI 推理输出</span>
-            </div>
+            <div className="text-[10px] text-muted-foreground text-right">所有 AI 标签均可手动调整</div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground shrink-0">情感分类：</span>
               <Select value={item.sentiment} onValueChange={(v) => updateField("sentiment", v)}>
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
                   {SENTIMENT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground shrink-0">是否负面舆情：</span>
+              <Select value={isNegativeLabel} onValueChange={(v) => { setIsNegativeLabel(v); toast({ title: "已更新" }); }}>
+                <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  {NEGATIVE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -364,37 +384,6 @@ export default function ArticleDetail() {
             </div>
           </div>
 
-          {/* Two separated actions */}
-          <div className="space-y-2 pt-2 border-t">
-            <div className="text-[11px] text-muted-foreground leading-relaxed">
-              「从舆情移出」基于 AI 舆情标签判断；「标记噪音」基于 AI 噪音标签判断，两者相互独立。
-            </div>
-            {!item.isNoise && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-8 text-xs"
-                onClick={() => updateField("sentiment", "中性")}
-              >
-                <ArrowLeft className="w-3 h-3 mr-1 rotate-45" /> 从舆情移出（调整AI舆情标签）
-              </Button>
-            )}
-            {!item.isNoise && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full h-8 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
-                onClick={() => setNoiseDialogOpen(true)}
-              >
-                <Ban className="w-3 h-3 mr-1" /> 标记噪音（基于AI噪音标签）
-              </Button>
-            )}
-            {item.isNoise && (
-              <div className="text-xs text-muted-foreground bg-muted/40 rounded p-2 text-center">
-                已标记为噪音：{NOISE_CATEGORIES.find(c => c.value === item.noiseCategory)?.label || "未分类"}
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
