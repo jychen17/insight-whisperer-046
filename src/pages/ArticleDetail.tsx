@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import {
   ArrowLeft, FileText, History, Sparkles, Clock, Ban, ClipboardList,
-  Image as ImageIcon, ScanText, ChevronLeft, ChevronRight,
+  Image as ImageIcon, ScanText, ChevronLeft, ChevronRight, Search, X,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { SentimentItem, HandleRecord } from "@/pages/SentimentDetail";
@@ -81,6 +81,19 @@ const renderRecordDesc = (r: HandleRecord) => {
   return map[r.action] || "执行了操作";
 };
 
+// 高亮命中关键词
+const highlightText = (text: string, query: string): React.ReactNode => {
+  const q = query.trim();
+  if (!q) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "ig"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase()
+      ? <mark key={i} className="bg-yellow-300/60 text-foreground rounded-sm px-0.5">{part}</mark>
+      : <span key={i}>{part}</span>
+  );
+};
+
 export default function ArticleDetail() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -144,6 +157,9 @@ export default function ArticleDetail() {
   // Noise dialog (manual mark)
   const [noiseDialogOpen, setNoiseDialogOpen] = useState(false);
   const [noiseCategory, setNoiseCategory] = useState("unrelated");
+
+  // 关键词搜索（高亮）
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (!item) {
@@ -225,11 +241,30 @@ export default function ArticleDetail() {
         </Button>
       </div>
 
-      {/* Title */}
+      {/* Title + 关键词搜索 */}
       <div className="flex items-start gap-3 pb-3 border-b">
         <FileText className="w-5 h-5 text-primary mt-1 shrink-0" />
         <div className="flex-1 min-w-0">
-          <h1 className="text-lg font-semibold text-foreground">{item.title}</h1>
+          <h1 className="text-lg font-semibold text-foreground">{highlightText(item.title, searchQuery)}</h1>
+        </div>
+        <div className="relative shrink-0 w-64">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <input
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            placeholder="在文章内搜索关键词高亮"
+            className="w-full h-8 pl-7 pr-7 text-xs border border-border rounded-md bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground"
+              aria-label="清除搜索"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -327,14 +362,13 @@ export default function ArticleDetail() {
           <div>
             <div className="text-xs font-medium text-foreground mb-1.5">文本：</div>
             <div className="text-sm text-foreground bg-muted/30 rounded-md p-4 leading-relaxed whitespace-pre-wrap max-h-[480px] overflow-y-auto">
-              {item.summary}
+              {highlightText(item.summary, searchQuery)}
               {"\n\n"}
               {/* Pad with mock long content for demonstration */}
-              {Array.from({ length: 4 }).map((_, i) => (
-                <span key={i}>
-                  {`\n第 ${i + 1} 段补充：用户详细描述了相关问题的发生过程、与客服沟通的细节，并附上了订单截图作为证据，希望平台能尽快给出合理的解决方案。`}
-                </span>
-              ))}
+              {Array.from({ length: 4 }).map((_, i) => {
+                const para = `\n第 ${i + 1} 段补充：用户详细描述了相关问题的发生过程、与客服沟通的细节，并附上了订单截图作为证据，希望平台能尽快给出合理的解决方案。`;
+                return <span key={i}>{highlightText(para, searchQuery)}</span>;
+              })}
             </div>
           </div>
         </div>
