@@ -468,9 +468,22 @@ export default function EventDetail() {
                   <TableCell className="text-xs">{post.comments}</TableCell>
                   <TableCell className="text-xs">{post.likes}</TableCell>
                   <TableCell>
-                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandle("post", post.id)}>
-                      <ClipboardList className="w-3 h-3" /> 处置
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandle("post", post.id)}>
+                        <ClipboardList className="w-3 h-3" /> 处置
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-5 text-[10px] px-1.5 text-destructive hover:text-destructive"
+                        onClick={() => {
+                          setEvent(prev => ({ ...prev, posts: prev.posts.filter(p => p.id !== post.id) }));
+                          toast({ title: "已拆分该文章", description: "该文章已从事件中移出" });
+                        }}
+                      >
+                        拆分
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
