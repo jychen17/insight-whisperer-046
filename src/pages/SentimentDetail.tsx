@@ -1312,9 +1312,19 @@ export default function SentimentDetail() {
                                 <TableCell>{renderStatusBadge(post.handleStatus)}</TableCell>
                                 <TableCell className="text-xs">{post.comments + post.likes + post.shares}</TableCell>
                                 <TableCell>
-                                  <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", post.id)}>
-                                    <ClipboardList className="w-3 h-3" /> 处置
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", post.id)}>
+                                      <ClipboardList className="w-3 h-3" /> 处置
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-5 text-[10px] px-1.5 text-destructive hover:text-destructive"
+                                      onClick={() => splitPostFromEvent(event.id, post.id)}
+                                    >
+                                      拆分
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))}
