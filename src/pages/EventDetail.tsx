@@ -284,14 +284,8 @@ export default function EventDetail() {
       </Card>
 
       {/* AI 标签字段 */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">AI 标签</Badge>
-            <span className="text-muted-foreground font-normal text-xs">事件标签（基于文章相似度聚合）</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="pt-4 space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             {event.sentimentBreakdown.negative > 0 && <Badge className="bg-destructive/10 text-destructive border-0 text-[10px]">负向 {event.sentimentBreakdown.negative}</Badge>}
             {event.sentimentBreakdown.neutral > 0 && <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">中性 {event.sentimentBreakdown.neutral}</Badge>}
@@ -310,14 +304,8 @@ export default function EventDetail() {
       </Card>
 
       {/* 计算字段 */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-600">计算字段</Badge>
-            <span className="text-muted-foreground font-normal text-xs">基于文章互动量聚合</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Card className="border-emerald-500/20 bg-emerald-500/5">
+        <CardContent className="pt-4">
           <div className="grid grid-cols-5 gap-3">
             <Badge variant="outline" className={`text-[10px] justify-center py-1.5 ${speedColor[event.fermentSpeed]}`}>发酵速度: {speedLabel[event.fermentSpeed]}</Badge>
             {[
@@ -337,14 +325,8 @@ export default function EventDetail() {
       </Card>
 
       {/* 原始字段 */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Badge variant="outline" className="text-[10px] border-muted-foreground/40 text-muted-foreground">原始字段</Badge>
-            <span className="text-muted-foreground font-normal text-xs">采集自原始文章</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-3 gap-4 text-sm">
+      <Card className="bg-muted/20">
+        <CardContent className="pt-4 grid grid-cols-3 gap-4 text-sm">
           <div>
             <div className="text-xs text-muted-foreground mb-1">首发时间</div>
             <div className="text-foreground text-sm">{event.firstTime}</div>

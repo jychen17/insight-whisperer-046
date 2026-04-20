@@ -1170,10 +1170,6 @@ export default function SentimentDetail() {
 
                       {/* AI 标签字段 */}
                       <div className="mt-3 rounded-md border border-primary/20 bg-primary/5 p-2.5">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Badge variant="outline" className="text-[9px] border-primary/40 text-primary px-1 py-0">AI 标签</Badge>
-                          <span className="text-[10px] text-muted-foreground">事件标签（基于文章相似度聚合）</span>
-                        </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           {event.sentimentBreakdown && (
                             <>
@@ -1198,10 +1194,6 @@ export default function SentimentDetail() {
 
                       {/* 计算字段 */}
                       <div className="mt-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2.5">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-600 px-1 py-0">计算字段</Badge>
-                          <span className="text-[10px] text-muted-foreground">基于互动量聚合</span>
-                        </div>
                         <div className="grid grid-cols-5 gap-3">
                           {event.fermentSpeed && (
                             <div className="text-center">
@@ -1238,10 +1230,6 @@ export default function SentimentDetail() {
 
                       {/* 原始字段 */}
                       <div className="mt-2 rounded-md border border-border bg-muted/20 p-2.5">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Badge variant="outline" className="text-[9px] border-muted-foreground/40 text-muted-foreground px-1 py-0">原始字段</Badge>
-                          <span className="text-[10px] text-muted-foreground">采集自原始文章</span>
-                        </div>
                         <div className="grid grid-cols-3 gap-3 text-[11px]">
                           <div>
                             <div className="text-muted-foreground text-[10px]">首发时间</div>
@@ -1534,9 +1522,6 @@ export default function SentimentDetail() {
 
                       {/* 原始字段 */}
                       <div className="rounded-md border border-border bg-muted/20 p-2">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Badge variant="outline" className="text-[9px] border-muted-foreground/40 text-muted-foreground px-1 py-0">原始字段</Badge>
-                        </div>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
                           <span>平台: <span className="text-foreground">{item.platform}</span></span>
                           <span>发布者: <span className="text-foreground">{item.author}</span></span>
@@ -1545,26 +1530,31 @@ export default function SentimentDetail() {
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.userType}</Badge>
                           <Badge className="text-[10px] px-1.5 py-0 bg-primary/80">{item.fans}</Badge>
                         </div>
+                        <div className="mt-1.5 text-[11px] text-muted-foreground">
+                          正文：<span className="text-foreground">{(item.summary || "").slice(0, 15)}{(item.summary || "").length > 15 ? "…" : ""}</span>
+                        </div>
                       </div>
 
                       {/* AI 标签字段 */}
-                      <div className="rounded-md border border-primary/20 bg-primary/5 p-2">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Badge variant="outline" className="text-[9px] border-primary/40 text-primary px-1 py-0">AI 标签</Badge>
-                        </div>
+                      <div className="rounded-md border border-primary/20 bg-primary/5 p-2 space-y-1.5">
                         <div className="flex flex-wrap gap-1.5">
                           <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">情感: {item.sentiment}</Badge>
                           <Badge className="text-[10px] bg-primary/20 text-primary border-0">业务: {item.business}</Badge>
                           <Badge variant="outline" className="text-[10px]">所属OTA: {item.business?.split("-")[0]}</Badge>
                           <Badge variant="outline" className="text-[10px]">问题分类: {item.issueType}</Badge>
                         </div>
+                        <div className="text-[11px] text-foreground leading-relaxed">
+                          <span className="text-muted-foreground">AI 摘要：</span>{item.summary}
+                        </div>
+                        {!item.isNoise && (
+                          <div className="text-[11px] text-foreground leading-relaxed">
+                            <span className="text-muted-foreground">舆情判断依据：</span>根据「{item.business}」业务范畴及内容关键词，命中{item.issueType}问题，情感判定为{item.sentiment}。
+                          </div>
+                        )}
                       </div>
 
                       {/* 计算字段 */}
                       <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-600 px-1 py-0">计算字段</Badge>
-                        </div>
                         <div className="flex flex-wrap items-center gap-1.5">
                           <Badge variant="outline" className="text-[10px]">初始等级: {item.riskLevel}</Badge>
                           <Badge variant="outline" className="text-[10px]">发酵速度: {item.speed}</Badge>
@@ -1577,10 +1567,6 @@ export default function SentimentDetail() {
                         </div>
                       </div>
 
-                      <div className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.summary}</div>
-                      {!item.isNoise && (
-                        <div className="text-destructive text-xs font-medium">AI摘要：{item.summary}</div>
-                      )}
                       {/* Processing records */}
                       {(item.handleRecords || []).length > 0 && (
                         <div className="pt-2 border-t border-border">
