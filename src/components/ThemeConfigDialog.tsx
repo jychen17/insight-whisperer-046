@@ -1323,6 +1323,10 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                                 <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
                                                   {selected && <Check className="w-2 h-2 text-primary-foreground" />}
                                                 </div>
+                                                {selected && df && (() => {
+                                                  const orderIdx = (node.displayFields || []).findIndex(d => d.key === f.key);
+                                                  return <Badge className="text-[8px] px-1 py-0 bg-primary text-primary-foreground border-0 font-mono">#{orderIdx + 1}</Badge>;
+                                                })()}
                                                 <span className="text-[10px] font-medium text-foreground">{f.label}</span>
                                               </div>
                                               {selected && df && (
