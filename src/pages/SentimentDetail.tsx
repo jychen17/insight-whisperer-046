@@ -680,7 +680,7 @@ export default function SentimentDetail() {
 
       Object.entries(groups).forEach(([key, ids]) => {
         if (ids.length < 2) return;
-        const eventId = `auto-${Date.now()}-${key}`;
+        const eventId = `CLS-${Date.now().toString(36).toUpperCase()}-${key.slice(0, 4).toUpperCase()}`;
         const posts = updatedItems.filter(i => ids.includes(i.id));
         const meta = buildEventMeta(posts, methodLabel);
         newEvents.push({
