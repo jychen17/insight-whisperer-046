@@ -1215,7 +1215,10 @@ export default function SentimentDetail() {
                             </>
                           )}
                           {event.topBusiness && (
-                            <Badge className="bg-primary/10 text-primary border-0 text-[10px]">{event.topBusiness}</Badge>
+                            <>
+                              <Badge className="bg-primary/20 text-primary border-0 text-[10px]">所属OTA: {event.topBusiness.split("-")[0]}</Badge>
+                              <Badge className="bg-primary/10 text-primary border-0 text-[10px]">业务类型: {event.topBusiness.split("-")[1] || "-"}</Badge>
+                            </>
                           )}
                           <span className="ml-auto text-[10px] text-muted-foreground">文章总量</span>
                           <span className="text-xs font-semibold text-foreground">{event.postIds.length}</span>
@@ -1452,11 +1455,15 @@ export default function SentimentDetail() {
               {selectedIds.length > 0 && (
                 <>
                   <span className="text-primary font-medium">已选 {selectedIds.length} 条</span>
-                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={handleMerge}>
-                    <Layers className="w-3 h-3" /> 合并为事件
-                  </Button>
-                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => openNoiseDialog(selectedIds)}>
-                    <Ban className="w-3 h-3" /> 标记为噪音
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1"
+                    disabled={mergedEvents.length === 0}
+                    onClick={() => { setMergeMode("existing"); setMergeTargetEventId(""); setMergeDialogOpen(true); }}
+                    title={mergedEvents.length === 0 ? "暂无可并入的聚类" : "合并到已有聚类"}
+                  >
+                    <Layers className="w-3 h-3" /> 合并到已有聚类
                   </Button>
                   <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openBatchHandle("article")}>
                     <ClipboardList className="w-3 h-3" /> 批量处置
@@ -1547,15 +1554,6 @@ export default function SentimentDetail() {
                               <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
                                 <ClipboardList className="w-3 h-3" /> 处置
                               </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 text-[11px] gap-0.5 px-1.5"
-                                title="合并到聚类"
-                                onClick={() => { setSelectedIds([item.id]); handleMerge(); }}
-                              >
-                                <Layers className="w-3 h-3" /> 合并
-                              </Button>
                               <input
                                 type="checkbox"
                                 className="rounded"
@@ -1591,9 +1589,10 @@ export default function SentimentDetail() {
                       {/* AI 标签字段 */}
                       <div className="rounded-md border border-primary/20 bg-primary/5 p-2 space-y-1.5">
                         <div className="flex flex-wrap gap-1.5">
-                          <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">情感: {item.sentiment}</Badge>
-                          <Badge className="text-[10px] bg-primary/20 text-primary border-0">业务: {item.business}</Badge>
-                          <Badge variant="outline" className="text-[10px]">所属OTA: {item.business?.split("-")[0]}</Badge>
+                          <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">情感: {(item.sentiment || "").split("-")[0]}</Badge>
+                          <Badge className="text-[10px] bg-destructive/10 text-destructive border-0">内容主题: {(item.sentiment || "").split("-")[1] || "-"}</Badge>
+                          <Badge className="text-[10px] bg-primary/20 text-primary border-0">所属OTA: {(item.business || "").split("-")[0]}</Badge>
+                          <Badge className="text-[10px] bg-primary/10 text-primary border-0">业务类型: {(item.business || "").split("-")[1] || "-"}</Badge>
                           <Badge variant="outline" className="text-[10px]">问题分类: {item.issueType}</Badge>
                         </div>
                         <div className="text-[11px] text-foreground leading-relaxed">

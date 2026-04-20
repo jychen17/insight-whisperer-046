@@ -290,7 +290,8 @@ export default function EventDetail() {
             {event.sentimentBreakdown.negative > 0 && <Badge className="bg-destructive/10 text-destructive border-0 text-[10px]">负向 {event.sentimentBreakdown.negative}</Badge>}
             {event.sentimentBreakdown.neutral > 0 && <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">中性 {event.sentimentBreakdown.neutral}</Badge>}
             {event.sentimentBreakdown.positive > 0 && <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">正向 {event.sentimentBreakdown.positive}</Badge>}
-            <Badge className="bg-primary/10 text-primary border-0 text-[10px]">业务: {event.topBusiness}</Badge>
+            <Badge className="bg-primary/20 text-primary border-0 text-[10px]">所属OTA: {event.topBusiness.split("-")[0]}</Badge>
+            <Badge className="bg-primary/10 text-primary border-0 text-[10px]">业务类型: {event.topBusiness.split("-")[1] || "-"}</Badge>
           </div>
           <div className="grid grid-cols-1 gap-2">
             <div className="bg-muted/30 rounded-md p-3 flex items-center justify-between">
@@ -456,7 +457,12 @@ export default function EventDetail() {
                   <TableCell className="text-xs">{post.platform}</TableCell>
                   <TableCell className="text-xs">{post.author}</TableCell>
                   <TableCell className="text-xs">{post.publishTime}</TableCell>
-                  <TableCell><Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{post.sentiment}</Badge></TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">{(post.sentiment || "").split("-")[0]}</Badge>
+                      <Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{(post.sentiment || "").split("-")[1] || "-"}</Badge>
+                    </div>
+                  </TableCell>
                   <TableCell>{renderStatusBadge(post.handleStatus)}</TableCell>
                   <TableCell className="text-xs">{post.comments}</TableCell>
                   <TableCell className="text-xs">{post.likes}</TableCell>
