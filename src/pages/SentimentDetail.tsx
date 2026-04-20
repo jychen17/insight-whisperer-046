@@ -333,12 +333,14 @@ export default function SentimentDetail() {
   };
 
   const handleMerge = () => {
-    if (selectedIds.length < 2) {
-      toast({ title: "至少选择2条舆情进行合并", variant: "destructive" });
+    if (selectedIds.length < 1) {
+      toast({ title: "请至少选择1条文章", variant: "destructive" });
       return;
     }
     const selectedItems = items.filter(i => selectedIds.includes(i.id));
     setMergeTitle(selectedItems[0]?.issueType + " - 合并事件");
+    setMergeMode(selectedIds.length >= 2 ? "new" : "existing");
+    setMergeTargetEventId(mergedEvents[0]?.id || "");
     setMergeDialogOpen(true);
   };
 
@@ -356,6 +358,7 @@ export default function SentimentDetail() {
     const topBusiness = Object.entries(businessCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
     const highSpeedCount = posts.filter(p => p.speed === "高").length;
     const fermentSpeed: "high" | "medium" | "low" = highSpeedCount > posts.length * 0.5 ? "high" : highSpeedCount > 0 ? "medium" : "low";
+
     const times = posts.map(p => p.publishTime).sort();
     const importance: "high" | "medium" | "low" = totalInteractions > 50 ? "high" : totalInteractions > 10 ? "medium" : "low";
 
