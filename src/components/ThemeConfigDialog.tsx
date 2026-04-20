@@ -1451,11 +1451,11 @@ function MergeConditionTreeEditor({
 // ── Nested Condition Tree Editor ────────────────────────────
 
 function ConditionTreeEditor({
-  node, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot,
+  node, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot, maxOneGroup,
 }: {
   node: ConditionNode; onAddCondition: (parentId: string) => void; onAddGroup: (parentId: string) => void;
   onRemove: (id: string) => void; onUpdate: (id: string, u: Partial<ConditionNode>) => void;
-  depth: number; isRoot?: boolean;
+  depth: number; isRoot?: boolean; maxOneGroup?: boolean;
 }) {
   if (node.type === "condition") {
     return (
@@ -1507,7 +1507,13 @@ function ConditionTreeEditor({
         </div>
         <div className="flex items-center gap-1">
           <button onClick={() => onAddCondition(node.id)} className="flex items-center gap-0.5 text-[10px] text-primary hover:underline"><Plus className="w-2.5 h-2.5" />条件</button>
-          <button onClick={() => onAddGroup(node.id)} className="flex items-center gap-0.5 text-[10px] text-primary hover:underline ml-2"><Plus className="w-2.5 h-2.5" />分组()</button>
+          {(() => {
+            const hasGroupChild = children.some(c => c.type === "group");
+            const canAddGroup = !maxOneGroup || (isRoot && !hasGroupChild);
+            return canAddGroup ? (
+              <button onClick={() => onAddGroup(node.id)} className="flex items-center gap-0.5 text-[10px] text-primary hover:underline ml-2"><Plus className="w-2.5 h-2.5" />分组()</button>
+            ) : null;
+          })()}
           {!isRoot && <button onClick={() => onRemove(node.id)} className="ml-2 text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>}
         </div>
       </div>
@@ -1515,7 +1521,7 @@ function ConditionTreeEditor({
         {children.map((child, ci) => (
           <div key={child.id}>
             {ci > 0 && <div className="text-[10px] text-primary font-medium py-0.5 ml-2">{node.logic}</div>}
-            <ConditionTreeEditor node={child} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} />
+            <ConditionTreeEditor node={child} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} maxOneGroup={maxOneGroup} />
           </div>
         ))}
         {children.length === 0 && <p className="text-[10px] text-muted-foreground py-2 text-center">点击上方按钮添加条件或嵌套分组</p>}
@@ -1601,4 +1607,69 @@ export function mergeConditionTreeToText(node: MCN | undefined): string {
   if (childTexts.length === 0) return "";
   const joined = childTexts.join(node.logic === "OR" ? " 或 " : " 且 ");
   return childTexts.length > 1 ? `(${joined})` : joined;
+}
+
+// ── WordChipsInput: chip-style include/exclude word editor ──
+function WordChipsInput({
+  label, hint, tone, words, onChange,
+}: {
+  label: string;
+  hint: string;
+  tone: "success" | "danger";
+  words: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const toneClass = tone === "success"
+    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400"
+    : "bg-destructive/10 text-destructive border-destructive/30";
+
+  const commit = () => {
+    const parts = draft.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean);
+    if (parts.length === 0) return;
+    const merged = Array.from(new Set([...words, ...parts]));
+    onChange(merged);
+    setDraft("");
+  };
+
+  const removeAt = (i: number) => {
+    const next = words.slice();
+    next.splice(i, 1);
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-medium text-foreground">{label}</label>
+        <span className="text-[10px] text-muted-foreground">{words.length} 个词</span>
+      </div>
+      <p className="text-[10px] text-muted-foreground">{hint}</p>
+      <div className="flex flex-wrap items-center gap-1.5 px-2 py-1.5 border border-border rounded-md bg-background min-h-[36px] focus-within:ring-1 focus-within:ring-primary">
+        {words.map((w, i) => (
+          <span key={`${w}_${i}`} className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] rounded border ${toneClass}`}>
+            {w}
+            <button onClick={() => removeAt(i)} className="opacity-60 hover:opacity-100">
+              <X className="w-2.5 h-2.5" />
+            </button>
+          </span>
+        ))}
+        <input
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === "Enter" || e.key === ",") {
+              e.preventDefault();
+              commit();
+            } else if (e.key === "Backspace" && !draft && words.length > 0) {
+              removeAt(words.length - 1);
+            }
+          }}
+          onBlur={commit}
+          placeholder={words.length === 0 ? "输入后回车或逗号添加，可批量粘贴" : ""}
+          className="flex-1 min-w-[120px] bg-transparent outline-none text-xs text-foreground placeholder:text-muted-foreground"
+        />
+      </div>
+    </div>
+  );
 }
