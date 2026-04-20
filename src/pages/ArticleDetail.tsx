@@ -175,17 +175,39 @@ export default function ArticleDetail() {
         <FileText className="w-5 h-5 text-primary mt-1 shrink-0" />
         <div className="flex-1 min-w-0">
           <h1 className="text-lg font-semibold text-foreground">{item.title}</h1>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>发布平台：<span className="text-foreground">{item.platform}</span></span>
-            <span>发布者：<span className="text-foreground">{item.author}</span></span>
-            <span>内容类型：<span className="text-foreground">{item.contentType}</span></span>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.userType}</Badge>
-            <Badge className="text-[10px] px-1.5 py-0 bg-primary/80">{item.fans}</Badge>
+        </div>
+      </div>
+
+      {/* 原始字段 */}
+      <div className="rounded-md border border-border bg-muted/20 p-3">
+        <div className="flex items-center gap-1.5 mb-2">
+          <Badge variant="outline" className="text-[10px] border-muted-foreground/40 text-muted-foreground">原始字段</Badge>
+          <span className="text-[11px] text-muted-foreground">采集自原始平台</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div>
+            <div className="text-muted-foreground text-[10px]">发布平台</div>
+            <div className="text-foreground">{item.platform}</div>
           </div>
-          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            <span>发布时间：<span className="text-foreground">{item.publishTime}</span></span>
-            <span>收录时间：<span className="text-foreground">{item.collectTime}</span></span>
-            <span>收录地区：<span className="text-foreground">{item.region}</span></span>
+          <div>
+            <div className="text-muted-foreground text-[10px]">发布者</div>
+            <div className="text-foreground flex items-center gap-1.5 flex-wrap">
+              {item.author}
+              <Badge variant="outline" className="text-[10px] px-1 py-0">{item.userType}</Badge>
+              <Badge className="text-[10px] px-1 py-0 bg-primary/80">{item.fans}</Badge>
+            </div>
+          </div>
+          <div>
+            <div className="text-muted-foreground text-[10px]">发布时间</div>
+            <div className="text-foreground">{item.publishTime}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground text-[10px]">文章标签</div>
+            <div className="text-foreground flex items-center gap-1.5 flex-wrap">
+              <Badge variant="outline" className="text-[10px] px-1 py-0">内容类型: {item.contentType}</Badge>
+              <Badge variant="outline" className="text-[10px] px-1 py-0">收录: {item.collectTime}</Badge>
+              <Badge variant="outline" className="text-[10px] px-1 py-0">地区: {item.region}</Badge>
+            </div>
           </div>
         </div>
       </div>
@@ -193,22 +215,38 @@ export default function ArticleDetail() {
       <div className="grid grid-cols-3 gap-6">
         {/* Left: content (images + OCR + text) */}
         <div className="col-span-2 space-y-4">
-          {/* Risk / Speed */}
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-muted-foreground shrink-0">初始等级：</span>
-            <Select value={item.riskLevel} onValueChange={(v) => updateField("riskLevel", v)}>
-              <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                {RISK_LEVEL_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <span className="text-muted-foreground shrink-0 ml-2">发酵速度：</span>
-            <Select value={item.speed} onValueChange={(v) => updateField("speed", v)}>
-              <SelectTrigger className="h-7 w-20 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent className="bg-popover z-50">
-                {SPEED_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          {/* 计算字段 */}
+          <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-600">计算字段</Badge>
+              <span className="text-[11px] text-muted-foreground">基于规则计算</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground shrink-0">初始等级：</span>
+                <Select value={item.riskLevel} onValueChange={(v) => updateField("riskLevel", v)}>
+                  <SelectTrigger className="h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {RISK_LEVEL_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground shrink-0">发酵速度：</span>
+                <Select value={item.speed} onValueChange={(v) => updateField("speed", v)}>
+                  <SelectTrigger className="h-7 w-20 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {SPEED_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2 ml-auto">
+                <Badge variant="outline" className="text-[10px]">点赞 {item.likes}</Badge>
+                <Badge variant="outline" className="text-[10px]">收藏 {item.collects}</Badge>
+                <Badge variant="outline" className="text-[10px]">评论 {item.comments}</Badge>
+                <Badge variant="outline" className="text-[10px]">分享 {item.shares}</Badge>
+              </div>
+            </div>
           </div>
 
           {/* Images */}
@@ -267,9 +305,23 @@ export default function ArticleDetail() {
             </div>
           </div>
 
-          <div className="space-y-2">
+          {/* AI 标签字段 */}
+          <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">AI 标签</Badge>
+              <span className="text-[11px] text-muted-foreground">AI 推理输出</span>
+            </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground shrink-0">业务分类：</span>
+              <span className="text-xs text-muted-foreground shrink-0">情感分类：</span>
+              <Select value={item.sentiment} onValueChange={(v) => updateField("sentiment", v)}>
+                <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  {SENTIMENT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground shrink-0">业务类型：</span>
               <Select value={item.business} onValueChange={(v) => updateField("business", v)}>
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
@@ -278,11 +330,11 @@ export default function ArticleDetail() {
               </Select>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground shrink-0">情感分类：</span>
-              <Select value={item.sentiment} onValueChange={(v) => updateField("sentiment", v)}>
+              <span className="text-xs text-muted-foreground shrink-0">所属 OTA：</span>
+              <Select value={item.business?.split("-")[0] || "同程旅行"} onValueChange={(v) => updateField("business", `${v}-${item.business?.split("-")[1] || "其他"}`)}>
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
-                  {SENTIMENT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  {["同程旅行", "携程", "美团", "飞猪", "去哪儿"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
