@@ -1023,51 +1023,39 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                   <span className="text-[11px] text-muted-foreground">已选 {form.fieldConfigs.length} 个 · 按下方顺序在主题列表展示</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-3">
-                  从下方字段池勾选要展示的字段。已选字段将按上下移动确定的顺序在主题列表中排列。
+                  从下方字段池勾选要展示的字段。已选字段可在上方面板拖拽调整顺序，决定主题列表中的展示排列。
                 </p>
 
-                {/* Selected fields with ordering */}
+                {/* Selected fields with drag-and-drop ordering */}
                 {form.fieldConfigs.length > 0 && (
-                  <div className="border border-primary/20 rounded-lg p-3 bg-primary/5 mb-4 space-y-1.5">
-                    <div className="text-[11px] font-medium text-foreground mb-1">已选字段顺序（拖动按钮调整）</div>
-                    {form.fieldConfigs.map((fc, idx) => {
-                      const fdef = ALL_FIELDS.find(f => f.key === fc.key);
-                      return (
-                        <div key={fc.key} className="flex items-center gap-2 px-2 py-1.5 bg-card rounded border border-border">
-                          <span className="text-[10px] font-mono text-muted-foreground w-6">{idx + 1}</span>
-                          <Badge className={`text-[9px] px-1.5 py-0 border-0 ${
-                            fc.fieldType === "ai" ? "bg-purple-500/10 text-purple-600 dark:text-purple-300" :
-                            fc.fieldType === "calc" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                          }`}>{FIELD_TYPE_LABELS[fc.fieldType]}</Badge>
-                          <span className="text-xs text-foreground flex-1">{fdef?.label || fc.key}</span>
-                          <button
-                            disabled={idx === 0}
-                            onClick={() => setForm(f => {
-                              const arr = [...f.fieldConfigs];
-                              [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
-                              return { ...f, fieldConfigs: arr };
-                            })}
-                            className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
-                            title="上移"
-                          ><ArrowUp className="w-3 h-3" /></button>
-                          <button
-                            disabled={idx === form.fieldConfigs.length - 1}
-                            onClick={() => setForm(f => {
-                              const arr = [...f.fieldConfigs];
-                              [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
-                              return { ...f, fieldConfigs: arr };
-                            })}
-                            className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
-                            title="下移"
-                          ><ArrowDown className="w-3 h-3" /></button>
-                          <button
-                            onClick={() => toggleField(fc.key)}
-                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                            title="移除"
-                          ><Trash2 className="w-3 h-3" /></button>
-                        </div>
-                      );
-                    })}
+                  <div className="border border-primary/20 rounded-lg p-3 bg-primary/5 mb-4">
+                    <div className="text-[11px] font-medium text-foreground mb-2 flex items-center gap-1.5">
+                      <GripVertical className="w-3 h-3 text-muted-foreground" />
+                      已选字段顺序（拖动 ⋮⋮ 调整）
+                    </div>
+                    <SortableList
+                      items={form.fieldConfigs}
+                      onReorder={(items) => setForm(f => ({ ...f, fieldConfigs: items }))}
+                      renderItem={(fc, idx, handle) => {
+                        const fdef = ALL_FIELDS.find(f => f.key === fc.key);
+                        return (
+                          <div className="flex items-center gap-2 px-2 py-1.5 bg-card rounded border border-border">
+                            {handle}
+                            <span className="text-[10px] font-mono text-muted-foreground w-6">{idx + 1}</span>
+                            <Badge className={`text-[9px] px-1.5 py-0 border-0 ${
+                              fc.fieldType === "ai" ? "bg-purple-500/10 text-purple-600 dark:text-purple-300" :
+                              fc.fieldType === "calc" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                            }`}>{FIELD_TYPE_LABELS[fc.fieldType]}</Badge>
+                            <span className="text-xs text-foreground flex-1">{fdef?.label || fc.key}</span>
+                            <button
+                              onClick={() => toggleField(fc.key)}
+                              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                              title="移除"
+                            ><Trash2 className="w-3 h-3" /></button>
+                          </div>
+                        );
+                      }}
+                    />
                   </div>
                 )}
 
