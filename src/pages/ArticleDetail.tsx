@@ -362,14 +362,13 @@ export default function ArticleDetail() {
           <div>
             <div className="text-xs font-medium text-foreground mb-1.5">文本：</div>
             <div className="text-sm text-foreground bg-muted/30 rounded-md p-4 leading-relaxed whitespace-pre-wrap max-h-[480px] overflow-y-auto">
-              {item.summary}
+              {highlightText(item.summary, searchQuery)}
               {"\n\n"}
               {/* Pad with mock long content for demonstration */}
-              {Array.from({ length: 4 }).map((_, i) => (
-                <span key={i}>
-                  {`\n第 ${i + 1} 段补充：用户详细描述了相关问题的发生过程、与客服沟通的细节，并附上了订单截图作为证据，希望平台能尽快给出合理的解决方案。`}
-                </span>
-              ))}
+              {Array.from({ length: 4 }).map((_, i) => {
+                const para = `\n第 ${i + 1} 段补充：用户详细描述了相关问题的发生过程、与客服沟通的细节，并附上了订单截图作为证据，希望平台能尽快给出合理的解决方案。`;
+                return <span key={i}>{highlightText(para, searchQuery)}</span>;
+              })}
             </div>
           </div>
         </div>
