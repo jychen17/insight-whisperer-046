@@ -1045,7 +1045,7 @@ export default function SentimentDetail() {
           </DropdownMenu>
           <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/sentiment/event-alert")}><Bell className="w-3 h-3" />预警设置</button>
           <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/analysis/report-config")}><FileText className="w-3 h-3" />报告设置</button>
-          <button className="px-3 py-1.5 border border-border rounded-md bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1" onClick={() => setThemeConfigOpen(true)}><Settings className="w-3 h-3" />主题配置</button>
+          <button className="px-3 py-1.5 border border-border rounded-md bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1" onClick={() => { setCurrentSentimentTheme(currentSentimentTheme ?? sentimentTheme); setThemeDetailsOpen(true); }}><Settings className="w-3 h-3" />主题配置</button>
         </div>
       </div>
 
