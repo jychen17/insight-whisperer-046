@@ -1740,8 +1740,8 @@ export default function SentimentDetail() {
               <div className="space-y-1 max-h-40 overflow-y-auto">
                 {items.filter(i => selectedIds.includes(i.id)).map(item => (
                   <div key={item.id} className="text-xs p-2 bg-muted/30 rounded flex items-center justify-between">
-                    <span className="truncate flex-1">{item.title}</span>
-                    <span className="text-muted-foreground shrink-0 ml-2">{item.platform}</span>
+                    <span className="text-muted-foreground shrink-0 font-mono">#{articleCode(item.id)}</span>
+                    <span className="truncate flex-1 ml-2">{item.title}</span>
                   </div>
                 ))}
               </div>
