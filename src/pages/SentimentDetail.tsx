@@ -1536,15 +1536,21 @@ export default function SentimentDetail() {
                       {/* 原始字段 */}
                       <div className="rounded-md border border-border bg-muted/20 p-2">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                          <span>发布时间: <span className="text-foreground">{item.publishTime}</span></span>
                           <span>平台: <span className="text-foreground">{item.platform}</span></span>
                           <span>发布者: <span className="text-foreground">{item.author}</span></span>
-                          <span>发布时间: <span className="text-foreground">{item.publishTime}</span></span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.contentType}</Badge>
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.userType}</Badge>
                           <Badge className="text-[10px] px-1.5 py-0 bg-primary/80">{item.fans}</Badge>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.contentType}</Badge>
                         </div>
                         <div className="mt-1.5 text-[11px] text-muted-foreground">
                           正文：<span className="text-foreground">{(item.summary || "").slice(0, 15)}{(item.summary || "").length > 15 ? "…" : ""}</span>
+                        </div>
+                        <div className="mt-1.5 flex gap-3 text-[10px] text-muted-foreground">
+                          <span>👍 点赞 {item.likes}</span>
+                          <span>⭐ 收藏 {item.collects}</span>
+                          <span>💬 评论 {item.comments}</span>
+                          <span>↗ 分享 {item.shares}</span>
                         </div>
                       </div>
 
@@ -1571,12 +1577,6 @@ export default function SentimentDetail() {
                         <div className="flex flex-wrap items-center gap-1.5">
                           <Badge variant="outline" className="text-[10px]">初始等级: {item.riskLevel}</Badge>
                           <Badge variant="outline" className="text-[10px]">发酵速度: {item.speed}</Badge>
-                          <span className="ml-auto flex gap-2 text-[10px] text-muted-foreground">
-                            <span>👍{item.likes}</span>
-                            <span>⭐{item.collects}</span>
-                            <span>💬{item.comments}</span>
-                            <span>↗{item.shares}</span>
-                          </span>
                         </div>
                       </div>
 
