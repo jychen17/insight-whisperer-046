@@ -397,6 +397,16 @@ export default function SentimentDetail() {
     toast({ title: "已拆分事件" });
   };
 
+  // Split a single article out of an event
+  const splitPostFromEvent = (eventId: string, postId: number) => {
+    setItems(prev => prev.map(i => i.id === postId ? { ...i, mergedEventId: null } : i));
+    setMergedEvents(prev => prev
+      .map(e => e.id === eventId ? { ...e, postIds: e.postIds.filter(id => id !== postId) } : e)
+      .filter(e => e.postIds.length > 0)
+    );
+    toast({ title: "已拆分该文章", description: "该文章已从事件中移出" });
+  };
+
   const openNoiseDialog = (ids: number[]) => {
     setNoiseTargetIds(ids);
     setNoiseCategory("unrelated");
