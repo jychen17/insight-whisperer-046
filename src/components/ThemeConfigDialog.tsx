@@ -904,9 +904,34 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                         <div className="space-y-3">
                           {/* Basic filter — include / exclude words */}
                           <div className="border border-border rounded-lg p-3 bg-card space-y-3">
-                            <div className="flex items-center gap-2">
-                              <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">基础过滤条件</Badge>
-                              <span className="text-[10px] text-muted-foreground">精准匹配 · 标题/正文/发布人昵称</span>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">基础过滤条件</Badge>
+                                <span className="text-[10px] text-muted-foreground">精准匹配 · 标题/正文/发布人昵称</span>
+                              </div>
+                              {form.dataSources.length > 1 && (
+                                <div className="flex items-center gap-1">
+                                  <Copy className="w-3 h-3 text-muted-foreground" />
+                                  <select
+                                    value=""
+                                    onChange={(e) => {
+                                      const sourceDS = form.dataSources.find(ds => ds.taskId === e.target.value);
+                                      if (sourceDS) {
+                                        updateDataSource(activeDS.taskId, {
+                                          includeWords: [...(sourceDS.includeWords || [])],
+                                          excludeWords: [...(sourceDS.excludeWords || [])],
+                                        });
+                                      }
+                                    }}
+                                    className="px-1.5 py-1 text-[10px] border border-border rounded bg-card text-foreground"
+                                  >
+                                    <option value="">复制基础过滤自...</option>
+                                    {form.dataSources.filter(ds => ds.taskId !== activeDS.taskId).map(ds => (
+                                      <option key={ds.taskId} value={ds.taskId}>{ds.taskName}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
                             </div>
 
                             <WordChipsInput
