@@ -17,6 +17,7 @@ import type {
 import { ALL_FIELDS } from "@/pages/ThemeSettings";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { SortableList } from "@/components/SortableFieldList";
 
 interface Props {
   open: boolean;
