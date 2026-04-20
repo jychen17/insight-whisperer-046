@@ -311,7 +311,7 @@ export default function TagSystem() {
   const [enumDraftOther, setEnumDraftOther] = useState("");
   const [form, setForm] = useState<typeof emptyForm>({ ...emptyForm });
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-  const [filters, setFilters] = useState<Filters>({ search: "", dataType: "", source: "", status: "" });
+  const [filters, setFilters] = useState<Filters>({ search: "", dataType: "", entityType: "", source: "", status: "" });
 
   const openCreate = () => {
     setForm({ ...emptyForm });
@@ -332,6 +332,7 @@ export default function TagSystem() {
       description: tag.description,
       category: tag.category,
       dataType: tag.dataType,
+      entityType: tag.entityType,
       source: tag.source,
       enableEnum: enumVals.length > 0,
       enumValues: enumVals,
@@ -354,6 +355,7 @@ export default function TagSystem() {
     const newErrors: Record<string, boolean> = {};
     if (!form.name.trim()) newErrors.name = true;
     if (!form.dataType) newErrors.dataType = true;
+    if (!form.entityType) newErrors.entityType = true;
     if (!form.source) newErrors.source = true;
     if (Object.keys(newErrors).length) {
       setErrors(newErrors);
@@ -366,6 +368,7 @@ export default function TagSystem() {
     const newErrors: Record<string, boolean> = {};
     if (!form.name.trim()) newErrors.name = true;
     if (!form.dataType) newErrors.dataType = true;
+    if (!form.entityType) newErrors.entityType = true;
     if (!form.source) newErrors.source = true;
     if (Object.keys(newErrors).length) {
       setErrors(newErrors);
