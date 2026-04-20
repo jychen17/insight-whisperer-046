@@ -1776,8 +1776,8 @@ export default function SentimentDetail() {
                             mergeTargetEventId === e.id ? "bg-primary/10" : ""
                           }`}
                         >
-                          <span className="font-mono text-muted-foreground shrink-0">#{e.id}</span>
-                          <span className="truncate flex-1">{e.title}</span>
+                          <span className="font-mono text-muted-foreground shrink-0">#{highlightMatch(e.id, mergeTargetSearch)}</span>
+                          <span className="truncate flex-1">{highlightMatch(e.title, mergeTargetSearch)}</span>
                           <span className="text-muted-foreground shrink-0">{e.postIds.length}篇</span>
                         </button>
                       ));
