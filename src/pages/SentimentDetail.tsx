@@ -1326,6 +1326,26 @@ export default function SentimentDetail() {
               })}
             </div>
           )}
+          {filteredEvents.length > PAGE_SIZE && (
+            <Pagination className="mt-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setEventPage(p => Math.max(1, p - 1)); }} />
+                </PaginationItem>
+                {Array.from({ length: Math.ceil(filteredEvents.length / PAGE_SIZE) }, (_, i) => i + 1).map(p => (
+                  <PaginationItem key={p}>
+                    <PaginationLink href="#" isActive={p === eventPage} onClick={(e) => { e.preventDefault(); setEventPage(p); }}>{p}</PaginationLink>
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setEventPage(p => Math.min(Math.ceil(filteredEvents.length / PAGE_SIZE), p + 1)); }} />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+          <div className="text-[11px] text-muted-foreground text-center mt-2">
+            共 {filteredEvents.length} 个事件 · 第 {eventPage}/{Math.max(1, Math.ceil(filteredEvents.length / PAGE_SIZE))} 页
+          </div>
         </div>
       )}
 
