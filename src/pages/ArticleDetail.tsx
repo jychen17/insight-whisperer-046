@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import {
   ArrowLeft, FileText, History, Sparkles, Clock, Ban, ClipboardList,
-  Image as ImageIcon, ScanText, ChevronLeft, ChevronRight,
+  Image as ImageIcon, ScanText, ChevronLeft, ChevronRight, Search, X,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { SentimentItem, HandleRecord } from "@/pages/SentimentDetail";
