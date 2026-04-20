@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Edit2, LayoutDashboard, GitMerge, Filter, Search, Layers, ChevronRight, ChevronDown, ChevronUp, Eye, ArrowLeft, X, Trash2, Home } from "lucide-react";
+import { Edit2, LayoutDashboard, GitMerge, Filter, Search, Layers, ChevronRight, ChevronDown, ChevronUp, Eye, ArrowLeft, X, Trash2, Home, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import ThemeFlowCanvas from "@/components/ThemeFlowCanvas";
 import ThemeConfigDialog, { mergeConditionTreeToText } from "@/components/ThemeConfigDialog";
-import type { ThemeConfig, DashboardWidget } from "@/pages/ThemeSettings";
+import { DataPermissionDialog, type ThemeConfig, type DashboardWidget } from "@/pages/ThemeSettings";
 
 // Re-use labels from ThemeSettings
 const MERGE_TYPE_LABELS: Record<string, string> = { text_similarity: "文本相似度合并", field_group: "字段组合分组", time_window: "时间窗口聚合" };
