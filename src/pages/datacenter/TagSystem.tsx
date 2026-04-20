@@ -191,8 +191,8 @@ const sourceOptions: Record<string, string[]> = {
 
 const allSources = ["舆情模型", "情感模型", "主题模型", "风控模型", "NER模型", "采集字段", "加权计算", "时序计算", "规则计算", "评论量"];
 
-const emptyForm: { name: string; description: string; category: string; dataType: DataType | ""; source: string; enableEnum: boolean; enumValues: EnumPair[]; otherLabel: string } = {
-  name: "", description: "", category: "ai", dataType: "", source: "", enableEnum: false, enumValues: [], otherLabel: "",
+const emptyForm: { name: string; description: string; category: string; dataType: DataType | ""; entityType: EntityType | ""; source: string; enableEnum: boolean; enumValues: EnumPair[]; otherLabel: string } = {
+  name: "", description: "", category: "ai", dataType: "", entityType: "", source: "", enableEnum: false, enumValues: [], otherLabel: "",
 };
 
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
