@@ -457,7 +457,12 @@ export default function EventDetail() {
                   <TableCell className="text-xs">{post.platform}</TableCell>
                   <TableCell className="text-xs">{post.author}</TableCell>
                   <TableCell className="text-xs">{post.publishTime}</TableCell>
-                  <TableCell><Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{post.sentiment}</Badge></TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      <Badge className="text-[10px] bg-destructive/20 text-destructive border-0">{(post.sentiment || "").split("-")[0]}</Badge>
+                      <Badge className="text-[10px] bg-destructive/10 text-destructive border-0">{(post.sentiment || "").split("-")[1] || "-"}</Badge>
+                    </div>
+                  </TableCell>
                   <TableCell>{renderStatusBadge(post.handleStatus)}</TableCell>
                   <TableCell className="text-xs">{post.comments}</TableCell>
                   <TableCell className="text-xs">{post.likes}</TableCell>
