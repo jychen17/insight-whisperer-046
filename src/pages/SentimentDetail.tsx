@@ -1529,6 +1529,7 @@ export default function SentimentDetail() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate" onClick={() => navigate(`/sentiment/article/${item.id}`, { state: { item, from: "sentiment" } })}>{item.title}</h3>
+                            <span className="text-[10px] text-muted-foreground/60 font-mono shrink-0" title="文章ID">#A{String(item.id).padStart(6, "0")}</span>
                             {renderStatusBadge(item.handleStatus)}
                             {item.isNoise && (
                               <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
@@ -1538,7 +1539,7 @@ export default function SentimentDetail() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
                           {item.isNoise ? (
                             <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
                           ) : (
@@ -1546,13 +1547,15 @@ export default function SentimentDetail() {
                               <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
                                 <ClipboardList className="w-3 h-3" /> 处置
                               </Button>
-                              <button
-                                className="text-muted-foreground hover:text-destructive"
-                                title="标记为噪音"
-                                onClick={() => openNoiseDialog([item.id])}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-[11px] gap-0.5 px-1.5"
+                                title="合并到聚类"
+                                onClick={() => { setSelectedIds([item.id]); handleMerge(); }}
                               >
-                                <Ban className="w-3.5 h-3.5" />
-                              </button>
+                                <Layers className="w-3 h-3" /> 合并
+                              </Button>
                               <input
                                 type="checkbox"
                                 className="rounded"
