@@ -1451,11 +1451,11 @@ function MergeConditionTreeEditor({
 // ── Nested Condition Tree Editor ────────────────────────────
 
 function ConditionTreeEditor({
-  node, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot,
+  node, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot, maxOneGroup,
 }: {
   node: ConditionNode; onAddCondition: (parentId: string) => void; onAddGroup: (parentId: string) => void;
   onRemove: (id: string) => void; onUpdate: (id: string, u: Partial<ConditionNode>) => void;
-  depth: number; isRoot?: boolean;
+  depth: number; isRoot?: boolean; maxOneGroup?: boolean;
 }) {
   if (node.type === "condition") {
     return (
