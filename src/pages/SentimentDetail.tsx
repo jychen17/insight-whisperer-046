@@ -397,6 +397,16 @@ export default function SentimentDetail() {
     toast({ title: "已拆分事件" });
   };
 
+  // Split a single article out of an event
+  const splitPostFromEvent = (eventId: string, postId: number) => {
+    setItems(prev => prev.map(i => i.id === postId ? { ...i, mergedEventId: null } : i));
+    setMergedEvents(prev => prev
+      .map(e => e.id === eventId ? { ...e, postIds: e.postIds.filter(id => id !== postId) } : e)
+      .filter(e => e.postIds.length > 0)
+    );
+    toast({ title: "已拆分该文章", description: "该文章已从事件中移出" });
+  };
+
   const openNoiseDialog = (ids: number[]) => {
     setNoiseTargetIds(ids);
     setNoiseCategory("unrelated");
@@ -1149,7 +1159,6 @@ export default function SentimentDetail() {
                               onChange={(e) => { e.stopPropagation(); toggleEventSelect(event.id); }}
                               onClick={e => e.stopPropagation()}
                             />
-                            {importanceBadgeMap[event.importance || "low"]}
                             {renderStatusBadge(event.handleStatus)}
                             <h3 className="text-sm font-semibold text-foreground">{event.title}</h3>
                           </div>
@@ -1194,7 +1203,11 @@ export default function SentimentDetail() {
 
                       {/* 计算字段 */}
                       <div className="mt-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2.5">
-                        <div className="grid grid-cols-5 gap-3">
+                        <div className="grid grid-cols-6 gap-3">
+                          <div className="text-center">
+                            <div>{importanceBadgeMap[event.importance || "low"]}</div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">事件等级</div>
+                          </div>
                           {event.fermentSpeed && (
                             <div className="text-center">
                               <div className={`text-xs font-semibold ${speedColor[event.fermentSpeed]}`}>{speedLabel[event.fermentSpeed]}</div>
@@ -1299,9 +1312,19 @@ export default function SentimentDetail() {
                                 <TableCell>{renderStatusBadge(post.handleStatus)}</TableCell>
                                 <TableCell className="text-xs">{post.comments + post.likes + post.shares}</TableCell>
                                 <TableCell>
-                                  <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", post.id)}>
-                                    <ClipboardList className="w-3 h-3" /> 处置
-                                  </Button>
+                                  <div className="flex items-center gap-1">
+                                    <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", post.id)}>
+                                      <ClipboardList className="w-3 h-3" /> 处置
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-5 text-[10px] px-1.5 text-destructive hover:text-destructive"
+                                      onClick={() => splitPostFromEvent(event.id, post.id)}
+                                    >
+                                      拆分
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))}
@@ -1523,15 +1546,21 @@ export default function SentimentDetail() {
                       {/* 原始字段 */}
                       <div className="rounded-md border border-border bg-muted/20 p-2">
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                          <span>发布时间: <span className="text-foreground">{item.publishTime}</span></span>
                           <span>平台: <span className="text-foreground">{item.platform}</span></span>
                           <span>发布者: <span className="text-foreground">{item.author}</span></span>
-                          <span>发布时间: <span className="text-foreground">{item.publishTime}</span></span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.contentType}</Badge>
                           <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.userType}</Badge>
                           <Badge className="text-[10px] px-1.5 py-0 bg-primary/80">{item.fans}</Badge>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.contentType}</Badge>
                         </div>
                         <div className="mt-1.5 text-[11px] text-muted-foreground">
                           正文：<span className="text-foreground">{(item.summary || "").slice(0, 15)}{(item.summary || "").length > 15 ? "…" : ""}</span>
+                        </div>
+                        <div className="mt-1.5 flex gap-3 text-[10px] text-muted-foreground">
+                          <span>👍 点赞 {item.likes}</span>
+                          <span>⭐ 收藏 {item.collects}</span>
+                          <span>💬 评论 {item.comments}</span>
+                          <span>↗ 分享 {item.shares}</span>
                         </div>
                       </div>
 
@@ -1558,12 +1587,6 @@ export default function SentimentDetail() {
                         <div className="flex flex-wrap items-center gap-1.5">
                           <Badge variant="outline" className="text-[10px]">初始等级: {item.riskLevel}</Badge>
                           <Badge variant="outline" className="text-[10px]">发酵速度: {item.speed}</Badge>
-                          <span className="ml-auto flex gap-2 text-[10px] text-muted-foreground">
-                            <span>👍{item.likes}</span>
-                            <span>⭐{item.collects}</span>
-                            <span>💬{item.comments}</span>
-                            <span>↗{item.shares}</span>
-                          </span>
                         </div>
                       </div>
 
