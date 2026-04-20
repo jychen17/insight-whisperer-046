@@ -127,10 +127,10 @@ export default function Index() {
           <h2 className="text-lg font-semibold text-foreground">洞察主题</h2>
           <button
             onClick={() => navigate("/themes/list")}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground hover:bg-accent transition-colors"
+            className="inline-flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
           >
             更多主题
-            <ChevronRight className="w-3 h-3" />
+            <ChevronRight className="w-4 h-4" />
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
