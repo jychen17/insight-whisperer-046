@@ -1664,17 +1664,63 @@ export default function SentimentDetail() {
             <DialogTitle>合并为事件</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div>
-              <label className="text-xs text-muted-foreground">事件名称</label>
-              <input
-                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-                value={mergeTitle}
-                onChange={e => setMergeTitle(e.target.value)}
-                placeholder="请输入合并后的事件名称"
-              />
+            {/* Mode selector */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setMergeMode("new")}
+                className={`p-2.5 rounded-md border text-xs text-left transition-colors ${
+                  mergeMode === "new" ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted/30"
+                }`}
+              >
+                <div className="font-medium">生成新聚类</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">创建新事件聚类 ID</div>
+              </button>
+              <button
+                onClick={() => setMergeMode("existing")}
+                disabled={mergedEvents.length === 0}
+                className={`p-2.5 rounded-md border text-xs text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  mergeMode === "existing" ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted/30"
+                }`}
+              >
+                <div className="font-medium">并入已有聚类</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">选择已存在的聚类 ID</div>
+              </button>
             </div>
+
+            {mergeMode === "new" ? (
+              <div>
+                <label className="text-xs text-muted-foreground">事件名称</label>
+                <input
+                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                  value={mergeTitle}
+                  onChange={e => setMergeTitle(e.target.value)}
+                  placeholder="请输入合并后的事件名称"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">选择目标聚类</label>
+                <Select value={mergeTargetEventId} onValueChange={setMergeTargetEventId}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="请选择聚类 ID" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {mergedEvents.map(e => (
+                      <SelectItem key={e.id} value={e.id} className="text-xs">
+                        <span className="font-mono text-muted-foreground mr-2">{e.id}</span>
+                        <span>{e.title}</span>
+                        <span className="text-muted-foreground ml-2">({e.postIds.length}篇)</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div>
-              <label className="text-xs text-muted-foreground mb-2 block">将合并以下 {selectedIds.length} 条舆情：</label>
+              <label className="text-xs text-muted-foreground mb-2 block">
+                将{mergeMode === "existing" ? "并入" : "合并"}以下 {selectedIds.length} 条文章：
+              </label>
               <div className="space-y-1 max-h-40 overflow-y-auto">
                 {items.filter(i => selectedIds.includes(i.id)).map(item => (
                   <div key={item.id} className="text-xs p-2 bg-muted/30 rounded flex items-center justify-between">
