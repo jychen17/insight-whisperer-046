@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield, Globe, Zap, Lightbulb, ArrowRight, TrendingUp, Eye, Database, BarChart3, Settings, Monitor, FolderOpen, Bell } from "lucide-react";
+import { Shield, Globe, Zap, Lightbulb, ArrowRight, TrendingUp, Eye, Database, BarChart3, Settings, Monitor, FolderOpen, Bell, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
