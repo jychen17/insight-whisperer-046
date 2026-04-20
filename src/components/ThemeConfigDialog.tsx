@@ -146,6 +146,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
       extendedParams: [{ platform: "" }],
       platforms: [], timeRange: "近7天", enabled: true,
       conditionTree: { ...emptyConditionTree, id: `root_${id}` },
+      includeWords: [], excludeWords: [],
     };
     setForm(f => {
       if (f.dataSources.length === 0) setActiveConditionDS(id);
