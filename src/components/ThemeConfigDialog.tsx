@@ -85,11 +85,11 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
   const [platformSearch, setPlatformSearch] = useState<Record<string, string>>({});
 
   const isEdit = !!theme;
-  const steps = ["基本信息", "数据源", "入主题条件与字段", "合并管线"];
+  const steps = ["基本信息", "数据源", "入主题条件", "字段配置", "合并管线"];
 
   useEffect(() => {
     if (open) {
-      const stepCount = 4;
+      const stepCount = 5;
       setStep(typeof initialStep === "number" ? Math.max(0, Math.min(initialStep, stepCount - 1)) : 0);
       setErrors({}); setDsSearch(""); setFieldSearch("");
       setCollapsedGroups({}); setActiveConditionDS("");
@@ -101,6 +101,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
         dataSources: (theme.dataSources || []).map(ds => ({
           ...ds,
           conditionTree: ds.conditionTree || { ...emptyConditionTree },
+          includeWords: Array.isArray(ds.includeWords) ? ds.includeWords : [],
+          excludeWords: Array.isArray(ds.excludeWords) ? ds.excludeWords : [],
         })),
       } : { ...emptyTheme, id: `custom_${Date.now()}`, createdAt: new Date().toISOString().slice(0, 10), updatedAt: new Date().toISOString().slice(0, 10) };
       setForm(initForm);
