@@ -17,6 +17,7 @@ import type {
 import { ALL_FIELDS } from "@/pages/ThemeSettings";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { SortableList } from "@/components/SortableFieldList";
 
 interface Props {
   open: boolean;
@@ -377,6 +378,12 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
         }
         return { ...n, displayFields: dfs };
       }),
+    }));
+  };
+
+  const reorderMergeDisplayFields = (nodeId: string, items: MergeDisplayField[]) => {
+    setForm(f => ({
+      ...f, mergeNodes: (f.mergeNodes || []).map(n => n.id === nodeId ? { ...n, displayFields: items } : n),
     }));
   };
 
@@ -1022,51 +1029,39 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                   <span className="text-[11px] text-muted-foreground">已选 {form.fieldConfigs.length} 个 · 按下方顺序在主题列表展示</span>
                 </div>
                 <p className="text-[11px] text-muted-foreground mb-3">
-                  从下方字段池勾选要展示的字段。已选字段将按上下移动确定的顺序在主题列表中排列。
+                  从下方字段池勾选要展示的字段。已选字段可在上方面板拖拽调整顺序，决定主题列表中的展示排列。
                 </p>
 
-                {/* Selected fields with ordering */}
+                {/* Selected fields with drag-and-drop ordering */}
                 {form.fieldConfigs.length > 0 && (
-                  <div className="border border-primary/20 rounded-lg p-3 bg-primary/5 mb-4 space-y-1.5">
-                    <div className="text-[11px] font-medium text-foreground mb-1">已选字段顺序（拖动按钮调整）</div>
-                    {form.fieldConfigs.map((fc, idx) => {
-                      const fdef = ALL_FIELDS.find(f => f.key === fc.key);
-                      return (
-                        <div key={fc.key} className="flex items-center gap-2 px-2 py-1.5 bg-card rounded border border-border">
-                          <span className="text-[10px] font-mono text-muted-foreground w-6">{idx + 1}</span>
-                          <Badge className={`text-[9px] px-1.5 py-0 border-0 ${
-                            fc.fieldType === "ai" ? "bg-purple-500/10 text-purple-600 dark:text-purple-300" :
-                            fc.fieldType === "calc" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                          }`}>{FIELD_TYPE_LABELS[fc.fieldType]}</Badge>
-                          <span className="text-xs text-foreground flex-1">{fdef?.label || fc.key}</span>
-                          <button
-                            disabled={idx === 0}
-                            onClick={() => setForm(f => {
-                              const arr = [...f.fieldConfigs];
-                              [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
-                              return { ...f, fieldConfigs: arr };
-                            })}
-                            className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
-                            title="上移"
-                          ><ArrowUp className="w-3 h-3" /></button>
-                          <button
-                            disabled={idx === form.fieldConfigs.length - 1}
-                            onClick={() => setForm(f => {
-                              const arr = [...f.fieldConfigs];
-                              [arr[idx + 1], arr[idx]] = [arr[idx], arr[idx + 1]];
-                              return { ...f, fieldConfigs: arr };
-                            })}
-                            className="p-1 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
-                            title="下移"
-                          ><ArrowDown className="w-3 h-3" /></button>
-                          <button
-                            onClick={() => toggleField(fc.key)}
-                            className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                            title="移除"
-                          ><Trash2 className="w-3 h-3" /></button>
-                        </div>
-                      );
-                    })}
+                  <div className="border border-primary/20 rounded-lg p-3 bg-primary/5 mb-4">
+                    <div className="text-[11px] font-medium text-foreground mb-2 flex items-center gap-1.5">
+                      <GripVertical className="w-3 h-3 text-muted-foreground" />
+                      已选字段顺序（拖动 ⋮⋮ 调整）
+                    </div>
+                    <SortableList
+                      items={form.fieldConfigs}
+                      onReorder={(items) => setForm(f => ({ ...f, fieldConfigs: items }))}
+                      renderItem={(fc, idx, handle) => {
+                        const fdef = ALL_FIELDS.find(f => f.key === fc.key);
+                        return (
+                          <div className="flex items-center gap-2 px-2 py-1.5 bg-card rounded border border-border">
+                            {handle}
+                            <span className="text-[10px] font-mono text-muted-foreground w-6">{idx + 1}</span>
+                            <Badge className={`text-[9px] px-1.5 py-0 border-0 ${
+                              fc.fieldType === "ai" ? "bg-purple-500/10 text-purple-600 dark:text-purple-300" :
+                              fc.fieldType === "calc" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                            }`}>{FIELD_TYPE_LABELS[fc.fieldType]}</Badge>
+                            <span className="text-xs text-foreground flex-1">{fdef?.label || fc.key}</span>
+                            <button
+                              onClick={() => toggleField(fc.key)}
+                              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                              title="移除"
+                            ><Trash2 className="w-3 h-3" /></button>
+                          </div>
+                        );
+                      }}
+                    />
                   </div>
                 )}
 
@@ -1113,29 +1108,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                     {selected && fc && (() => {
                                       const orderIdx = form.fieldConfigs.findIndex(c => c.key === f.key);
                                       return (
-                                        <div className="flex items-center gap-0.5">
-                                          <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground border-0 font-mono">#{orderIdx + 1}</Badge>
-                                          <button
-                                            disabled={orderIdx === 0}
-                                            onClick={() => setForm(fr => {
-                                              const arr = [...fr.fieldConfigs];
-                                              [arr[orderIdx - 1], arr[orderIdx]] = [arr[orderIdx], arr[orderIdx - 1]];
-                                              return { ...fr, fieldConfigs: arr };
-                                            })}
-                                            className="p-0.5 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
-                                            title="上移"
-                                          ><ArrowUp className="w-2.5 h-2.5" /></button>
-                                          <button
-                                            disabled={orderIdx === form.fieldConfigs.length - 1}
-                                            onClick={() => setForm(fr => {
-                                              const arr = [...fr.fieldConfigs];
-                                              [arr[orderIdx + 1], arr[orderIdx]] = [arr[orderIdx], arr[orderIdx + 1]];
-                                              return { ...fr, fieldConfigs: arr };
-                                            })}
-                                            className="p-0.5 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
-                                            title="下移"
-                                          ><ArrowDown className="w-2.5 h-2.5" /></button>
-                                        </div>
+                                        <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground border-0 font-mono">#{orderIdx + 1}</Badge>
                                       );
                                     })()}
                                     <span className="text-xs font-medium text-foreground cursor-pointer" onClick={() => toggleField(f.key)}>{f.label}</span>
@@ -1286,6 +1259,39 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                 placeholder="搜索字段..." />
                             </div>
 
+                            {/* Selected merge fields with drag-and-drop ordering */}
+                            {(node.displayFields || []).length > 0 && (
+                              <div className="border border-primary/20 rounded-md p-2 bg-primary/5 mb-2">
+                                <div className="text-[10px] font-medium text-foreground mb-1.5 flex items-center gap-1">
+                                  <GripVertical className="w-2.5 h-2.5 text-muted-foreground" />
+                                  已选合并字段顺序（拖动 ⋮⋮ 调整）· 共 {(node.displayFields || []).length} 个
+                                </div>
+                                <SortableList
+                                  items={node.displayFields || []}
+                                  onReorder={(items) => reorderMergeDisplayFields(node.id, items)}
+                                  renderItem={(df, idx, handle) => {
+                                    const fdef = ALL_FIELDS.find(f => f.key === df.key);
+                                    return (
+                                      <div className="flex items-center gap-1.5 px-1.5 py-1 bg-card rounded border border-border">
+                                        {handle}
+                                        <span className="text-[9px] font-mono text-muted-foreground w-5">{idx + 1}</span>
+                                        <Badge className={`text-[8px] px-1 py-0 border-0 ${
+                                          df.fieldType === "ai" ? "bg-purple-500/10 text-purple-600 dark:text-purple-300" :
+                                          df.fieldType === "calc" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                                        }`}>{FIELD_TYPE_LABELS[df.fieldType]}</Badge>
+                                        <span className="text-[10px] text-foreground flex-1">{fdef?.label || df.key}</span>
+                                        <button
+                                          onClick={() => toggleMergeDisplayField(node.id, df.key)}
+                                          className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                          title="移除"
+                                        ><Trash2 className="w-2.5 h-2.5" /></button>
+                                      </div>
+                                    );
+                                  }}
+                                />
+                              </div>
+                            )}
+
                             {(["ai", "raw", "calc"] as const).map(ftype => {
                               const fields = ALL_FIELDS.filter(f => f.fieldType === ftype).filter(f => !mergeFieldSearch || f.label.includes(mergeFieldSearch) || f.key.includes(mergeFieldSearch));
                               if (fields.length === 0) return null;
@@ -1317,6 +1323,10 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                                 <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
                                                   {selected && <Check className="w-2 h-2 text-primary-foreground" />}
                                                 </div>
+                                                {selected && df && (() => {
+                                                  const orderIdx = (node.displayFields || []).findIndex(d => d.key === f.key);
+                                                  return <Badge className="text-[8px] px-1 py-0 bg-primary text-primary-foreground border-0 font-mono">#{orderIdx + 1}</Badge>;
+                                                })()}
                                                 <span className="text-[10px] font-medium text-foreground">{f.label}</span>
                                               </div>
                                               {selected && df && (
