@@ -413,6 +413,13 @@ export default function TagSystem() {
                 {ALL_DATA_TYPES.map((dt) => <SelectItem key={dt} value={dt}>{dt}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Select value={filters.entityType} onValueChange={(v) => updateFilter("entityType", v)}>
+              <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="实体类型" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">全部实体</SelectItem>
+                {ALL_ENTITY_TYPES.map((et) => <SelectItem key={et} value={et}>{et}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Select value={filters.source} onValueChange={(v) => updateFilter("source", v)}>
               <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="来源" /></SelectTrigger>
               <SelectContent>
