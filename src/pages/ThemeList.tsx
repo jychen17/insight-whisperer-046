@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Eye, LayoutDashboard, FolderOpen } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface ThemeItem {
   id: string;
@@ -19,16 +28,27 @@ interface ThemeItem {
   dataCount: number;
   alertCount: number;
   updatedAt: string;
+  updatedBy: string;
 }
 
 const allThemes: ThemeItem[] = [
-  { id: "sentiment", name: "舆情主题", icon: "🛡️", description: "品牌声誉风险监测与预警", owner: "张三", type: "builtin", status: "active", dataCount: 1284, alertCount: 3, updatedAt: "2026-03-29" },
-  { id: "industry", name: "行业资讯主题", icon: "🌐", description: "行业动态、竞品动向、市场趋势监测", owner: "李四", type: "builtin", status: "active", dataCount: 856, alertCount: 0, updatedAt: "2026-03-28" },
-  { id: "hotspot", name: "热点洞察主题", icon: "⚡", description: "社媒热点发现、话题趋势追踪", owner: "王五", type: "builtin", status: "active", dataCount: 2150, alertCount: 1, updatedAt: "2026-03-27" },
-  { id: "experience", name: "产品体验主题", icon: "💡", description: "用户反馈收集、产品问题洞察", owner: "赵六", type: "builtin", status: "active", dataCount: 673, alertCount: 2, updatedAt: "2026-03-26" },
-  { id: "brand", name: "品牌口碑监测", icon: "📊", description: "品牌口碑评价与传播效果监测", owner: "孙七", type: "custom", status: "active", dataCount: 432, alertCount: 0, updatedAt: "2026-03-25" },
-  { id: "crisis", name: "危机事件监测", icon: "🚨", description: "突发事件与危机舆情快速响应", owner: "张三", type: "custom", status: "inactive", dataCount: 0, alertCount: 0, updatedAt: "2026-03-20" },
+  { id: "sentiment", name: "舆情主题", icon: "🛡️", description: "品牌声誉风险监测与预警", owner: "张三", type: "builtin", status: "active", dataCount: 1284, alertCount: 3, updatedAt: "2026-03-29 10:24", updatedBy: "张三" },
+  { id: "industry", name: "行业资讯主题", icon: "🌐", description: "行业动态、竞品动向、市场趋势监测", owner: "李四", type: "builtin", status: "active", dataCount: 856, alertCount: 0, updatedAt: "2026-03-28 16:08", updatedBy: "李四" },
+  { id: "hotspot", name: "热点洞察主题", icon: "⚡", description: "社媒热点发现、话题趋势追踪", owner: "王五", type: "builtin", status: "active", dataCount: 2150, alertCount: 1, updatedAt: "2026-03-27 09:42", updatedBy: "王五" },
+  { id: "experience", name: "产品体验主题", icon: "💡", description: "用户反馈收集、产品问题洞察", owner: "赵六", type: "builtin", status: "active", dataCount: 673, alertCount: 2, updatedAt: "2026-03-26 14:55", updatedBy: "赵六" },
+  { id: "brand", name: "品牌口碑监测", icon: "📊", description: "品牌口碑评价与传播效果监测", owner: "孙七", type: "custom", status: "active", dataCount: 432, alertCount: 0, updatedAt: "2026-03-25 11:30", updatedBy: "孙七" },
+  { id: "crisis", name: "危机事件监测", icon: "🚨", description: "突发事件与危机舆情快速响应", owner: "张三", type: "custom", status: "inactive", dataCount: 0, alertCount: 0, updatedAt: "2026-03-20 17:12", updatedBy: "管理员" },
+  { id: "competitor", name: "竞品动态追踪", icon: "🎯", description: "主要竞品产品发布、市场活动监测", owner: "周八", type: "custom", status: "active", dataCount: 528, alertCount: 1, updatedAt: "2026-03-24 10:05", updatedBy: "周八" },
+  { id: "policy", name: "政策法规监测", icon: "📜", description: "行业政策与法规变化追踪", owner: "吴九", type: "custom", status: "active", dataCount: 196, alertCount: 0, updatedAt: "2026-03-23 15:48", updatedBy: "吴九" },
+  { id: "kol", name: "KOL影响力分析", icon: "🌟", description: "关键意见领袖言论与传播力监测", owner: "郑十", type: "custom", status: "active", dataCount: 845, alertCount: 2, updatedAt: "2026-03-22 09:18", updatedBy: "郑十" },
+  { id: "channel", name: "渠道商口碑", icon: "🏪", description: "线下渠道与代理商相关舆情", owner: "冯一", type: "custom", status: "active", dataCount: 312, alertCount: 0, updatedAt: "2026-03-21 13:27", updatedBy: "冯一" },
+  { id: "campaign", name: "营销活动效果", icon: "📣", description: "营销活动传播与用户反馈追踪", owner: "陈二", type: "custom", status: "active", dataCount: 689, alertCount: 1, updatedAt: "2026-03-20 16:34", updatedBy: "陈二" },
+  { id: "service", name: "客服满意度", icon: "🎧", description: "客户服务相关评价与投诉监测", owner: "卫三", type: "custom", status: "inactive", dataCount: 0, alertCount: 0, updatedAt: "2026-03-19 10:50", updatedBy: "管理员" },
+  { id: "recruit", name: "雇主品牌监测", icon: "💼", description: "招聘平台与员工评价相关舆情", owner: "蒋四", type: "custom", status: "active", dataCount: 174, alertCount: 0, updatedAt: "2026-03-18 14:11", updatedBy: "蒋四" },
+  { id: "esg", name: "ESG舆情监测", icon: "🌱", description: "环境、社会和治理相关议题追踪", owner: "沈五", type: "custom", status: "active", dataCount: 96, alertCount: 0, updatedAt: "2026-03-17 11:25", updatedBy: "沈五" },
 ];
+
+const PAGE_SIZE = 10;
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
   active: { label: "启用", variant: "default" },
