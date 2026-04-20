@@ -202,6 +202,8 @@ export default function SentimentDetail() {
   const [mergeTitle, setMergeTitle] = useState("");
   const [mergeMode, setMergeMode] = useState<"new" | "existing">("new");
   const [mergeTargetEventId, setMergeTargetEventId] = useState<string>("");
+  const [mergeTargetSearch, setMergeTargetSearch] = useState<string>("");
+  const [mergeTargetFocused, setMergeTargetFocused] = useState(false);
   const [noiseDialogOpen, setNoiseDialogOpen] = useState(false);
   const [noiseCategory, setNoiseCategory] = useState("unrelated");
   const [noiseTargetIds, setNoiseTargetIds] = useState<number[]>([]);
