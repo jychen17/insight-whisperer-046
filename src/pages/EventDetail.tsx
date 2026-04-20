@@ -277,55 +277,90 @@ export default function EventDetail() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">{event.title}</CardTitle>
-          <div className="flex items-center gap-2 flex-wrap mt-2">
-            {event.sentimentBreakdown.negative > 0 && <Badge className="bg-destructive/10 text-destructive border-0 text-[10px]">负向 {event.sentimentBreakdown.negative}</Badge>}
-            {event.sentimentBreakdown.neutral > 0 && <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">中性 {event.sentimentBreakdown.neutral}</Badge>}
-            {event.sentimentBreakdown.positive > 0 && <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">正向 {event.sentimentBreakdown.positive}</Badge>}
-            <Badge className="bg-primary/10 text-primary border-0 text-[10px]">{event.topBusiness}</Badge>
-            <Badge variant="outline" className={`text-[10px] ${speedColor[event.fermentSpeed]}`}>发酵速度: {speedLabel[event.fermentSpeed]}</Badge>
-          </div>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">{event.summary}</p>
         </CardContent>
       </Card>
 
-      {/* Key metrics */}
-      <div className="grid grid-cols-6 gap-3">
-        {[
-          { label: "文章总量", value: event.posts.length, icon: BarChart3 },
-          { label: "总点赞量", value: event.totalLikes, icon: ThumbsUp },
-          { label: "总收藏量", value: event.totalCollects, icon: Bookmark },
-          { label: "总评论量", value: event.totalComments, icon: MessageCircle },
-          { label: "总分享量", value: event.totalShares, icon: Share2 },
-          { label: "覆盖平台", value: event.keyPlatforms.length, icon: Globe },
-        ].map(m => (
-          <Card key={m.label}>
-            <CardContent className="p-3 text-center">
-              <m.icon className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
-              <div className="text-lg font-semibold text-foreground">{m.value}</div>
-              <div className="text-[11px] text-muted-foreground">{m.label}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* AI 标签字段 */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px] border-primary/40 text-primary">AI 标签</Badge>
+            <span className="text-muted-foreground font-normal text-xs">事件标签（基于文章相似度聚合）</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {event.sentimentBreakdown.negative > 0 && <Badge className="bg-destructive/10 text-destructive border-0 text-[10px]">负向 {event.sentimentBreakdown.negative}</Badge>}
+            {event.sentimentBreakdown.neutral > 0 && <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">中性 {event.sentimentBreakdown.neutral}</Badge>}
+            {event.sentimentBreakdown.positive > 0 && <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">正向 {event.sentimentBreakdown.positive}</Badge>}
+            <Badge className="bg-primary/10 text-primary border-0 text-[10px]">业务: {event.topBusiness}</Badge>
+          </div>
+          <div className="grid grid-cols-1 gap-2">
+            <div className="bg-muted/30 rounded-md p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <BarChart3 className="w-4 h-4" /> 文章总量
+              </div>
+              <div className="text-lg font-semibold text-foreground">{event.posts.length}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Time info & platforms */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">时间信息</CardTitle></CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">首发时间</span><span className="text-foreground">{event.firstTime}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">最新时间</span><span className="text-foreground">{event.latestTime}</span></div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">覆盖平台</CardTitle></CardHeader>
-          <CardContent className="flex gap-2 flex-wrap">
-            {event.keyPlatforms.map(p => <Badge key={p} variant="outline" className="text-xs">{p}</Badge>)}
-          </CardContent>
-        </Card>
-      </div>
+      {/* 计算字段 */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-600">计算字段</Badge>
+            <span className="text-muted-foreground font-normal text-xs">基于文章互动量聚合</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-5 gap-3">
+            <Badge variant="outline" className={`text-[10px] justify-center py-1.5 ${speedColor[event.fermentSpeed]}`}>发酵速度: {speedLabel[event.fermentSpeed]}</Badge>
+            {[
+              { label: "总点赞量", value: event.totalLikes, icon: ThumbsUp },
+              { label: "总收藏量", value: event.totalCollects, icon: Bookmark },
+              { label: "总评论量", value: event.totalComments, icon: MessageCircle },
+              { label: "总分享量", value: event.totalShares, icon: Share2 },
+            ].map(m => (
+              <div key={m.label} className="bg-muted/30 rounded-md p-3 text-center">
+                <m.icon className="w-4 h-4 mx-auto text-muted-foreground mb-1" />
+                <div className="text-base font-semibold text-foreground">{m.value}</div>
+                <div className="text-[11px] text-muted-foreground">{m.label}</div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 原始字段 */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Badge variant="outline" className="text-[10px] border-muted-foreground/40 text-muted-foreground">原始字段</Badge>
+            <span className="text-muted-foreground font-normal text-xs">采集自原始文章</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-3 gap-4 text-sm">
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">首发时间</div>
+            <div className="text-foreground text-sm">{event.firstTime}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">最新时间</div>
+            <div className="text-foreground text-sm">{event.latestTime}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">覆盖平台（{event.keyPlatforms.length}）</div>
+            <div className="flex gap-1.5 flex-wrap">
+              {event.keyPlatforms.map(p => <Badge key={p} variant="outline" className="text-[10px]">{p}</Badge>)}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Event Timeline */}
       <Card>
