@@ -158,6 +158,9 @@ export default function ArticleDetail() {
   const [noiseDialogOpen, setNoiseDialogOpen] = useState(false);
   const [noiseCategory, setNoiseCategory] = useState("unrelated");
 
+  // 关键词搜索（高亮）
+  const [searchQuery, setSearchQuery] = useState("");
+
   useEffect(() => {
     if (!item) {
       // No state — just go back
