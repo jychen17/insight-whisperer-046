@@ -1259,6 +1259,39 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                 placeholder="搜索字段..." />
                             </div>
 
+                            {/* Selected merge fields with drag-and-drop ordering */}
+                            {(node.displayFields || []).length > 0 && (
+                              <div className="border border-primary/20 rounded-md p-2 bg-primary/5 mb-2">
+                                <div className="text-[10px] font-medium text-foreground mb-1.5 flex items-center gap-1">
+                                  <GripVertical className="w-2.5 h-2.5 text-muted-foreground" />
+                                  已选合并字段顺序（拖动 ⋮⋮ 调整）· 共 {(node.displayFields || []).length} 个
+                                </div>
+                                <SortableList
+                                  items={node.displayFields || []}
+                                  onReorder={(items) => reorderMergeDisplayFields(node.id, items)}
+                                  renderItem={(df, idx, handle) => {
+                                    const fdef = ALL_FIELDS.find(f => f.key === df.key);
+                                    return (
+                                      <div className="flex items-center gap-1.5 px-1.5 py-1 bg-card rounded border border-border">
+                                        {handle}
+                                        <span className="text-[9px] font-mono text-muted-foreground w-5">{idx + 1}</span>
+                                        <Badge className={`text-[8px] px-1 py-0 border-0 ${
+                                          df.fieldType === "ai" ? "bg-purple-500/10 text-purple-600 dark:text-purple-300" :
+                                          df.fieldType === "calc" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                                        }`}>{FIELD_TYPE_LABELS[df.fieldType]}</Badge>
+                                        <span className="text-[10px] text-foreground flex-1">{fdef?.label || df.key}</span>
+                                        <button
+                                          onClick={() => toggleMergeDisplayField(node.id, df.key)}
+                                          className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                          title="移除"
+                                        ><Trash2 className="w-2.5 h-2.5" /></button>
+                                      </div>
+                                    );
+                                  }}
+                                />
+                              </div>
+                            )}
+
                             {(["ai", "raw", "calc"] as const).map(ftype => {
                               const fields = ALL_FIELDS.filter(f => f.fieldType === ftype).filter(f => !mergeFieldSearch || f.label.includes(mergeFieldSearch) || f.key.includes(mergeFieldSearch));
                               if (fields.length === 0) return null;
