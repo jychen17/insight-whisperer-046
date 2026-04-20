@@ -1507,7 +1507,13 @@ function ConditionTreeEditor({
         </div>
         <div className="flex items-center gap-1">
           <button onClick={() => onAddCondition(node.id)} className="flex items-center gap-0.5 text-[10px] text-primary hover:underline"><Plus className="w-2.5 h-2.5" />条件</button>
-          <button onClick={() => onAddGroup(node.id)} className="flex items-center gap-0.5 text-[10px] text-primary hover:underline ml-2"><Plus className="w-2.5 h-2.5" />分组()</button>
+          {(() => {
+            const hasGroupChild = children.some(c => c.type === "group");
+            const canAddGroup = !maxOneGroup || (isRoot && !hasGroupChild);
+            return canAddGroup ? (
+              <button onClick={() => onAddGroup(node.id)} className="flex items-center gap-0.5 text-[10px] text-primary hover:underline ml-2"><Plus className="w-2.5 h-2.5" />分组()</button>
+            ) : null;
+          })()}
           {!isRoot && <button onClick={() => onRemove(node.id)} className="ml-2 text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>}
         </div>
       </div>
@@ -1515,7 +1521,7 @@ function ConditionTreeEditor({
         {children.map((child, ci) => (
           <div key={child.id}>
             {ci > 0 && <div className="text-[10px] text-primary font-medium py-0.5 ml-2">{node.logic}</div>}
-            <ConditionTreeEditor node={child} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} />
+            <ConditionTreeEditor node={child} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} maxOneGroup={maxOneGroup} />
           </div>
         ))}
         {children.length === 0 && <p className="text-[10px] text-muted-foreground py-2 text-center">点击上方按钮添加条件或嵌套分组</p>}
