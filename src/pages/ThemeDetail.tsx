@@ -490,6 +490,14 @@ export default function ThemeDetail() {
         <DashboardBuilderDialog theme={dashboardDialogTheme} onClose={() => setDashboardDialogTheme(null)}
           onSave={updated => { setCurrentTheme(updated); setDashboardDialogTheme(null); }} />
       )}
+      {permissionDialogOpen && (
+        <DataPermissionDialog
+          theme={currentTheme}
+          currentUser={{ name: "张三", isSuperAdmin: true }}
+          onClose={() => setPermissionDialogOpen(false)}
+          onSave={(t) => { setCurrentTheme(t); setPermissionDialogOpen(false); }}
+        />
+      )}
     </div>
   );
 }
