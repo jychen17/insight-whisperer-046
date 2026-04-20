@@ -367,37 +367,6 @@ export default function EventDetail() {
         </CardContent>
       </Card>
 
-      {/* Event Processing Records */}
-      <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><History className="w-4 h-4" /> 事件处理记录</CardTitle></CardHeader>
-        <CardContent>
-          {event.handleRecords.length === 0 ? (
-            <p className="text-sm text-muted-foreground">暂无处理记录</p>
-          ) : (
-            <div className="space-y-3">
-              {event.handleRecords.map((r, idx) => (
-                <div key={r.id} className="flex gap-3 items-start">
-                  <div className="flex flex-col items-center">
-                    <div className={`w-2.5 h-2.5 rounded-full ${idx === 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
-                    {idx < event.handleRecords.length - 1 && <div className="w-px h-8 bg-border" />}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-foreground">{r.operator}</span>
-                      <span className="text-[11px] text-muted-foreground">{r.time}</span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-0.5">
-                      操作: <span className="text-foreground">{renderRecordDesc(r)}</span>
-                      {r.remark && <span className="ml-2">备注: {r.remark}</span>}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
       {/* Post list */}
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">事件内文章列表 ({event.posts.length})</CardTitle></CardHeader>
