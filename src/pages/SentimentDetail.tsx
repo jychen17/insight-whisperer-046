@@ -697,7 +697,7 @@ export default function SentimentDetail() {
 
       Object.entries(groups).forEach(([key, ids]) => {
         if (ids.length < 2) return;
-        const eventId = `CLS-${Date.now().toString(36).toUpperCase()}-${key.slice(0, 4).toUpperCase()}`;
+        const eventId = genClusterId();
         const posts = updatedItems.filter(i => ids.includes(i.id));
         const meta = buildEventMeta(posts, methodLabel);
         newEvents.push({
@@ -748,7 +748,7 @@ export default function SentimentDetail() {
       const methodLabel = clusterMethod === "text_similarity" ? "文本相似度" : clusterMethod === "title_same" ? "标题相同" : "正文相同";
       Object.entries(groups).forEach(([key, ids]) => {
         if (ids.length < 2) return;
-        const eid = `CLS-${Date.now().toString(36).toUpperCase()}-${key.slice(0, 4).toUpperCase()}`;
+        const eid = genClusterId();
         const posts = updatedItems.filter(i => ids.includes(i.id));
         const meta = buildEventMeta(posts, methodLabel);
         newEvents.push({
@@ -1553,7 +1553,7 @@ export default function SentimentDetail() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate" onClick={() => navigate(`/sentiment/article/${item.id}`, { state: { item, from: "sentiment" } })}>{item.title}</h3>
-                            <span className="text-[10px] text-muted-foreground/60 font-mono shrink-0" title="文章ID">#A{String(item.id).padStart(6, "0")}</span>
+                            <span className="text-[10px] text-muted-foreground/60 font-mono shrink-0" title="文章ID">#{articleCode(item.id)}</span>
                             {renderStatusBadge(item.handleStatus)}
                             {item.isNoise && (
                               <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
