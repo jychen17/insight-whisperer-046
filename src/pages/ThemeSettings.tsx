@@ -822,7 +822,7 @@ function UserMultiPicker({
   );
 }
 
-function DataPermissionDialog({
+export function DataPermissionDialog({
   theme, currentUser, onClose, onSave,
 }: {
   theme: ThemeConfig;
