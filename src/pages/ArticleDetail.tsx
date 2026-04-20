@@ -95,6 +95,14 @@ export default function ArticleDetail() {
 
   // AI noise label state (independent from "manual mark as noise")
   const [aiNoiseLabel, setAiNoiseLabel] = useState<string>(passedItem?.isNoise ? "low_quality" : "not_noise");
+  // Editable AI fields
+  const [aiSummary, setAiSummary] = useState<string>(passedItem?.summary || "");
+  const [aiJudgement, setAiJudgement] = useState<string>(
+    passedItem ? `根据「${passedItem.business}」业务范畴及内容关键词，命中${passedItem.issueType}问题，情感判定为${passedItem.sentiment}。` : ""
+  );
+  const [isNegativeLabel, setIsNegativeLabel] = useState<string>(
+    passedItem?.sentiment?.includes("负向") ? "yes" : "no"
+  );
 
   // Image preview
   const [previewIdx, setPreviewIdx] = useState<number | null>(null);
