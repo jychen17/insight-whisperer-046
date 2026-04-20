@@ -171,6 +171,23 @@ const initialItems: SentimentItem[] = [
   },
 ];
 
+// 生成英文字母+数字组合的随机ID
+const ALNUM_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const randomAlnum = (len: number) =>
+  Array.from({ length: len }, () => ALNUM_CHARS[Math.floor(Math.random() * ALNUM_CHARS.length)]).join("");
+const genClusterId = () => `CLS${randomAlnum(8)}`;
+// 文章ID：基于数字 id 生成稳定的字母+数字组合（演示用）
+const articleCode = (id: number) => {
+  const seed = (id * 9301 + 49297) % 233280;
+  let n = seed;
+  let s = "";
+  for (let i = 0; i < 6; i++) {
+    s = ALNUM_CHARS[n % ALNUM_CHARS.length] + s;
+    n = Math.floor(n / ALNUM_CHARS.length) + id + i;
+  }
+  return `ART${s}`;
+};
+
 export default function SentimentDetail() {
   const navigate = useNavigate();
   const [mainTab, setMainTab] = useState<"sentiment" | "all">("sentiment");
@@ -389,7 +406,7 @@ export default function SentimentDetail() {
       setMergedEvents(prev => prev.map(e => e.id === mergeTargetEventId ? { ...e, postIds: newPostIds, ...meta } : e));
       toast({ title: "合并成功", description: `已并入聚类 ${mergeTargetEventId}（共 ${selectedIds.length} 条）` });
     } else {
-      const eventId = `CLS-${Date.now().toString(36).toUpperCase()}`;
+      const eventId = genClusterId();
       const selectedItems = items.filter(i => selectedIds.includes(i.id));
       const meta = buildEventMeta(selectedItems);
       const newEvent: MergedEvent = {
@@ -680,7 +697,7 @@ export default function SentimentDetail() {
 
       Object.entries(groups).forEach(([key, ids]) => {
         if (ids.length < 2) return;
-        const eventId = `CLS-${Date.now().toString(36).toUpperCase()}-${key.slice(0, 4).toUpperCase()}`;
+        const eventId = genClusterId();
         const posts = updatedItems.filter(i => ids.includes(i.id));
         const meta = buildEventMeta(posts, methodLabel);
         newEvents.push({
@@ -731,7 +748,7 @@ export default function SentimentDetail() {
       const methodLabel = clusterMethod === "text_similarity" ? "文本相似度" : clusterMethod === "title_same" ? "标题相同" : "正文相同";
       Object.entries(groups).forEach(([key, ids]) => {
         if (ids.length < 2) return;
-        const eid = `CLS-${Date.now().toString(36).toUpperCase()}-${key.slice(0, 4).toUpperCase()}`;
+        const eid = genClusterId();
         const posts = updatedItems.filter(i => ids.includes(i.id));
         const meta = buildEventMeta(posts, methodLabel);
         newEvents.push({
@@ -1536,7 +1553,7 @@ export default function SentimentDetail() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate" onClick={() => navigate(`/sentiment/article/${item.id}`, { state: { item, from: "sentiment" } })}>{item.title}</h3>
-                            <span className="text-[10px] text-muted-foreground/60 font-mono shrink-0" title="文章ID">#A{String(item.id).padStart(6, "0")}</span>
+                            <span className="text-[10px] text-muted-foreground/60 font-mono shrink-0" title="文章ID">#{articleCode(item.id)}</span>
                             {renderStatusBadge(item.handleStatus)}
                             {item.isNoise && (
                               <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
