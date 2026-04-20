@@ -1159,7 +1159,6 @@ export default function SentimentDetail() {
                               onChange={(e) => { e.stopPropagation(); toggleEventSelect(event.id); }}
                               onClick={e => e.stopPropagation()}
                             />
-                            {importanceBadgeMap[event.importance || "low"]}
                             {renderStatusBadge(event.handleStatus)}
                             <h3 className="text-sm font-semibold text-foreground">{event.title}</h3>
                           </div>
@@ -1204,7 +1203,11 @@ export default function SentimentDetail() {
 
                       {/* 计算字段 */}
                       <div className="mt-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2.5">
-                        <div className="grid grid-cols-5 gap-3">
+                        <div className="grid grid-cols-6 gap-3">
+                          <div className="text-center">
+                            <div>{importanceBadgeMap[event.importance || "low"]}</div>
+                            <div className="text-[10px] text-muted-foreground mt-0.5">事件等级</div>
+                          </div>
                           {event.fermentSpeed && (
                             <div className="text-center">
                               <div className={`text-xs font-semibold ${speedColor[event.fermentSpeed]}`}>{speedLabel[event.fermentSpeed]}</div>
