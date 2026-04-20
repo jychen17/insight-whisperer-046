@@ -3,6 +3,7 @@ import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,11 @@ const AI_NOISE_OPTIONS = [
   { value: "off_topic", label: "话题无关" },
   { value: "ad", label: "广告营销" },
   { value: "duplicate", label: "重复内容" },
+];
+
+const NEGATIVE_OPTIONS = [
+  { value: "yes", label: "是负面舆情" },
+  { value: "no", label: "非负面舆情" },
 ];
 
 // Mock images for demo
