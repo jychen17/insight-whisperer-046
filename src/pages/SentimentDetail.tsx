@@ -188,6 +188,19 @@ const articleCode = (id: number) => {
   return `ART${s}`;
 };
 
+// 高亮匹配的关键词片段
+const highlightMatch = (text: string, query: string) => {
+  const q = query.trim();
+  if (!q) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "ig"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase()
+      ? <mark key={i} className="bg-primary/20 text-primary rounded-sm px-0.5">{part}</mark>
+      : <span key={i}>{part}</span>
+  );
+};
+
 export default function SentimentDetail() {
   const navigate = useNavigate();
   const [mainTab, setMainTab] = useState<"sentiment" | "all">("sentiment");
