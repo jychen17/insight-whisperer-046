@@ -4,14 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuLabel, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink, FileText, CheckCircle2, XCircle, ArrowUpRight, ClipboardList, History, User, MessageSquarePlus, Download, Settings } from "lucide-react";
+import { Layers, Ban, ChevronDown, ChevronUp, X, AlertTriangle, Trash2, Sparkles, Clock, Settings2, TrendingUp, TrendingDown, Eye, Flame, Search, Filter, ArrowUpDown, BarChart3, Zap, MessageCircle, ThumbsUp, Share2, Calendar, Globe, Bookmark, Bell, ExternalLink, FileText, CheckCircle2, XCircle, ArrowUpRight, ClipboardList, History, User, MessageSquarePlus, Download, Settings, Edit2, Shield, GitMerge, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
-import ThemeConfigDialog from "@/components/ThemeConfigDialog";
-import { defaultThemes, type ThemeConfig } from "@/pages/ThemeSettings";
+import ThemeConfigDialog, { mergeConditionTreeToText } from "@/components/ThemeConfigDialog";
+import { defaultThemes, DataPermissionDialog, type ThemeConfig } from "@/pages/ThemeSettings";
 
 const filters = {
   brands: ["同程旅行", "携程", "美团", "飞猪", "去哪儿"],
@@ -267,6 +267,9 @@ export default function SentimentDetail() {
   const [eventFilterHandleStatus, setEventFilterHandleStatus] = useState<"all" | HandleStatus>("all");
 
   const [themeConfigOpen, setThemeConfigOpen] = useState(false);
+  const [themeDetailsOpen, setThemeDetailsOpen] = useState(false);
+  const [permissionDialogOpen, setPermissionDialogOpen] = useState(false);
+  const [currentSentimentTheme, setCurrentSentimentTheme] = useState<ThemeConfig | null>(null);
 
   // Export dialog state
   const sentimentTheme = useMemo(() => defaultThemes.find(t => t.id === "sentiment") ?? null, []);
@@ -1042,7 +1045,7 @@ export default function SentimentDetail() {
           </DropdownMenu>
           <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/sentiment/event-alert")}><Bell className="w-3 h-3" />预警设置</button>
           <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/analysis/report-config")}><FileText className="w-3 h-3" />报告设置</button>
-          <button className="px-3 py-1.5 border border-border rounded-md bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1" onClick={() => setThemeConfigOpen(true)}><Settings className="w-3 h-3" />主题配置</button>
+          <button className="px-3 py-1.5 border border-border rounded-md bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1" onClick={() => { setCurrentSentimentTheme(currentSentimentTheme ?? sentimentTheme); setThemeDetailsOpen(true); }}><Settings className="w-3 h-3" />主题配置</button>
         </div>
       </div>
 
@@ -2028,12 +2031,140 @@ export default function SentimentDetail() {
         </DialogContent>
       </Dialog>
 
+      {/* Theme details (read-only) with quick actions */}
+      <Dialog open={themeDetailsOpen} onOpenChange={setThemeDetailsOpen}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          {currentSentimentTheme && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{currentSentimentTheme.icon}</span>
+                    <div>
+                      <DialogTitle className="text-base">{currentSentimentTheme.name}</DialogTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {currentSentimentTheme.description} · 负责人：{currentSentimentTheme.owner}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => { setThemeDetailsOpen(false); setPermissionDialogOpen(true); }}>
+                      <Shield className="w-3 h-3" /> 数据权限
+                    </Button>
+                    <Button size="sm" className="h-7 text-xs gap-1" onClick={() => { setThemeDetailsOpen(false); setThemeConfigOpen(true); }}>
+                      <Edit2 className="w-3 h-3" /> 编辑配置
+                    </Button>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-5 mt-2">
+                {/* Data sources */}
+                <div>
+                  <h4 className="text-xs font-medium text-foreground mb-2 flex items-center gap-1.5">
+                    <span className="w-0.5 h-3 rounded-full bg-primary" /> 数据源（{currentSentimentTheme.dataSources.length}）
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {currentSentimentTheme.dataSources.map(ds => (
+                      <div key={ds.taskId} className="flex items-center gap-2 bg-muted/30 rounded-md px-2.5 py-1.5 border border-border">
+                        <span className="text-xs font-medium text-foreground">{ds.taskName}</span>
+                        <div className="flex gap-1">
+                          {ds.platforms.map(p => <Badge key={p} className="text-[10px] px-1 py-0 bg-primary/10 text-primary border-0">{p}</Badge>)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Field summary */}
+                <div>
+                  <h4 className="text-xs font-medium text-foreground mb-2 flex items-center gap-1.5">
+                    <span className="w-0.5 h-3 rounded-full bg-primary" /> 展示字段（{(currentSentimentTheme.fieldConfigs || []).length}）
+                  </h4>
+                  <div className="flex flex-wrap gap-1">
+                    {(currentSentimentTheme.fieldConfigs || []).map(fc => (
+                      <Badge key={fc.key} variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                        {fc.key}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Merge pipeline */}
+                <div>
+                  <h4 className="text-xs font-medium text-foreground mb-2 flex items-center gap-1.5">
+                    <span className="w-0.5 h-3 rounded-full bg-primary" /> 合并管线
+                  </h4>
+                  {(() => {
+                    const enabledNodes = (currentSentimentTheme.mergeNodes ?? []).filter(n => n.enabled).sort((a, b) => a.order - b.order);
+                    if (enabledNodes.length === 0) {
+                      return <div className="text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-2 border border-border">未配置合并节点</div>;
+                    }
+                    return (
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <div className="bg-muted/50 rounded-md px-2.5 py-1.5 border border-border text-xs font-medium text-foreground">全部帖子</div>
+                        {enabledNodes.map((node, i) => (
+                          <div key={node.id} className="flex items-center gap-1.5">
+                            <ChevronRightIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                            <div className="bg-primary/5 rounded-md px-2.5 py-1.5 border border-primary/20">
+                              <div className="text-xs font-medium text-foreground flex items-center gap-1">
+                                <GitMerge className="w-3 h-3 text-primary" /> 第{i + 1}级：{node.name}
+                              </div>
+                              {node.mergeConditionTree && (node.mergeConditionTree.children || []).length > 0 && (
+                                <div className="text-[10px] text-muted-foreground mt-0.5 max-w-[260px] truncate">
+                                  {mergeConditionTreeToText(node.mergeConditionTree)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Permission summary */}
+                <div>
+                  <h4 className="text-xs font-medium text-foreground mb-2 flex items-center gap-1.5">
+                    <span className="w-0.5 h-3 rounded-full bg-primary" /> 数据权限
+                  </h4>
+                  <div className="text-xs text-muted-foreground bg-muted/30 rounded-md px-3 py-2 border border-border">
+                    可见范围：
+                    <span className="ml-1 text-foreground font-medium">
+                      {currentSentimentTheme.permissionMode === "selected" ? "选定人员开放" : "全局开放"}
+                    </span>
+                    {currentSentimentTheme.permissionMode === "selected" && (
+                      <span className="ml-2">
+                        · 主题管理员 {(currentSentimentTheme.themeAdmins || []).length} 人 · 授权用户 {(currentSentimentTheme.allowedUsers || []).length} 人
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" size="sm" onClick={() => setThemeDetailsOpen(false)}>关闭</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <ThemeConfigDialog
         open={themeConfigOpen}
         onOpenChange={setThemeConfigOpen}
-        theme={sentimentTheme}
-        onSave={() => setThemeConfigOpen(false)}
+        theme={currentSentimentTheme ?? sentimentTheme}
+        onSave={(t) => { setCurrentSentimentTheme(t); setThemeConfigOpen(false); }}
       />
+
+      {permissionDialogOpen && (currentSentimentTheme ?? sentimentTheme) && (
+        <DataPermissionDialog
+          theme={(currentSentimentTheme ?? sentimentTheme)!}
+          currentUser={{ name: "张三", isSuperAdmin: true }}
+          onClose={() => setPermissionDialogOpen(false)}
+          onSave={(t) => { setCurrentSentimentTheme(t); setPermissionDialogOpen(false); }}
+        />
+      )}
 
       {/* Export Dialog */}
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
