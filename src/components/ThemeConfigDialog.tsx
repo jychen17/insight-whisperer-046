@@ -904,9 +904,34 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                         <div className="space-y-3">
                           {/* Basic filter — include / exclude words */}
                           <div className="border border-border rounded-lg p-3 bg-card space-y-3">
-                            <div className="flex items-center gap-2">
-                              <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">基础过滤条件</Badge>
-                              <span className="text-[10px] text-muted-foreground">精准匹配 · 标题/正文/发布人昵称</span>
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Badge className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-0">基础过滤条件</Badge>
+                                <span className="text-[10px] text-muted-foreground">精准匹配 · 标题/正文/发布人昵称</span>
+                              </div>
+                              {form.dataSources.length > 1 && (
+                                <div className="flex items-center gap-1">
+                                  <Copy className="w-3 h-3 text-muted-foreground" />
+                                  <select
+                                    value=""
+                                    onChange={(e) => {
+                                      const sourceDS = form.dataSources.find(ds => ds.taskId === e.target.value);
+                                      if (sourceDS) {
+                                        updateDataSource(activeDS.taskId, {
+                                          includeWords: [...(sourceDS.includeWords || [])],
+                                          excludeWords: [...(sourceDS.excludeWords || [])],
+                                        });
+                                      }
+                                    }}
+                                    className="px-1.5 py-1 text-[10px] border border-border rounded bg-card text-foreground"
+                                  >
+                                    <option value="">复制基础过滤自...</option>
+                                    {form.dataSources.filter(ds => ds.taskId !== activeDS.taskId).map(ds => (
+                                      <option key={ds.taskId} value={ds.taskId}>{ds.taskName}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
                             </div>
 
                             <WordChipsInput
@@ -1080,11 +1105,40 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                             return (
                               <div key={f.key} className={`px-3 py-2.5 transition-colors ${selected ? "bg-primary/5" : ""}`}>
                                 <div className="flex items-center justify-between">
-                                  <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => toggleField(f.key)}>
-                                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
+                                  <div className="flex items-center gap-2.5">
+                                    <div onClick={() => toggleField(f.key)}
+                                      className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 cursor-pointer ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
                                       {selected && <Check className="w-2.5 h-2.5 text-primary-foreground" />}
                                     </div>
-                                    <span className="text-xs font-medium text-foreground">{f.label}</span>
+                                    {selected && fc && (() => {
+                                      const orderIdx = form.fieldConfigs.findIndex(c => c.key === f.key);
+                                      return (
+                                        <div className="flex items-center gap-0.5">
+                                          <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground border-0 font-mono">#{orderIdx + 1}</Badge>
+                                          <button
+                                            disabled={orderIdx === 0}
+                                            onClick={() => setForm(fr => {
+                                              const arr = [...fr.fieldConfigs];
+                                              [arr[orderIdx - 1], arr[orderIdx]] = [arr[orderIdx], arr[orderIdx - 1]];
+                                              return { ...fr, fieldConfigs: arr };
+                                            })}
+                                            className="p-0.5 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
+                                            title="上移"
+                                          ><ArrowUp className="w-2.5 h-2.5" /></button>
+                                          <button
+                                            disabled={orderIdx === form.fieldConfigs.length - 1}
+                                            onClick={() => setForm(fr => {
+                                              const arr = [...fr.fieldConfigs];
+                                              [arr[orderIdx + 1], arr[orderIdx]] = [arr[orderIdx], arr[orderIdx + 1]];
+                                              return { ...fr, fieldConfigs: arr };
+                                            })}
+                                            className="p-0.5 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
+                                            title="下移"
+                                          ><ArrowDown className="w-2.5 h-2.5" /></button>
+                                        </div>
+                                      );
+                                    })()}
+                                    <span className="text-xs font-medium text-foreground cursor-pointer" onClick={() => toggleField(f.key)}>{f.label}</span>
                                     {f.hasSystemEnum && (
                                       <Badge className="text-[9px] px-1 py-0 bg-accent text-accent-foreground border-0">有枚举值</Badge>
                                     )}
@@ -1161,8 +1215,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
             </div>
           )}
 
-          {/* ═══════ Step 4: Merge Pipeline ═══════ */}
-          {step === 3 && (
+          {/* ═══════ Step 5: Merge Pipeline ═══════ */}
+          {step === 4 && (
             <div className="space-y-5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground flex items-center gap-2">
