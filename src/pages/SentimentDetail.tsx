@@ -202,6 +202,8 @@ export default function SentimentDetail() {
   const [mergeTitle, setMergeTitle] = useState("");
   const [mergeMode, setMergeMode] = useState<"new" | "existing">("new");
   const [mergeTargetEventId, setMergeTargetEventId] = useState<string>("");
+  const [mergeTargetSearch, setMergeTargetSearch] = useState<string>("");
+  const [mergeTargetFocused, setMergeTargetFocused] = useState(false);
   const [noiseDialogOpen, setNoiseDialogOpen] = useState(false);
   const [noiseCategory, setNoiseCategory] = useState("unrelated");
   const [noiseTargetIds, setNoiseTargetIds] = useState<number[]>([]);
@@ -1716,20 +1718,59 @@ export default function SentimentDetail() {
             ) : (
               <div>
                 <label className="text-xs text-muted-foreground mb-1 block">选择目标聚类</label>
-                <Select value={mergeTargetEventId} onValueChange={setMergeTargetEventId}>
-                  <SelectTrigger className="h-9 text-xs">
-                    <SelectValue placeholder="请选择聚类 ID" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-72">
-                    {mergedEvents.map(e => (
-                      <SelectItem key={e.id} value={e.id} className="text-xs">
-                        <span className="font-mono text-muted-foreground mr-2">{e.id}</span>
-                        <span>{e.title}</span>
-                        <span className="text-muted-foreground ml-2">({e.postIds.length}篇)</span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <input
+                    className="w-full h-9 pl-7 pr-3 text-xs border border-border rounded-md bg-card text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={mergeTargetSearch}
+                    onChange={e => { setMergeTargetSearch(e.target.value); setMergeTargetEventId(""); }}
+                    onFocus={() => setMergeTargetFocused(true)}
+                    onBlur={() => setTimeout(() => setMergeTargetFocused(false), 150)}
+                    placeholder="输入聚类 ID 或事件名称模糊搜索"
+                  />
+                </div>
+                {mergeTargetEventId && !mergeTargetFocused && (() => {
+                  const sel = mergedEvents.find(e => e.id === mergeTargetEventId);
+                  return sel ? (
+                    <div className="mt-2 p-2 rounded border border-primary/30 bg-primary/5 text-xs flex items-center gap-2">
+                      <span className="font-mono text-primary">#{sel.id}</span>
+                      <span className="truncate flex-1">{sel.title}</span>
+                      <span className="text-muted-foreground shrink-0">{sel.postIds.length}篇</span>
+                    </div>
+                  ) : null;
+                })()}
+                {mergeTargetFocused && (
+                  <div className="mt-1 max-h-56 overflow-y-auto border border-border rounded-md bg-popover shadow-md">
+                    {(() => {
+                      const q = mergeTargetSearch.trim().toLowerCase();
+                      const list = mergedEvents.filter(e =>
+                        !q || e.id.toLowerCase().includes(q) || e.title.toLowerCase().includes(q)
+                      );
+                      if (list.length === 0) {
+                        return <div className="px-3 py-4 text-xs text-muted-foreground text-center">无匹配的聚类</div>;
+                      }
+                      return list.map(e => (
+                        <button
+                          key={e.id}
+                          type="button"
+                          onMouseDown={ev => ev.preventDefault()}
+                          onClick={() => {
+                            setMergeTargetEventId(e.id);
+                            setMergeTargetSearch(`#${e.id}  ${e.title}`);
+                            setMergeTargetFocused(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs hover:bg-muted/50 flex items-center gap-2 ${
+                            mergeTargetEventId === e.id ? "bg-primary/10" : ""
+                          }`}
+                        >
+                          <span className="font-mono text-muted-foreground shrink-0">#{e.id}</span>
+                          <span className="truncate flex-1">{e.title}</span>
+                          <span className="text-muted-foreground shrink-0">{e.postIds.length}篇</span>
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                )}
               </div>
             )}
 
