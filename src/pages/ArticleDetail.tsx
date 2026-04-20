@@ -296,12 +296,6 @@ export default function ArticleDetail() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-2 ml-auto">
-                <Badge variant="outline" className="text-[10px]">点赞 {item.likes}</Badge>
-                <Badge variant="outline" className="text-[10px]">收藏 {item.collects}</Badge>
-                <Badge variant="outline" className="text-[10px]">评论 {item.comments}</Badge>
-                <Badge variant="outline" className="text-[10px]">分享 {item.shares}</Badge>
-              </div>
             </div>
           </div>
 
