@@ -498,6 +498,9 @@ export default function TagSystem() {
               <DetailRow label="数据类型">
                 <Badge variant="outline">{selectedTag.dataType}</Badge>
               </DetailRow>
+              <DetailRow label="实体类型">
+                <Badge variant="secondary">{selectedTag.entityType}</Badge>
+              </DetailRow>
               {selectedTag.dataType === "字符串" && (
                 <DetailRow label="枚举值">
                   {(selectedTag.enumValues?.length ?? 0) === 0 ? (
