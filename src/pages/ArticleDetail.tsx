@@ -194,10 +194,6 @@ export default function ArticleDetail() {
 
       {/* 原始字段 */}
       <div className="rounded-md border border-border bg-muted/20 p-3">
-        <div className="flex items-center gap-1.5 mb-2">
-          <Badge variant="outline" className="text-[10px] border-muted-foreground/40 text-muted-foreground">原始字段</Badge>
-          <span className="text-[11px] text-muted-foreground">采集自原始平台</span>
-        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
           <div>
             <div className="text-muted-foreground text-[10px]">发布平台</div>
@@ -231,10 +227,6 @@ export default function ArticleDetail() {
         <div className="col-span-2 space-y-4">
           {/* 计算字段 */}
           <div className="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-600">计算字段</Badge>
-              <span className="text-[11px] text-muted-foreground">基于规则计算</span>
-            </div>
             <div className="flex flex-wrap items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5">
                 <span className="text-muted-foreground shrink-0">初始等级：</span>
