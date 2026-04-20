@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Shield, Globe, Zap, Lightbulb, ArrowRight, TrendingUp, Eye, Database, BarChart3, Settings, Monitor, FolderOpen, Bell } from "lucide-react";
+import { Shield, Globe, Zap, Lightbulb, ArrowRight, TrendingUp, Eye, Database, BarChart3, Settings, Monitor, FolderOpen, Bell, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -123,7 +123,16 @@ export default function Index() {
 
       {/* Insight Theme Cards */}
       <div>
-        <h2 className="text-lg font-semibold text-foreground mb-4">洞察主题</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-foreground">洞察主题</h2>
+          <button
+            onClick={() => navigate("/themes/list")}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground hover:bg-accent transition-colors"
+          >
+            更多主题
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
           {themeModules.map((m) => (
             <ThemeCard key={m.key} module={m} isHovered={hoveredKey === m.key} onHover={setHoveredKey} onNavigate={navigate} />
