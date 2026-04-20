@@ -81,10 +81,12 @@ const categoryLabels: Record<string, string> = {
 };
 
 const ALL_DATA_TYPES: DataType[] = ["数字", "字符串", "时间"];
+const ALL_ENTITY_TYPES: EntityType[] = ["文章", "账户", "话题", "评论", "榜单"];
 
 interface Filters {
   search: string;
   dataType: string;
+  entityType: string;
   source: string;
   status: string;
 }
@@ -101,6 +103,7 @@ function TagTable({
     return tags.filter((t) => {
       if (filters.search && !t.name.includes(filters.search) && !t.id.toLowerCase().includes(filters.search.toLowerCase())) return false;
       if (filters.dataType && filters.dataType !== "all" && t.dataType !== filters.dataType) return false;
+      if (filters.entityType && filters.entityType !== "all" && t.entityType !== filters.entityType) return false;
       if (filters.source && filters.source !== "all" && t.source !== filters.source) return false;
       if (filters.status === "enabled" && !t.status) return false;
       if (filters.status === "disabled" && t.status) return false;
