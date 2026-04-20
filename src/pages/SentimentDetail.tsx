@@ -195,6 +195,11 @@ export default function SentimentDetail() {
   const [eventSearchQuery, setEventSearchQuery] = useState("");
   const [hasAutoClustered, setHasAutoClustered] = useState(false);
 
+  // Pagination
+  const PAGE_SIZE = 10;
+  const [eventPage, setEventPage] = useState(1);
+  const [articlePage, setArticlePage] = useState(1);
+
   // Event filter states
   const [eventFilterImportance, setEventFilterImportance] = useState<"all" | "high" | "medium" | "low">("all");
   const [eventFilterPlatform, setEventFilterPlatform] = useState("全部");
