@@ -169,6 +169,7 @@ export default function ThemeDetail() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-muted/50">
+                  <th className="text-center px-3 py-2 font-medium text-muted-foreground w-14">排序</th>
                   <th className="text-left px-3 py-2 font-medium text-muted-foreground">字段名</th>
                   <th className="text-left px-3 py-2 font-medium text-muted-foreground">类型</th>
                   <th className="text-center px-3 py-2 font-medium text-muted-foreground">展示位置</th>
@@ -177,8 +178,11 @@ export default function ThemeDetail() {
                 </tr>
               </thead>
               <tbody>
-                {currentTheme.fieldConfigs.map(fc => (
+                {currentTheme.fieldConfigs.map((fc, idx) => (
                   <tr key={fc.key} className="border-t border-border">
+                    <td className="px-3 py-2 text-center">
+                      <Badge className="text-[10px] px-1.5 py-0 bg-primary text-primary-foreground border-0">#{idx + 1}</Badge>
+                    </td>
                     <td className="px-3 py-2 font-medium text-foreground">{FIELD_LABELS[fc.key] || fc.key}</td>
                     <td className="px-3 py-2">
                       <Badge className={`text-[10px] px-1.5 py-0 border-0 ${
@@ -248,8 +252,9 @@ export default function ThemeDetail() {
                     )}
                     {(node.displayFields || []).length > 0 && (
                       <div className="flex gap-1 mt-1 flex-wrap">
-                        {(node.displayFields || []).map(df => (
+                        {(node.displayFields || []).map((df, dfIdx) => (
                           <Badge key={df.key} className="text-[9px] px-1 py-0 bg-muted text-muted-foreground border-0">
+                            <span className="text-primary font-semibold mr-0.5">#{dfIdx + 1}</span>
                             {FIELD_LABELS[df.key] || df.key}·{DISPLAY_POS_LABELS[df.position]}
                             {df.isFilter && "·筛选"}
                             {df.isSortable && "·排序"}
