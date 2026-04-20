@@ -117,8 +117,8 @@ function TagTable({
         <TableRow>
           <TableHead className="w-20">标签ID</TableHead>
           <TableHead>标签名称</TableHead>
+          <TableHead>值类型</TableHead>
           <TableHead>数据类型</TableHead>
-          <TableHead>实体类型</TableHead>
           <TableHead>枚举值</TableHead>
           <TableHead>来源</TableHead>
           <TableHead>状态</TableHead>
@@ -407,14 +407,14 @@ export default function TagSystem() {
               />
             </div>
             <Select value={filters.dataType} onValueChange={(v) => updateFilter("dataType", v)}>
-              <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="数据类型" /></SelectTrigger>
+              <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="值类型" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部类型</SelectItem>
                 {ALL_DATA_TYPES.map((dt) => <SelectItem key={dt} value={dt}>{dt}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.entityType} onValueChange={(v) => updateFilter("entityType", v)}>
-              <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="实体类型" /></SelectTrigger>
+              <SelectTrigger className="w-[140px] h-9"><SelectValue placeholder="数据类型" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">全部实体</SelectItem>
                 {ALL_ENTITY_TYPES.map((et) => <SelectItem key={et} value={et}>{et}</SelectItem>)}
@@ -495,10 +495,10 @@ export default function TagSystem() {
                 <Badge variant="secondary">{categoryLabels[selectedTag.category]}</Badge>
               </DetailRow>
               <DetailRow label="描述">{selectedTag.description || "—"}</DetailRow>
-              <DetailRow label="数据类型">
+              <DetailRow label="值类型">
                 <Badge variant="outline">{selectedTag.dataType}</Badge>
               </DetailRow>
-              <DetailRow label="实体类型">
+              <DetailRow label="数据类型">
                 <Badge variant="secondary">{selectedTag.entityType}</Badge>
               </DetailRow>
               {selectedTag.dataType === "字符串" && (
@@ -571,7 +571,7 @@ export default function TagSystem() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>数据类型 <span className="text-destructive">*</span></Label>
+                <Label>值类型 <span className="text-destructive">*</span></Label>
                 <Select
                   value={form.dataType}
                   onValueChange={(v) => {
@@ -587,10 +587,10 @@ export default function TagSystem() {
                     {ALL_DATA_TYPES.map((dt) => <SelectItem key={dt} value={dt}>{dt}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {errors.dataType && <p className="text-xs text-destructive">请选择数据类型</p>}
+                {errors.dataType && <p className="text-xs text-destructive">请选择值类型</p>}
               </div>
               <div className="space-y-1.5">
-                <Label>实体类型 <span className="text-destructive">*</span></Label>
+                <Label>数据类型 <span className="text-destructive">*</span></Label>
                 <Select
                   value={form.entityType}
                   onValueChange={(v) => { setForm({ ...form, entityType: v as EntityType }); setErrors({ ...errors, entityType: false }); }}
@@ -602,7 +602,7 @@ export default function TagSystem() {
                     {ALL_ENTITY_TYPES.map((et) => <SelectItem key={et} value={et}>{et}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {errors.entityType && <p className="text-xs text-destructive">请选择实体类型</p>}
+                {errors.entityType && <p className="text-xs text-destructive">请选择数据类型</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>来源 <span className="text-destructive">*</span></Label>
@@ -690,7 +690,7 @@ export default function TagSystem() {
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
-                <Label>数据类型 <span className="text-destructive">*</span></Label>
+                <Label>值类型 <span className="text-destructive">*</span></Label>
                 <Select
                   value={form.dataType}
                   onValueChange={(v) => {
@@ -704,10 +704,10 @@ export default function TagSystem() {
                     {ALL_DATA_TYPES.map((dt) => <SelectItem key={dt} value={dt}>{dt}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {errors.dataType && <p className="text-xs text-destructive">请选择数据类型</p>}
+                {errors.dataType && <p className="text-xs text-destructive">请选择值类型</p>}
               </div>
               <div className="space-y-1.5">
-                <Label>实体类型 <span className="text-destructive">*</span></Label>
+                <Label>数据类型 <span className="text-destructive">*</span></Label>
                 <Select
                   value={form.entityType}
                   onValueChange={(v) => { setForm({ ...form, entityType: v as EntityType }); setErrors({ ...errors, entityType: false }); }}
@@ -717,7 +717,7 @@ export default function TagSystem() {
                     {ALL_ENTITY_TYPES.map((et) => <SelectItem key={et} value={et}>{et}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {errors.entityType && <p className="text-xs text-destructive">请选择实体类型</p>}
+                {errors.entityType && <p className="text-xs text-destructive">请选择数据类型</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>来源 <span className="text-destructive">*</span></Label>
