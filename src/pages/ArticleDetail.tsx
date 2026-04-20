@@ -18,16 +18,16 @@ import {
 import { toast } from "@/hooks/use-toast";
 import type { SentimentItem, HandleRecord } from "@/pages/SentimentDetail";
 
-const SENTIMENT_OPTIONS = [
-  "负向情感-客户投诉", "负向情感-媒体曝光", "负向情感-用户吐槽",
-  "中性", "正向情感-用户好评", "正向情感-媒体报道",
+const SENTIMENT_BASE_OPTIONS = ["负向情感", "中性", "正向情感"];
+const CONTENT_TOPIC_OPTIONS = [
+  "客户投诉", "媒体曝光", "用户吐槽", "用户好评", "媒体报道", "其他",
 ];
 const ISSUE_TYPE_OPTIONS = [
   "票价吐槽", "机票退改", "金融服务", "酒店投诉", "客服态度", "退款问题", "其他",
 ];
-const BUSINESS_OPTIONS = [
-  "同程旅行-国际机票", "同程旅行-国内机票", "同程旅行-国内酒店",
-  "同程旅行-旅游", "同程旅行-金服", "同程旅行-用车", "同程旅行-人资",
+const OTA_OPTIONS = ["同程旅行", "携程", "美团", "飞猪", "去哪儿"];
+const BUSINESS_TYPE_OPTIONS = [
+  "国际机票", "国内机票", "国内酒店", "旅游", "金服", "用车", "人资",
 ];
 const RISK_LEVEL_OPTIONS = ["无", "低", "一般", "高", "紧急"];
 const SPEED_OPTIONS = ["低", "中", "高"];
@@ -398,11 +398,36 @@ export default function ArticleDetail() {
           <div className="rounded-md border border-primary/20 bg-primary/5 p-3 space-y-2">
             <div className="text-[10px] text-muted-foreground text-right">所有 AI 标签均可手动调整（修改需二次确认）</div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground shrink-0">情感分类：</span>
-              <Select value={item.sentiment} onValueChange={(v) => updateAiSelect("sentiment", "情感分类", v)}>
+              <span className="text-xs text-muted-foreground shrink-0">情感：</span>
+              <Select
+                value={(item.sentiment || "").split("-")[0] || "中性"}
+                onValueChange={(v) => {
+                  const fromSent = (item.sentiment || "").split("-")[0] || "";
+                  const topic = (item.sentiment || "").split("-")[1];
+                  const newSentiment = topic ? `${v}-${topic}` : v;
+                  requestAiChange("情感", fromSent, v, () => setItem(prev => prev ? { ...prev, sentiment: newSentiment } : prev));
+                }}
+              >
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
-                  {SENTIMENT_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  {SENTIMENT_BASE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground shrink-0">内容主题：</span>
+              <Select
+                value={(item.sentiment || "").split("-")[1] || "其他"}
+                onValueChange={(v) => {
+                  const fromTopic = (item.sentiment || "").split("-")[1] || "";
+                  const sent = (item.sentiment || "").split("-")[0] || "中性";
+                  const newSentiment = `${sent}-${v}`;
+                  requestAiChange("内容主题", fromTopic, v, () => setItem(prev => prev ? { ...prev, sentiment: newSentiment } : prev));
+                }}
+              >
+                <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  {CONTENT_TOPIC_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -423,27 +448,36 @@ export default function ArticleDetail() {
               </Select>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground shrink-0">业务类型：</span>
-              <Select value={item.business} onValueChange={(v) => updateAiSelect("business", "业务类型", v)}>
-                <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent className="bg-popover z-50">
-                  {BUSINESS_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center justify-between gap-2">
               <span className="text-xs text-muted-foreground shrink-0">所属 OTA：</span>
               <Select
                 value={item.business?.split("-")[0] || "同程旅行"}
                 onValueChange={(v) => {
                   const fromOta = item.business?.split("-")[0] || "";
-                  const newBusiness = `${v}-${item.business?.split("-")[1] || "其他"}`;
+                  const type = item.business?.split("-")[1] || "其他";
+                  const newBusiness = `${v}-${type}`;
                   requestAiChange("所属 OTA", fromOta, v, () => setItem(prev => prev ? { ...prev, business: newBusiness } : prev));
                 }}
               >
                 <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent className="bg-popover z-50">
-                  {["同程旅行", "携程", "美团", "飞猪", "去哪儿"].map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                  {OTA_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground shrink-0">业务类型：</span>
+              <Select
+                value={item.business?.split("-")[1] || "其他"}
+                onValueChange={(v) => {
+                  const fromType = item.business?.split("-")[1] || "";
+                  const ota = item.business?.split("-")[0] || "同程旅行";
+                  const newBusiness = `${ota}-${v}`;
+                  requestAiChange("业务类型", fromType, v, () => setItem(prev => prev ? { ...prev, business: newBusiness } : prev));
+                }}
+              >
+                <SelectTrigger className="h-7 w-44 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-popover z-50">
+                  {BUSINESS_TYPE_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
