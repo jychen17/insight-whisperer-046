@@ -26,6 +26,8 @@ export interface FieldConfig {
   isSortable?: boolean;
   isDefaultSort?: boolean;
   sortDirection?: "asc" | "desc";
+  /** Display order in the theme list — lower values appear first */
+  order?: number;
 }
 
 export interface MergeDisplayField {
@@ -132,6 +134,10 @@ export interface DataSourceConfig {
   timeRange: string;
   enabled: boolean;
   conditionTree?: ConditionNode;
+  /** Basic include words — exact match against title/body/author nickname */
+  includeWords?: string[];
+  /** Basic exclude words — exact match against title/body/author nickname */
+  excludeWords?: string[];
 }
 
 export interface TagRule {
