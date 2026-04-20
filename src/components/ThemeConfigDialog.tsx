@@ -1102,29 +1102,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                     {selected && fc && (() => {
                                       const orderIdx = form.fieldConfigs.findIndex(c => c.key === f.key);
                                       return (
-                                        <div className="flex items-center gap-0.5">
-                                          <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground border-0 font-mono">#{orderIdx + 1}</Badge>
-                                          <button
-                                            disabled={orderIdx === 0}
-                                            onClick={() => setForm(fr => {
-                                              const arr = [...fr.fieldConfigs];
-                                              [arr[orderIdx - 1], arr[orderIdx]] = [arr[orderIdx], arr[orderIdx - 1]];
-                                              return { ...fr, fieldConfigs: arr };
-                                            })}
-                                            className="p-0.5 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
-                                            title="上移"
-                                          ><ArrowUp className="w-2.5 h-2.5" /></button>
-                                          <button
-                                            disabled={orderIdx === form.fieldConfigs.length - 1}
-                                            onClick={() => setForm(fr => {
-                                              const arr = [...fr.fieldConfigs];
-                                              [arr[orderIdx + 1], arr[orderIdx]] = [arr[orderIdx], arr[orderIdx + 1]];
-                                              return { ...fr, fieldConfigs: arr };
-                                            })}
-                                            className="p-0.5 rounded hover:bg-accent text-muted-foreground disabled:opacity-30"
-                                            title="下移"
-                                          ><ArrowDown className="w-2.5 h-2.5" /></button>
-                                        </div>
+                                        <Badge className="text-[9px] px-1.5 py-0 bg-primary text-primary-foreground border-0 font-mono">#{orderIdx + 1}</Badge>
                                       );
                                     })()}
                                     <span className="text-xs font-medium text-foreground cursor-pointer" onClick={() => toggleField(f.key)}>{f.label}</span>
