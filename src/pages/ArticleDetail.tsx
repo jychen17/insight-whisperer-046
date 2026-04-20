@@ -81,6 +81,19 @@ const renderRecordDesc = (r: HandleRecord) => {
   return map[r.action] || "执行了操作";
 };
 
+// 高亮命中关键词
+const highlightText = (text: string, query: string): React.ReactNode => {
+  const q = query.trim();
+  if (!q) return text;
+  const escaped = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "ig"));
+  return parts.map((part, i) =>
+    part.toLowerCase() === q.toLowerCase()
+      ? <mark key={i} className="bg-yellow-300/60 text-foreground rounded-sm px-0.5">{part}</mark>
+      : <span key={i}>{part}</span>
+  );
+};
+
 export default function ArticleDetail() {
   const navigate = useNavigate();
   const location = useLocation();
