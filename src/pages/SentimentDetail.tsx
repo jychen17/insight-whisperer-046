@@ -1170,10 +1170,6 @@ export default function SentimentDetail() {
 
                       {/* AI 标签字段 */}
                       <div className="mt-3 rounded-md border border-primary/20 bg-primary/5 p-2.5">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Badge variant="outline" className="text-[9px] border-primary/40 text-primary px-1 py-0">AI 标签</Badge>
-                          <span className="text-[10px] text-muted-foreground">事件标签（基于文章相似度聚合）</span>
-                        </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           {event.sentimentBreakdown && (
                             <>
@@ -1198,10 +1194,6 @@ export default function SentimentDetail() {
 
                       {/* 计算字段 */}
                       <div className="mt-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 p-2.5">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-600 px-1 py-0">计算字段</Badge>
-                          <span className="text-[10px] text-muted-foreground">基于互动量聚合</span>
-                        </div>
                         <div className="grid grid-cols-5 gap-3">
                           {event.fermentSpeed && (
                             <div className="text-center">
@@ -1238,10 +1230,6 @@ export default function SentimentDetail() {
 
                       {/* 原始字段 */}
                       <div className="mt-2 rounded-md border border-border bg-muted/20 p-2.5">
-                        <div className="flex items-center gap-1.5 mb-1.5">
-                          <Badge variant="outline" className="text-[9px] border-muted-foreground/40 text-muted-foreground px-1 py-0">原始字段</Badge>
-                          <span className="text-[10px] text-muted-foreground">采集自原始文章</span>
-                        </div>
                         <div className="grid grid-cols-3 gap-3 text-[11px]">
                           <div>
                             <div className="text-muted-foreground text-[10px]">首发时间</div>
