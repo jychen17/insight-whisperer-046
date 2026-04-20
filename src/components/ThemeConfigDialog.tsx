@@ -381,6 +381,12 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
     }));
   };
 
+  const reorderMergeDisplayFields = (nodeId: string, items: MergeDisplayField[]) => {
+    setForm(f => ({
+      ...f, mergeNodes: (f.mergeNodes || []).map(n => n.id === nodeId ? { ...n, displayFields: items } : n),
+    }));
+  };
+
   // Select all fields for a type in merge display fields
   const toggleAllMergeDisplayFields = (nodeId: string, fieldType: "ai" | "raw" | "calc", select: boolean) => {
     const fieldsOfType = ALL_FIELDS.filter(f => f.fieldType === fieldType);
