@@ -602,6 +602,38 @@ export default function ArticleDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AI 字段修改 二次确认弹窗 */}
+      <Dialog open={confirmOpen} onOpenChange={(o) => { if (!o) { setConfirmOpen(false); setPendingChange(null); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" /> 确认修改 AI 字段
+            </DialogTitle>
+          </DialogHeader>
+          {pendingChange && (
+            <div className="space-y-3 py-2 text-xs">
+              <div className="text-muted-foreground">
+                您正在手动修改 AI 标签字段「<span className="text-primary font-medium">{pendingChange.field}</span>」，确认后将记录本次修改。
+              </div>
+              <div className="rounded-md border border-border bg-muted/30 p-3 space-y-1.5">
+                <div>
+                  <div className="text-[10px] text-muted-foreground">原值</div>
+                  <div className="text-foreground line-through opacity-70 break-words">{pendingChange.from || "（空）"}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-muted-foreground">新值</div>
+                  <div className="text-primary font-medium break-words">{pendingChange.to || "（空）"}</div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setConfirmOpen(false); setPendingChange(null); }}>取消</Button>
+            <Button onClick={confirmAiChange}>确认修改</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
