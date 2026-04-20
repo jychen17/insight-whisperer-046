@@ -569,7 +569,7 @@ export default function TagSystem() {
                 rows={2}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label>数据类型 <span className="text-destructive">*</span></Label>
                 <Select
@@ -588,6 +588,21 @@ export default function TagSystem() {
                   </SelectContent>
                 </Select>
                 {errors.dataType && <p className="text-xs text-destructive">请选择数据类型</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label>实体类型 <span className="text-destructive">*</span></Label>
+                <Select
+                  value={form.entityType}
+                  onValueChange={(v) => { setForm({ ...form, entityType: v as EntityType }); setErrors({ ...errors, entityType: false }); }}
+                >
+                  <SelectTrigger className={errors.entityType ? "border-destructive" : ""}>
+                    <SelectValue placeholder="请选择" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ALL_ENTITY_TYPES.map((et) => <SelectItem key={et} value={et}>{et}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {errors.entityType && <p className="text-xs text-destructive">请选择实体类型</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>来源 <span className="text-destructive">*</span></Label>
@@ -673,7 +688,7 @@ export default function TagSystem() {
                 rows={2}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label>数据类型 <span className="text-destructive">*</span></Label>
                 <Select
@@ -690,6 +705,19 @@ export default function TagSystem() {
                   </SelectContent>
                 </Select>
                 {errors.dataType && <p className="text-xs text-destructive">请选择数据类型</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label>实体类型 <span className="text-destructive">*</span></Label>
+                <Select
+                  value={form.entityType}
+                  onValueChange={(v) => { setForm({ ...form, entityType: v as EntityType }); setErrors({ ...errors, entityType: false }); }}
+                >
+                  <SelectTrigger className={errors.entityType ? "border-destructive" : ""}><SelectValue placeholder="请选择" /></SelectTrigger>
+                  <SelectContent>
+                    {ALL_ENTITY_TYPES.map((et) => <SelectItem key={et} value={et}>{et}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                {errors.entityType && <p className="text-xs text-destructive">请选择实体类型</p>}
               </div>
               <div className="space-y-1.5">
                 <Label>来源 <span className="text-destructive">*</span></Label>
