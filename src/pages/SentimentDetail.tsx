@@ -183,6 +183,8 @@ export default function SentimentDetail() {
   const [showNoiseFilter, setShowNoiseFilter] = useState<"all" | "normal" | "noise">("normal");
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [mergeTitle, setMergeTitle] = useState("");
+  const [mergeMode, setMergeMode] = useState<"new" | "existing">("new");
+  const [mergeTargetEventId, setMergeTargetEventId] = useState<string>("");
   const [noiseDialogOpen, setNoiseDialogOpen] = useState(false);
   const [noiseCategory, setNoiseCategory] = useState("unrelated");
   const [noiseTargetIds, setNoiseTargetIds] = useState<number[]>([]);
@@ -331,12 +333,14 @@ export default function SentimentDetail() {
   };
 
   const handleMerge = () => {
-    if (selectedIds.length < 2) {
-      toast({ title: "至少选择2条舆情进行合并", variant: "destructive" });
+    if (selectedIds.length < 1) {
+      toast({ title: "请至少选择1条文章", variant: "destructive" });
       return;
     }
     const selectedItems = items.filter(i => selectedIds.includes(i.id));
     setMergeTitle(selectedItems[0]?.issueType + " - 合并事件");
+    setMergeMode(selectedIds.length >= 2 ? "new" : "existing");
+    setMergeTargetEventId(mergedEvents[0]?.id || "");
     setMergeDialogOpen(true);
   };
 
@@ -354,6 +358,7 @@ export default function SentimentDetail() {
     const topBusiness = Object.entries(businessCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
     const highSpeedCount = posts.filter(p => p.speed === "高").length;
     const fermentSpeed: "high" | "medium" | "low" = highSpeedCount > posts.length * 0.5 ? "high" : highSpeedCount > 0 ? "medium" : "low";
+
     const times = posts.map(p => p.publishTime).sort();
     const importance: "high" | "medium" | "low" = totalInteractions > 50 ? "high" : totalInteractions > 10 ? "medium" : "low";
 
@@ -370,25 +375,40 @@ export default function SentimentDetail() {
   };
 
   const confirmMerge = () => {
-    const eventId = `evt-${Date.now()}`;
-    const selectedItems = items.filter(i => selectedIds.includes(i.id));
-    const meta = buildEventMeta(selectedItems);
-    const newEvent: MergedEvent = {
-      id: eventId,
-      title: mergeTitle || "未命名事件",
-      postIds: selectedIds,
-      createdAt: new Date().toLocaleString("zh-CN"),
-      summary: `合并了 ${selectedIds.length} 条相关舆情，涉及平台: ${[...new Set(selectedItems.map(i => i.platform))].join("、")}`,
-      handleStatus: "pending",
-      handleRecords: [],
-      ...meta,
-    };
-    setMergedEvents(prev => [...prev, newEvent]);
-    setItems(prev => prev.map(i => selectedIds.includes(i.id) ? { ...i, mergedEventId: eventId } : i));
+    if (mergeMode === "existing") {
+      if (!mergeTargetEventId) {
+        toast({ title: "请选择目标聚类", variant: "destructive" });
+        return;
+      }
+      const target = mergedEvents.find(e => e.id === mergeTargetEventId);
+      if (!target) return;
+      const newPostIds = [...new Set([...target.postIds, ...selectedIds])];
+      const updatedItems = items.map(i => newPostIds.includes(i.id) ? { ...i, mergedEventId: mergeTargetEventId } : i);
+      const meta = buildEventMeta(updatedItems.filter(p => newPostIds.includes(p.id)));
+      setItems(updatedItems);
+      setMergedEvents(prev => prev.map(e => e.id === mergeTargetEventId ? { ...e, postIds: newPostIds, ...meta } : e));
+      toast({ title: "合并成功", description: `已并入聚类 ${mergeTargetEventId}（共 ${selectedIds.length} 条）` });
+    } else {
+      const eventId = `CLS-${Date.now().toString(36).toUpperCase()}`;
+      const selectedItems = items.filter(i => selectedIds.includes(i.id));
+      const meta = buildEventMeta(selectedItems);
+      const newEvent: MergedEvent = {
+        id: eventId,
+        title: mergeTitle || "未命名事件",
+        postIds: selectedIds,
+        createdAt: new Date().toLocaleString("zh-CN"),
+        summary: `合并了 ${selectedIds.length} 条相关舆情，涉及平台: ${[...new Set(selectedItems.map(i => i.platform))].join("、")}`,
+        handleStatus: "pending",
+        handleRecords: [],
+        ...meta,
+      };
+      setMergedEvents(prev => [...prev, newEvent]);
+      setItems(prev => prev.map(i => selectedIds.includes(i.id) ? { ...i, mergedEventId: eventId } : i));
+      toast({ title: "合并成功", description: `已生成新聚类 ${eventId}` });
+    }
     setSelectedIds([]);
     setMergeDialogOpen(false);
     setMergeTitle("");
-    toast({ title: "合并成功", description: `已将 ${selectedIds.length} 条舆情合并为事件` });
   };
 
   const handleUnmerge = (eventId: string) => {
@@ -660,7 +680,7 @@ export default function SentimentDetail() {
 
       Object.entries(groups).forEach(([key, ids]) => {
         if (ids.length < 2) return;
-        const eventId = `auto-${Date.now()}-${key}`;
+        const eventId = `CLS-${Date.now().toString(36).toUpperCase()}-${key.slice(0, 4).toUpperCase()}`;
         const posts = updatedItems.filter(i => ids.includes(i.id));
         const meta = buildEventMeta(posts, methodLabel);
         newEvents.push({
@@ -711,7 +731,7 @@ export default function SentimentDetail() {
       const methodLabel = clusterMethod === "text_similarity" ? "文本相似度" : clusterMethod === "title_same" ? "标题相同" : "正文相同";
       Object.entries(groups).forEach(([key, ids]) => {
         if (ids.length < 2) return;
-        const eid = `auto-${Date.now()}-${key}`;
+        const eid = `CLS-${Date.now().toString(36).toUpperCase()}-${key.slice(0, 4).toUpperCase()}`;
         const posts = updatedItems.filter(i => ids.includes(i.id));
         const meta = buildEventMeta(posts, methodLabel);
         newEvents.push({
@@ -1161,6 +1181,7 @@ export default function SentimentDetail() {
                             />
                             {renderStatusBadge(event.handleStatus)}
                             <h3 className="text-sm font-semibold text-foreground">{event.title}</h3>
+                            <span className="text-[10px] text-muted-foreground/60 font-mono" title="聚类ID">#{event.id}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
@@ -1508,6 +1529,7 @@ export default function SentimentDetail() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <h3 className="text-sm font-medium text-foreground cursor-pointer hover:text-primary truncate" onClick={() => navigate(`/sentiment/article/${item.id}`, { state: { item, from: "sentiment" } })}>{item.title}</h3>
+                            <span className="text-[10px] text-muted-foreground/60 font-mono shrink-0" title="文章ID">#A{String(item.id).padStart(6, "0")}</span>
                             {renderStatusBadge(item.handleStatus)}
                             {item.isNoise && (
                               <Badge className="bg-muted text-muted-foreground border-0 text-[10px] shrink-0">
@@ -1517,7 +1539,7 @@ export default function SentimentDetail() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center gap-1 shrink-0">
                           {item.isNoise ? (
                             <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => restoreFromNoise(item.id)}>恢复</Button>
                           ) : (
@@ -1525,13 +1547,15 @@ export default function SentimentDetail() {
                               <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-0.5 px-1.5" onClick={() => openHandleDialog("article", item.id)}>
                                 <ClipboardList className="w-3 h-3" /> 处置
                               </Button>
-                              <button
-                                className="text-muted-foreground hover:text-destructive"
-                                title="标记为噪音"
-                                onClick={() => openNoiseDialog([item.id])}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 text-[11px] gap-0.5 px-1.5"
+                                title="合并到聚类"
+                                onClick={() => { setSelectedIds([item.id]); handleMerge(); }}
                               >
-                                <Ban className="w-3.5 h-3.5" />
-                              </button>
+                                <Layers className="w-3 h-3" /> 合并
+                              </Button>
                               <input
                                 type="checkbox"
                                 className="rounded"
@@ -1640,17 +1664,63 @@ export default function SentimentDetail() {
             <DialogTitle>合并为事件</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div>
-              <label className="text-xs text-muted-foreground">事件名称</label>
-              <input
-                className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
-                value={mergeTitle}
-                onChange={e => setMergeTitle(e.target.value)}
-                placeholder="请输入合并后的事件名称"
-              />
+            {/* Mode selector */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setMergeMode("new")}
+                className={`p-2.5 rounded-md border text-xs text-left transition-colors ${
+                  mergeMode === "new" ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted/30"
+                }`}
+              >
+                <div className="font-medium">生成新聚类</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">创建新事件聚类 ID</div>
+              </button>
+              <button
+                onClick={() => setMergeMode("existing")}
+                disabled={mergedEvents.length === 0}
+                className={`p-2.5 rounded-md border text-xs text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                  mergeMode === "existing" ? "border-primary bg-primary/5 text-primary" : "border-border text-foreground hover:bg-muted/30"
+                }`}
+              >
+                <div className="font-medium">并入已有聚类</div>
+                <div className="text-[10px] text-muted-foreground mt-0.5">选择已存在的聚类 ID</div>
+              </button>
             </div>
+
+            {mergeMode === "new" ? (
+              <div>
+                <label className="text-xs text-muted-foreground">事件名称</label>
+                <input
+                  className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-card text-foreground"
+                  value={mergeTitle}
+                  onChange={e => setMergeTitle(e.target.value)}
+                  placeholder="请输入合并后的事件名称"
+                />
+              </div>
+            ) : (
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">选择目标聚类</label>
+                <Select value={mergeTargetEventId} onValueChange={setMergeTargetEventId}>
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder="请选择聚类 ID" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {mergedEvents.map(e => (
+                      <SelectItem key={e.id} value={e.id} className="text-xs">
+                        <span className="font-mono text-muted-foreground mr-2">{e.id}</span>
+                        <span>{e.title}</span>
+                        <span className="text-muted-foreground ml-2">({e.postIds.length}篇)</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div>
-              <label className="text-xs text-muted-foreground mb-2 block">将合并以下 {selectedIds.length} 条舆情：</label>
+              <label className="text-xs text-muted-foreground mb-2 block">
+                将{mergeMode === "existing" ? "并入" : "合并"}以下 {selectedIds.length} 条文章：
+              </label>
               <div className="space-y-1 max-h-40 overflow-y-auto">
                 {items.filter(i => selectedIds.includes(i.id)).map(item => (
                   <div key={item.id} className="text-xs p-2 bg-muted/30 rounded flex items-center justify-between">
