@@ -440,18 +440,29 @@ export default function ModelManage() {
               </div>
 
               <div className="space-y-2">
-                {form.processors.map((p, idx) => (
-                  <ProcessorCard
-                    key={p.id}
-                    index={idx}
-                    processor={p}
-                    inputFields={form.inputFields}
-                    onMoveUp={() => moveProcessor(p.id, -1)}
-                    onMoveDown={() => moveProcessor(p.id, 1)}
-                    onRemove={() => removeProcessor(p.id)}
-                    onUpdate={(patch) => updateProcessor(p.id, patch)}
-                  />
-                ))}
+                {form.processors.map((p, idx) => {
+                  const upstreamHttpKeys = form.processors
+                    .slice(0, idx)
+                    .filter(pr => pr.type === "http")
+                    .flatMap(pr => (pr as HttpProcessor).resultMappings.map(rm => ({
+                      key: rm.responseKey || rm.outputField,
+                      label: rm.outputAlias || rm.responseKey || rm.outputField,
+                    })))
+                    .filter(x => x.key);
+                  return (
+                    <ProcessorCard
+                      key={p.id}
+                      index={idx}
+                      processor={p}
+                      inputFields={form.inputFields}
+                      upstreamHttpKeys={upstreamHttpKeys}
+                      onMoveUp={() => moveProcessor(p.id, -1)}
+                      onMoveDown={() => moveProcessor(p.id, 1)}
+                      onRemove={() => removeProcessor(p.id)}
+                      onUpdate={(patch) => updateProcessor(p.id, patch)}
+                    />
+                  );
+                })}
                 {form.processors.length === 0 && (
                   <div className="text-center text-xs text-muted-foreground border border-dashed border-border rounded py-6">
                     暂无处理器，请添加一个 HTTP 或公式处理器
@@ -490,11 +501,12 @@ function StatTile({ label, value, icon: Icon }: { label: string; value: number; 
 }
 
 function ProcessorCard({
-  index, processor, inputFields, onMoveUp, onMoveDown, onRemove, onUpdate,
+  index, processor, inputFields, upstreamHttpKeys, onMoveUp, onMoveDown, onRemove, onUpdate,
 }: {
   index: number;
   processor: Processor;
   inputFields: string[];
+  upstreamHttpKeys: { key: string; label: string }[];
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRemove: () => void;
@@ -523,7 +535,12 @@ function ProcessorCard({
         <div className="px-4 pb-4 pt-1 space-y-4 border-t border-border">
           {isHttp
             ? <HttpProcessorEditor processor={processor as HttpProcessor} inputFields={inputFields} onUpdate={onUpdate as (p: Partial<HttpProcessor>) => void} />
-            : <FormulaProcessorEditor processor={processor as FormulaProcessor} onUpdate={onUpdate as (p: Partial<FormulaProcessor>) => void} />}
+            : <FormulaProcessorEditor
+                processor={processor as FormulaProcessor}
+                inputFields={inputFields}
+                upstreamHttpKeys={upstreamHttpKeys}
+                onUpdate={onUpdate as (p: Partial<FormulaProcessor>) => void}
+              />}
         </div>
       </CollapsibleContent>
     </Collapsible>
@@ -667,12 +684,7 @@ function HttpProcessorEditor({
                       <SelectTrigger className="h-9"><SelectValue placeholder="选择标签字段" /></SelectTrigger>
                       <SelectContent>
                         {AI_FIELD_CATALOG.map(f => (
-                          <SelectItem key={f.key} value={f.key}>
-                            <span className="flex items-center gap-1.5">
-                              {f.label}
-                              {f.isIndex && <Badge variant="outline" className="text-[9px] py-0 px-1">索引</Badge>}
-                            </span>
-                          </SelectItem>
+                          <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -748,37 +760,147 @@ function HttpProcessorEditor({
 }
 
 function FormulaProcessorEditor({
-  processor, onUpdate,
-}: { processor: FormulaProcessor; onUpdate: (patch: Partial<FormulaProcessor>) => void; }) {
+  processor, inputFields, upstreamHttpKeys, onUpdate,
+}: {
+  processor: FormulaProcessor;
+  inputFields: string[];
+  upstreamHttpKeys: { key: string; label: string }[];
+  onUpdate: (patch: Partial<FormulaProcessor>) => void;
+}) {
+  const OPERATORS = ["+", "-", "*", "/", "(", ")"];
+
+  const insertToken = (token: string) => {
+    const cur = processor.expression || "";
+    const needsSpace = cur && !cur.endsWith(" ") && !cur.endsWith("(");
+    onUpdate({ expression: cur + (needsSpace ? " " : "") + token });
+  };
+  const backspace = () => {
+    const cur = (processor.expression || "").trimEnd();
+    // 删除最后一个 token（按空格切分，整体删除）
+    const idx = cur.lastIndexOf(" ");
+    onUpdate({ expression: idx === -1 ? "" : cur.slice(0, idx) });
+  };
+  const clearAll = () => onUpdate({ expression: "" });
+
+  // 编译后表达式：把字段名替换为安全的标识符（仅展示用）
+  const compiled = (processor.expression || "")
+    .replace(/[\u4e00-\u9fa5_a-zA-Z][\u4e00-\u9fa5_a-zA-Z0-9]*/g, (m) => {
+      if (OPERATORS.includes(m)) return m;
+      return m.replace(/[^a-zA-Z0-9_]/g, "_");
+    });
+
   return (
     <>
-      <div className="space-y-1.5">
-        <Label className="text-xs">公式表达式</Label>
-        <Textarea
-          rows={3}
-          placeholder="例如：likes * 0.3 + comments * 0.5 + shares * 0.2"
-          value={processor.expression}
-          onChange={e => onUpdate({ expression: e.target.value })}
-          className="font-mono text-xs"
-        />
-        <p className="text-[11px] text-muted-foreground">支持引用上游处理器产出的字段或输入字段</p>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs">目标 AI 字段</Label>
-          <Select value={processor.outputField} onValueChange={v => {
-            const t = AI_FIELD_CATALOG.find(f => f.key === v);
-            onUpdate({ outputField: v, outputAlias: processor.outputAlias || t?.label || "" });
-          }}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="选择标签字段" /></SelectTrigger>
-            <SelectContent>
-              {AI_FIELD_CATALOG.map(f => <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+      <div className="grid grid-cols-[1fr_220px] gap-4">
+        {/* 左侧：表达式输入 + 编译预览 + 输出 */}
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs">表达式</Label>
+            <Textarea
+              rows={3}
+              placeholder="请输入表达式，如：(点赞量 * 0.6 + 评论量 * 0.3 + 分享量 * 0.1) * 风险等级"
+              value={processor.expression}
+              onChange={e => onUpdate({ expression: e.target.value })}
+              className="font-mono text-xs"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">编译后表达式</Label>
+            <Input className="h-9 font-mono text-xs bg-muted/30" value={compiled} readOnly />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs">目标 AI 字段</Label>
+              <Select value={processor.outputField} onValueChange={v => {
+                const t = AI_FIELD_CATALOG.find(f => f.key === v);
+                onUpdate({ outputField: v, outputAlias: processor.outputAlias || t?.label || "" });
+              }}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="选择标签字段" /></SelectTrigger>
+                <SelectContent>
+                  {AI_FIELD_CATALOG.map(f => <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">显示别名</Label>
+              <Input className="h-9" value={processor.outputAlias} onChange={e => onUpdate({ outputAlias: e.target.value })} />
+            </div>
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs">显示别名</Label>
-          <Input className="h-9" value={processor.outputAlias} onChange={e => onUpdate({ outputAlias: e.target.value })} />
+
+        {/* 右侧：可点击的字段、HTTP结果、运算符 */}
+        <div className="space-y-3 border-l border-border pl-4">
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium text-muted-foreground">原始字段</p>
+            {inputFields.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">请先在上方选择输入字段</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {inputFields.map(f => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => insertToken(f)}
+                    className="text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted hover:border-primary/40 transition-colors"
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium text-muted-foreground">HTTP结果映射</p>
+            {upstreamHttpKeys.length === 0 ? (
+              <p className="text-[11px] text-muted-foreground">无上游 HTTP 处理器输出</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {upstreamHttpKeys.map(k => (
+                  <button
+                    key={k.key}
+                    type="button"
+                    onClick={() => insertToken(k.label)}
+                    className="text-xs px-2 py-1 rounded border border-border bg-background hover:bg-muted hover:border-primary/40 transition-colors"
+                  >
+                    {k.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-medium text-muted-foreground">运算符</p>
+            <div className="flex flex-wrap gap-1.5">
+              {OPERATORS.map(op => (
+                <button
+                  key={op}
+                  type="button"
+                  onClick={() => insertToken(op)}
+                  className="text-xs w-8 h-8 rounded border border-border bg-background hover:bg-muted hover:border-primary/40 transition-colors font-mono"
+                >
+                  {op}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-1.5 pt-1">
+              <button
+                type="button"
+                onClick={backspace}
+                className="text-xs px-3 h-8 rounded border border-border bg-background hover:bg-muted transition-colors"
+              >
+                退格
+              </button>
+              <button
+                type="button"
+                onClick={clearAll}
+                className="text-xs px-3 h-8 rounded border border-destructive/40 text-destructive bg-background hover:bg-destructive/10 transition-colors"
+              >
+                清空
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </>
