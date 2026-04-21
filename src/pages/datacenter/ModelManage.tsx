@@ -119,7 +119,7 @@ const initialModels: ModelItem[] = [
     name: "舆情判别模型",
     description: "基于标题+正文判断帖子是否构成负面舆情，产出多个 AI 字段",
     category: "分类",
-    inputFields: ["标题", "正文内容", "视频内容"],
+    inputFields: ["标题", "内容", "视频内容"],
     status: true,
     processors: [
       {
@@ -131,7 +131,7 @@ const initialModels: ModelItem[] = [
         headers: [{ id: uid(), key: "Authorization", value: "app-xxxxxxxx" }],
         paramMappings: [
           { id: uid(), inputField: "标题", paramKey: "title" },
-          { id: uid(), inputField: "正文内容", paramKey: "content" },
+          { id: uid(), inputField: "内容", paramKey: "content" },
           { id: uid(), inputField: "视频内容", paramKey: "videoContent" },
         ],
         resultMappings: [
@@ -169,7 +169,7 @@ const initialModels: ModelItem[] = [
     name: "情感分析模型",
     description: "对正文进行情感判别（正/负/中性）",
     category: "情感",
-    inputFields: ["正文内容"],
+    inputFields: ["内容"],
     status: true,
     processors: [
       {
@@ -179,7 +179,7 @@ const initialModels: ModelItem[] = [
         timeout: 3,
         url: "http://nlpapi.example.com/v1/sentiment",
         headers: [],
-        paramMappings: [{ id: uid(), inputField: "正文内容", paramKey: "text" }],
+        paramMappings: [{ id: uid(), inputField: "内容", paramKey: "text" }],
         resultMappings: [
           {
             id: uid(),
