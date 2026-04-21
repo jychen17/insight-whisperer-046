@@ -440,18 +440,29 @@ export default function ModelManage() {
               </div>
 
               <div className="space-y-2">
-                {form.processors.map((p, idx) => (
-                  <ProcessorCard
-                    key={p.id}
-                    index={idx}
-                    processor={p}
-                    inputFields={form.inputFields}
-                    onMoveUp={() => moveProcessor(p.id, -1)}
-                    onMoveDown={() => moveProcessor(p.id, 1)}
-                    onRemove={() => removeProcessor(p.id)}
-                    onUpdate={(patch) => updateProcessor(p.id, patch)}
-                  />
-                ))}
+                {form.processors.map((p, idx) => {
+                  const upstreamHttpKeys = form.processors
+                    .slice(0, idx)
+                    .filter(pr => pr.type === "http")
+                    .flatMap(pr => (pr as HttpProcessor).resultMappings.map(rm => ({
+                      key: rm.responseKey || rm.outputField,
+                      label: rm.outputAlias || rm.responseKey || rm.outputField,
+                    })))
+                    .filter(x => x.key);
+                  return (
+                    <ProcessorCard
+                      key={p.id}
+                      index={idx}
+                      processor={p}
+                      inputFields={form.inputFields}
+                      upstreamHttpKeys={upstreamHttpKeys}
+                      onMoveUp={() => moveProcessor(p.id, -1)}
+                      onMoveDown={() => moveProcessor(p.id, 1)}
+                      onRemove={() => removeProcessor(p.id)}
+                      onUpdate={(patch) => updateProcessor(p.id, patch)}
+                    />
+                  );
+                })}
                 {form.processors.length === 0 && (
                   <div className="text-center text-xs text-muted-foreground border border-dashed border-border rounded py-6">
                     暂无处理器，请添加一个 HTTP 或公式处理器
