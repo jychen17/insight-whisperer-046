@@ -10,9 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Plus, Brain, Pencil, Trash2, Search, Cpu, ChevronDown, ChevronRight,
-  ArrowDown, ArrowUp, Workflow, Code2, Globe2, ArrowRightLeft,
+  ArrowDown, ArrowUp, Workflow, Code2, Globe2, ArrowRightLeft, X, Check,
 } from "lucide-react";
 
 // ====== Types ======
