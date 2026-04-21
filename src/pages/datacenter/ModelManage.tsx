@@ -10,9 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Plus, Brain, Pencil, Trash2, Search, Cpu, ChevronDown, ChevronRight,
-  ArrowDown, ArrowUp, Workflow, Code2, Globe2, ArrowRightLeft,
+  ArrowDown, ArrowUp, Workflow, Code2, Globe2, ArrowRightLeft, X, Check,
 } from "lucide-react";
 
 // ====== Types ======
@@ -63,10 +65,14 @@ interface ModelItem {
 }
 
 // ====== Mock catalogs ======
-const INPUT_FIELD_OPTIONS = [
-  "标题", "正文内容", "视频内容", "发布人昵称", "发布人粉丝数",
-  "平台来源", "发布时间", "图片OCR文本",
+// 输入字段：源自采集字段，按分组管理，方便后续持续扩展
+const INPUT_FIELD_GROUPS: { group: string; fields: string[] }[] = [
+  { group: "内容", fields: ["标题", "内容", "视频内容", "内容类型", "原文链接"] },
+  { group: "时间", fields: ["发布时间", "收录时间"] },
+  { group: "互动指标", fields: ["点赞量", "收藏量", "分享量", "阅读量"] },
+  { group: "发布人", fields: ["发布人粉丝量", "发布人认证类型"] },
 ];
+const INPUT_FIELD_OPTIONS = INPUT_FIELD_GROUPS.flatMap(g => g.fields);
 
 // 已存在的 AI 字段（标签体系中的索引字段会标记为 isIndex）
 const AI_FIELD_CATALOG: { key: string; label: string; isIndex: boolean }[] = [
@@ -113,7 +119,7 @@ const initialModels: ModelItem[] = [
     name: "舆情判别模型",
     description: "基于标题+正文判断帖子是否构成负面舆情，产出多个 AI 字段",
     category: "分类",
-    inputFields: ["标题", "正文内容", "视频内容"],
+    inputFields: ["标题", "内容", "视频内容"],
     status: true,
     processors: [
       {
@@ -125,7 +131,7 @@ const initialModels: ModelItem[] = [
         headers: [{ id: uid(), key: "Authorization", value: "app-xxxxxxxx" }],
         paramMappings: [
           { id: uid(), inputField: "标题", paramKey: "title" },
-          { id: uid(), inputField: "正文内容", paramKey: "content" },
+          { id: uid(), inputField: "内容", paramKey: "content" },
           { id: uid(), inputField: "视频内容", paramKey: "videoContent" },
         ],
         resultMappings: [
@@ -163,7 +169,7 @@ const initialModels: ModelItem[] = [
     name: "情感分析模型",
     description: "对正文进行情感判别（正/负/中性）",
     category: "情感",
-    inputFields: ["正文内容"],
+    inputFields: ["内容"],
     status: true,
     processors: [
       {
@@ -173,7 +179,7 @@ const initialModels: ModelItem[] = [
         timeout: 3,
         url: "http://nlpapi.example.com/v1/sentiment",
         headers: [],
-        paramMappings: [{ id: uid(), inputField: "正文内容", paramKey: "text" }],
+        paramMappings: [{ id: uid(), inputField: "内容", paramKey: "text" }],
         resultMappings: [
           {
             id: uid(),
@@ -408,29 +414,11 @@ export default function ModelManage() {
 
             {/* Input fields */}
             <div className="space-y-1.5">
-              <Label>输入字段 <span className="text-xs text-muted-foreground font-normal">（将作为处理流程参数映射的可选项）</span></Label>
-              <div className="flex flex-wrap gap-1.5 p-2 border border-border rounded bg-muted/30 min-h-[42px]">
-                {INPUT_FIELD_OPTIONS.map(f => {
-                  const active = form.inputFields.includes(f);
-                  return (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => setForm(s => ({
-                        ...s,
-                        inputFields: active ? s.inputFields.filter(x => x !== f) : [...s.inputFields, f],
-                      }))}
-                      className={`text-xs px-2 py-1 rounded border transition ${
-                        active
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background text-foreground border-border hover:border-primary/50"
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  );
-                })}
-              </div>
+              <Label>输入字段 <span className="text-xs text-muted-foreground font-normal">（来自采集字段，作为处理流程参数映射的可选项）</span></Label>
+              <InputFieldsPicker
+                value={form.inputFields}
+                onChange={(v) => setForm(s => ({ ...s, inputFields: v }))}
+              />
             </div>
 
             {/* Processors */}
@@ -815,4 +803,115 @@ function SectionHeader({
 
 function EmptyHint({ text }: { text: string }) {
   return <p className="text-xs text-muted-foreground py-2 px-3 bg-muted/30 border border-dashed border-border rounded">{text}</p>;
+}
+
+function InputFieldsPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [keyword, setKeyword] = useState("");
+  const toggle = (f: string) =>
+    onChange(value.includes(f) ? value.filter(x => x !== f) : [...value, f]);
+  const remove = (f: string) => onChange(value.filter(x => x !== f));
+  const clearAll = () => onChange([]);
+
+  const filteredGroups = INPUT_FIELD_GROUPS.map(g => ({
+    ...g,
+    fields: g.fields.filter(f => !keyword.trim() || f.includes(keyword.trim())),
+  })).filter(g => g.fields.length > 0);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-start gap-2 p-2 border border-border rounded bg-muted/30 min-h-[42px]">
+        <div className="flex flex-wrap gap-1.5 flex-1">
+          {value.length === 0 ? (
+            <span className="text-xs text-muted-foreground py-1 px-1">未选择，点击右侧按钮添加输入字段</span>
+          ) : value.map(f => (
+            <Badge key={f} variant="secondary" className="text-xs gap-1 pr-1">
+              {f}
+              <button type="button" onClick={() => remove(f)} className="rounded hover:bg-background/60">
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+        <div className="flex gap-1 shrink-0">
+          {value.length > 0 && (
+            <Button type="button" size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={clearAll}>
+              清空
+            </Button>
+          )}
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" size="sm" variant="outline" className="h-7 gap-1 text-primary text-xs">
+                <Plus className="w-3.5 h-3.5" /> 添加字段
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end">
+              <div className="p-2 border-b border-border">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="搜索字段名"
+                    value={keyword}
+                    onChange={e => setKeyword(e.target.value)}
+                    className="pl-7 h-8 text-xs"
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2 text-[11px] text-muted-foreground">
+                  <span>已选 {value.length} 个</span>
+                  <button
+                    type="button"
+                    className="text-primary hover:underline"
+                    onClick={() => onChange(Array.from(new Set([...value, ...INPUT_FIELD_OPTIONS])))}
+                  >
+                    全选
+                  </button>
+                </div>
+              </div>
+              <ScrollArea className="h-72">
+                <div className="p-2 space-y-3">
+                  {filteredGroups.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">无匹配字段</p>
+                  )}
+                  {filteredGroups.map(g => (
+                    <div key={g.group} className="space-y-1">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[11px] font-medium text-muted-foreground">{g.group}</span>
+                        <button
+                          type="button"
+                          className="text-[11px] text-primary hover:underline"
+                          onClick={() => onChange(Array.from(new Set([...value, ...g.fields])))}
+                        >
+                          组内全选
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {g.fields.map(f => {
+                          const active = value.includes(f);
+                          return (
+                            <button
+                              key={f}
+                              type="button"
+                              onClick={() => toggle(f)}
+                              className={`text-xs px-2 py-1 rounded border transition flex items-center gap-1 ${
+                                active
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-background text-foreground border-border hover:border-primary/50"
+                              }`}
+                            >
+                              {active && <Check className="w-3 h-3" />}
+                              {f}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+    </div>
+  );
 }
