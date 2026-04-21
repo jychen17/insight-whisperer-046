@@ -804,3 +804,114 @@ function SectionHeader({
 function EmptyHint({ text }: { text: string }) {
   return <p className="text-xs text-muted-foreground py-2 px-3 bg-muted/30 border border-dashed border-border rounded">{text}</p>;
 }
+
+function InputFieldsPicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const [open, setOpen] = useState(false);
+  const [keyword, setKeyword] = useState("");
+  const toggle = (f: string) =>
+    onChange(value.includes(f) ? value.filter(x => x !== f) : [...value, f]);
+  const remove = (f: string) => onChange(value.filter(x => x !== f));
+  const clearAll = () => onChange([]);
+
+  const filteredGroups = INPUT_FIELD_GROUPS.map(g => ({
+    ...g,
+    fields: g.fields.filter(f => !keyword.trim() || f.includes(keyword.trim())),
+  })).filter(g => g.fields.length > 0);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-start gap-2 p-2 border border-border rounded bg-muted/30 min-h-[42px]">
+        <div className="flex flex-wrap gap-1.5 flex-1">
+          {value.length === 0 ? (
+            <span className="text-xs text-muted-foreground py-1 px-1">未选择，点击右侧按钮添加输入字段</span>
+          ) : value.map(f => (
+            <Badge key={f} variant="secondary" className="text-xs gap-1 pr-1">
+              {f}
+              <button type="button" onClick={() => remove(f)} className="rounded hover:bg-background/60">
+                <X className="w-3 h-3" />
+              </button>
+            </Badge>
+          ))}
+        </div>
+        <div className="flex gap-1 shrink-0">
+          {value.length > 0 && (
+            <Button type="button" size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground" onClick={clearAll}>
+              清空
+            </Button>
+          )}
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" size="sm" variant="outline" className="h-7 gap-1 text-primary text-xs">
+                <Plus className="w-3.5 h-3.5" /> 添加字段
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-0" align="end">
+              <div className="p-2 border-b border-border">
+                <div className="relative">
+                  <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="搜索字段名"
+                    value={keyword}
+                    onChange={e => setKeyword(e.target.value)}
+                    className="pl-7 h-8 text-xs"
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2 text-[11px] text-muted-foreground">
+                  <span>已选 {value.length} 个</span>
+                  <button
+                    type="button"
+                    className="text-primary hover:underline"
+                    onClick={() => onChange(Array.from(new Set([...value, ...INPUT_FIELD_OPTIONS])))}
+                  >
+                    全选
+                  </button>
+                </div>
+              </div>
+              <ScrollArea className="h-72">
+                <div className="p-2 space-y-3">
+                  {filteredGroups.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-4">无匹配字段</p>
+                  )}
+                  {filteredGroups.map(g => (
+                    <div key={g.group} className="space-y-1">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[11px] font-medium text-muted-foreground">{g.group}</span>
+                        <button
+                          type="button"
+                          className="text-[11px] text-primary hover:underline"
+                          onClick={() => onChange(Array.from(new Set([...value, ...g.fields])))}
+                        >
+                          组内全选
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {g.fields.map(f => {
+                          const active = value.includes(f);
+                          return (
+                            <button
+                              key={f}
+                              type="button"
+                              onClick={() => toggle(f)}
+                              className={`text-xs px-2 py-1 rounded border transition flex items-center gap-1 ${
+                                active
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-background text-foreground border-border hover:border-primary/50"
+                              }`}
+                            >
+                              {active && <Check className="w-3 h-3" />}
+                              {f}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
+    </div>
+  );
+}
