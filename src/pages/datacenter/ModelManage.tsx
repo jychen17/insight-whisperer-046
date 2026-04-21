@@ -65,10 +65,14 @@ interface ModelItem {
 }
 
 // ====== Mock catalogs ======
-const INPUT_FIELD_OPTIONS = [
-  "标题", "正文内容", "视频内容", "发布人昵称", "发布人粉丝数",
-  "平台来源", "发布时间", "图片OCR文本",
+// 输入字段：源自采集字段，按分组管理，方便后续持续扩展
+const INPUT_FIELD_GROUPS: { group: string; fields: string[] }[] = [
+  { group: "内容", fields: ["标题", "内容", "视频内容", "内容类型", "原文链接"] },
+  { group: "时间", fields: ["发布时间", "收录时间"] },
+  { group: "互动指标", fields: ["点赞量", "收藏量", "分享量", "阅读量"] },
+  { group: "发布人", fields: ["发布人粉丝量", "发布人认证类型"] },
 ];
+const INPUT_FIELD_OPTIONS = INPUT_FIELD_GROUPS.flatMap(g => g.fields);
 
 // 已存在的 AI 字段（标签体系中的索引字段会标记为 isIndex）
 const AI_FIELD_CATALOG: { key: string; label: string; isIndex: boolean }[] = [
