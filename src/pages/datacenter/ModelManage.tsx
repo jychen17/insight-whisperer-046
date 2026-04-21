@@ -9,125 +9,272 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Brain, Pencil, Trash2, Search, Cpu } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Plus, Brain, Pencil, Trash2, Search, Cpu, ChevronDown, ChevronRight,
+  ArrowDown, ArrowUp, Workflow, Code2, Globe2, ArrowRightLeft,
+} from "lucide-react";
+
+// ====== Types ======
+type ProcessorType = "http" | "formula";
+type InterfaceType = "Dify平台接口" | "通用HTTP接口" | "OpenAI兼容接口";
+
+interface HeaderPair { id: string; key: string; value: string; }
+interface ParamMapping { id: string; inputField: string; paramKey: string; }
+interface EnumPair { key: string; label: string; }
+interface ResultMapping {
+  id: string;
+  responseKey: string;       // e.g. risk_level
+  outputField: string;       // 标签字段（产出 AI 字段）
+  outputAlias: string;       // 显示名/别名
+  useAsFilter: boolean;      // 用于过滤（仅当目标字段为索引字段时可启用）
+  useEnumMapping: boolean;   // 使用枚举映射
+  enumValues: EnumPair[];
+  otherLabel?: string;
+}
+
+interface HttpProcessor {
+  id: string;
+  type: "http";
+  interfaceType: InterfaceType;
+  timeout: number;
+  url: string;
+  headers: HeaderPair[];
+  paramMappings: ParamMapping[];
+  resultMappings: ResultMapping[];
+}
+interface FormulaProcessor {
+  id: string;
+  type: "formula";
+  expression: string;        // 公式表达式
+  outputField: string;
+  outputAlias: string;
+}
+type Processor = HttpProcessor | FormulaProcessor;
 
 interface ModelItem {
   id: string;
   name: string;
   description: string;
-  type: "分类" | "情感" | "聚类" | "命名实体" | "风控" | "其他";
-  provider: string;
-  version: string;
-  outputFields: string[];
+  category: "分类" | "情感" | "聚类" | "命名实体" | "风控" | "其他";
+  inputFields: string[];     // 输入字段（来自标签体系）
+  processors: Processor[];   // 处理流程（多个串行）
   status: boolean;
 }
 
-const initialModels: ModelItem[] = [
-  { id: "M01", name: "舆情判别模型", description: "判别帖子是否构成负面舆情", type: "分类", provider: "内部算法团队", version: "v2.1.0", outputFields: ["业务类型", "是否负面舆情", "舆情问题类型", "舆情判断依据"], status: true },
-  { id: "M02", name: "情感分析模型", description: "识别文本正面/负面/中性情感", type: "情感", provider: "内部算法团队", version: "v3.0.2", outputFields: ["情感类型"], status: true },
-  { id: "M03", name: "主题聚类模型", description: "无监督聚类生成内容主题标签", type: "聚类", provider: "内部算法团队", version: "v1.4.0", outputFields: ["内容主题"], status: true },
-  { id: "M04", name: "风控判别模型", description: "评估帖子风险等级", type: "风控", provider: "风控中台", version: "v2.0.0", outputFields: ["风险等级", "风险判断依据", "所属BG"], status: true },
-  { id: "M05", name: "OTA品牌识别模型", description: "NER 识别提及的 OTA 品牌", type: "命名实体", provider: "内部算法团队", version: "v1.2.0", outputFields: ["OTA品牌"], status: true },
+// ====== Mock catalogs ======
+const INPUT_FIELD_OPTIONS = [
+  "标题", "正文内容", "视频内容", "发布人昵称", "发布人粉丝数",
+  "平台来源", "发布时间", "图片OCR文本",
 ];
 
-const MODEL_TYPES = ["分类", "情感", "聚类", "命名实体", "风控", "其他"] as const;
+// 已存在的 AI 字段（标签体系中的索引字段会标记为 isIndex）
+const AI_FIELD_CATALOG: { key: string; label: string; isIndex: boolean }[] = [
+  { key: "business_type",   label: "业务类型",     isIndex: true },
+  { key: "sentiment",       label: "情感类型",     isIndex: true },
+  { key: "topic",           label: "内容主题",     isIndex: false },
+  { key: "is_negative",     label: "是否负面舆情", isIndex: true },
+  { key: "issue_type",      label: "舆情问题类型", isIndex: true },
+  { key: "judge_basis",     label: "舆情判断依据", isIndex: false },
+  { key: "risk_level",      label: "风险等级",     isIndex: true },
+  { key: "risk_basis",      label: "风险判断依据", isIndex: false },
+  { key: "ota_brand",       label: "OTA品牌",      isIndex: true },
+  { key: "bg",              label: "所属BG",       isIndex: true },
+];
 
+const MODEL_CATEGORIES = ["分类", "情感", "聚类", "命名实体", "风控", "其他"] as const;
+const INTERFACE_TYPES: InterfaceType[] = ["Dify平台接口", "通用HTTP接口", "OpenAI兼容接口"];
+
+// ====== Helpers ======
+const uid = () => Math.random().toString(36).slice(2, 9);
+
+const makeHttpProcessor = (): HttpProcessor => ({
+  id: uid(),
+  type: "http",
+  interfaceType: "Dify平台接口",
+  timeout: 3,
+  url: "http://difyapi.example.com/v1/workflows/run",
+  headers: [],
+  paramMappings: [],
+  resultMappings: [],
+});
+const makeFormulaProcessor = (): FormulaProcessor => ({
+  id: uid(),
+  type: "formula",
+  expression: "",
+  outputField: "",
+  outputAlias: "",
+});
+
+// ====== Initial mock models ======
+const initialModels: ModelItem[] = [
+  {
+    id: "M01",
+    name: "舆情判别模型",
+    description: "基于标题+正文判断帖子是否构成负面舆情，产出多个 AI 字段",
+    category: "分类",
+    inputFields: ["标题", "正文内容", "视频内容"],
+    status: true,
+    processors: [
+      {
+        id: uid(),
+        type: "http",
+        interfaceType: "Dify平台接口",
+        timeout: 3,
+        url: "http://difyapi.example.com/v1/workflows/run",
+        headers: [{ id: uid(), key: "Authorization", value: "app-xxxxxxxx" }],
+        paramMappings: [
+          { id: uid(), inputField: "标题", paramKey: "title" },
+          { id: uid(), inputField: "正文内容", paramKey: "content" },
+          { id: uid(), inputField: "视频内容", paramKey: "videoContent" },
+        ],
+        resultMappings: [
+          {
+            id: uid(),
+            responseKey: "risk_level",
+            outputField: "risk_level",
+            outputAlias: "风险等级",
+            useAsFilter: true,
+            useEnumMapping: true,
+            enumValues: [
+              { key: "1", label: "极高风险" },
+              { key: "2", label: "高风险" },
+              { key: "3", label: "中风险" },
+              { key: "4", label: "中低风险" },
+              { key: "5", label: "低风险" },
+            ],
+            otherLabel: "低风险",
+          },
+          {
+            id: uid(),
+            responseKey: "is_negative",
+            outputField: "is_negative",
+            outputAlias: "是否负面舆情",
+            useAsFilter: true,
+            useEnumMapping: true,
+            enumValues: [{ key: "1", label: "是" }, { key: "0", label: "否" }],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: "M02",
+    name: "情感分析模型",
+    description: "对正文进行情感判别（正/负/中性）",
+    category: "情感",
+    inputFields: ["正文内容"],
+    status: true,
+    processors: [
+      {
+        id: uid(),
+        type: "http",
+        interfaceType: "OpenAI兼容接口",
+        timeout: 3,
+        url: "http://nlpapi.example.com/v1/sentiment",
+        headers: [],
+        paramMappings: [{ id: uid(), inputField: "正文内容", paramKey: "text" }],
+        resultMappings: [
+          {
+            id: uid(),
+            responseKey: "sentiment",
+            outputField: "sentiment",
+            outputAlias: "情感类型",
+            useAsFilter: true,
+            useEnumMapping: true,
+            enumValues: [
+              { key: "1", label: "正面" },
+              { key: "0", label: "中性" },
+              { key: "-1", label: "负面" },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+];
+
+// ====== Component ======
 export default function ModelManage() {
   const [models, setModels] = useState<ModelItem[]>(initialModels);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ModelItem | null>(null);
-  const [form, setForm] = useState<Partial<ModelItem>>({});
+  const [form, setForm] = useState<ModelItem>(emptyForm());
+
+  function emptyForm(): ModelItem {
+    return {
+      id: "",
+      name: "",
+      description: "",
+      category: "分类",
+      inputFields: [],
+      processors: [makeHttpProcessor()],
+      status: true,
+    };
+  }
 
   const filtered = models.filter(m => {
     if (search && !m.name.includes(search) && !m.id.toLowerCase().includes(search.toLowerCase())) return false;
-    if (typeFilter !== "all" && m.type !== typeFilter) return false;
+    if (categoryFilter !== "all" && m.category !== categoryFilter) return false;
     return true;
   });
 
-  const openCreate = () => {
-    setEditing(null);
-    setForm({ name: "", description: "", type: "分类", provider: "", version: "", outputFields: [], status: true });
-    setDialogOpen(true);
-  };
+  const totalOutputFields = (m: ModelItem) =>
+    m.processors.reduce((acc, p) => acc + (p.type === "http" ? p.resultMappings.length : 1), 0);
 
-  const openEdit = (m: ModelItem) => {
-    setEditing(m);
-    setForm({ ...m });
-    setDialogOpen(true);
-  };
-
+  const openCreate = () => { setEditing(null); setForm(emptyForm()); setDialogOpen(true); };
+  const openEdit = (m: ModelItem) => { setEditing(m); setForm(JSON.parse(JSON.stringify(m))); setDialogOpen(true); };
   const handleSave = () => {
-    if (!form.name?.trim()) return;
+    if (!form.name.trim()) return;
     if (editing) {
-      setModels(prev => prev.map(m => m.id === editing.id ? { ...editing, ...form } as ModelItem : m));
+      setModels(prev => prev.map(m => m.id === editing.id ? { ...form, id: editing.id } : m));
     } else {
       const id = `M${String(models.length + 1).padStart(2, "0")}`;
-      setModels(prev => [...prev, { id, status: true, outputFields: [], ...form } as ModelItem]);
+      setModels(prev => [...prev, { ...form, id }]);
     }
     setDialogOpen(false);
   };
+  const handleDelete = (id: string) => setModels(prev => prev.filter(m => m.id !== id));
+  const toggleStatus = (id: string) => setModels(prev => prev.map(m => m.id === id ? { ...m, status: !m.status } : m));
 
-  const handleDelete = (id: string) => {
-    setModels(prev => prev.filter(m => m.id !== id));
-  };
-
-  const toggleStatus = (id: string) => {
-    setModels(prev => prev.map(m => m.id === id ? { ...m, status: !m.status } : m));
-  };
+  // ===== Processor helpers (operate on form) =====
+  const addHttpProcessor = () => setForm(f => ({ ...f, processors: [...f.processors, makeHttpProcessor()] }));
+  const addFormulaProcessor = () => setForm(f => ({ ...f, processors: [...f.processors, makeFormulaProcessor()] }));
+  const removeProcessor = (id: string) => setForm(f => ({ ...f, processors: f.processors.filter(p => p.id !== id) }));
+  const moveProcessor = (id: string, dir: -1 | 1) => setForm(f => {
+    const idx = f.processors.findIndex(p => p.id === id);
+    const next = [...f.processors];
+    const target = idx + dir;
+    if (target < 0 || target >= next.length) return f;
+    [next[idx], next[target]] = [next[target], next[idx]];
+    return { ...f, processors: next };
+  });
+  const updateProcessor = (id: string, patch: Partial<Processor>) =>
+    setForm(f => ({ ...f, processors: f.processors.map(p => p.id === id ? ({ ...p, ...patch } as Processor) : p) }));
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">模型管理</h1>
-          <p className="text-sm text-muted-foreground mt-1">管理 AI 标签字段的来源模型，包括模型版本、产出字段与启停状态</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            管理 AI 标签字段的来源模型：定义输入字段、处理流程（HTTP/公式，可串行多步），以及产出 AI 字段的映射与枚举
+          </p>
         </div>
         <Button className="gap-2" onClick={openCreate}><Plus className="w-4 h-4" /> 新增模型</Button>
       </div>
 
+      {/* Stat cards */}
       <div className="grid grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">模型总数</p>
-                <p className="text-2xl font-bold text-foreground">{models.length}</p>
-              </div>
-              <Cpu className="w-8 h-8 text-primary opacity-60" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">运行中</p>
-                <p className="text-2xl font-bold text-foreground">{models.filter(m => m.status).length}</p>
-              </div>
-              <Brain className="w-8 h-8 text-primary opacity-60" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">产出 AI 字段</p>
-              <p className="text-2xl font-bold text-foreground">{models.reduce((acc, m) => acc + m.outputFields.length, 0)}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div>
-              <p className="text-xs text-muted-foreground mb-1">模型类型</p>
-              <p className="text-2xl font-bold text-foreground">{new Set(models.map(m => m.type)).size}</p>
-            </div>
-          </CardContent>
-        </Card>
+        <StatTile label="模型总数" value={models.length} icon={Cpu} />
+        <StatTile label="运行中" value={models.filter(m => m.status).length} icon={Brain} />
+        <StatTile label="处理流程数" value={models.reduce((a, m) => a + m.processors.length, 0)} icon={Workflow} />
+        <StatTile label="产出 AI 字段" value={models.reduce((a, m) => a + totalOutputFields(m), 0)} icon={ArrowRightLeft} />
       </div>
 
+      {/* Filters */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center gap-3 flex-wrap">
@@ -135,17 +282,18 @@ export default function ModelManage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input placeholder="搜索模型名称或ID" value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9" />
             </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="模型类型" /></SelectTrigger>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="w-[160px] h-9"><SelectValue placeholder="模型分类" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">全部类型</SelectItem>
-                {MODEL_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                <SelectItem value="all">全部分类</SelectItem>
+                {MODEL_CATEGORIES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
         </CardContent>
       </Card>
 
+      {/* List */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
@@ -159,9 +307,9 @@ export default function ModelManage() {
               <TableRow>
                 <TableHead className="w-20">模型ID</TableHead>
                 <TableHead>模型名称</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead>提供方</TableHead>
-                <TableHead>版本</TableHead>
+                <TableHead>分类</TableHead>
+                <TableHead>输入字段</TableHead>
+                <TableHead>处理流程</TableHead>
                 <TableHead>产出字段</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead className="text-right">操作</TableHead>
@@ -170,83 +318,162 @@ export default function ModelManage() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">暂无匹配的模型</TableCell></TableRow>
-              ) : filtered.map(m => (
-                <TableRow key={m.id}>
-                  <TableCell className="text-xs text-muted-foreground font-mono">{m.id}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Brain className="w-3.5 h-3.5 text-muted-foreground" />
-                      <div>
-                        <p className="font-medium text-sm">{m.name}</p>
-                        <p className="text-xs text-muted-foreground">{m.description}</p>
+              ) : filtered.map(m => {
+                const outputs = m.processors.flatMap(p =>
+                  p.type === "http"
+                    ? p.resultMappings.map(r => r.outputAlias || r.outputField)
+                    : [p.outputAlias || p.outputField || "公式产出"]
+                );
+                return (
+                  <TableRow key={m.id}>
+                    <TableCell className="text-xs text-muted-foreground font-mono">{m.id}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Brain className="w-3.5 h-3.5 text-muted-foreground" />
+                        <div>
+                          <p className="font-medium text-sm">{m.name}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{m.description}</p>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell><Badge variant="outline" className="text-xs">{m.type}</Badge></TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{m.provider}</TableCell>
-                  <TableCell className="text-xs font-mono">{m.version}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {m.outputFields.slice(0, 3).map(f => <Badge key={f} variant="secondary" className="text-[10px]">{f}</Badge>)}
-                      {m.outputFields.length > 3 && <Badge variant="outline" className="text-[10px]">+{m.outputFields.length - 3}</Badge>}
-                    </div>
-                  </TableCell>
-                  <TableCell><Switch checked={m.status} onCheckedChange={() => toggleStatus(m.id)} /></TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(m)}><Pencil className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(m.id)}><Trash2 className="w-4 h-4" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell><Badge variant="outline" className="text-xs">{m.category}</Badge></TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {m.inputFields.slice(0, 3).map(f => <Badge key={f} variant="secondary" className="text-[10px]">{f}</Badge>)}
+                        {m.inputFields.length > 3 && <Badge variant="outline" className="text-[10px]">+{m.inputFields.length - 3}</Badge>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <Workflow className="w-3.5 h-3.5" />
+                        {m.processors.length} 步
+                        <span className="ml-1 flex gap-0.5">
+                          {m.processors.map(p => (
+                            <span key={p.id} title={p.type === "http" ? "HTTP" : "公式"}
+                              className={`inline-block w-1.5 h-1.5 rounded-full ${p.type === "http" ? "bg-primary" : "bg-accent-foreground/60"}`} />
+                          ))}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1 max-w-[200px]">
+                        {outputs.slice(0, 3).map((f, i) => <Badge key={`${f}-${i}`} variant="secondary" className="text-[10px]">{f}</Badge>)}
+                        {outputs.length > 3 && <Badge variant="outline" className="text-[10px]">+{outputs.length - 3}</Badge>}
+                      </div>
+                    </TableCell>
+                    <TableCell><Switch checked={m.status} onCheckedChange={() => toggleStatus(m.id)} /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(m)}><Pencil className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(m.id)}><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
+      {/* Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "编辑模型" : "新增模型"}</DialogTitle>
-            <DialogDescription>{editing ? "修改模型的基本信息与产出字段" : "登记一个新的 AI 模型，作为 AI 标签字段的来源"}</DialogDescription>
+            <DialogDescription>
+              定义模型的基本信息、输入字段，以及多步处理流程（HTTP接口 / 公式），由处理器的「结果映射」产出 AI 标签字段
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>模型名称 <span className="text-destructive">*</span></Label>
-              <Input value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="例如：舆情判别模型" />
+
+          {/* Basic */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>模型名称 <span className="text-destructive">*</span></Label>
+                <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="例如：舆情判别模型" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>分类</Label>
+                <Select value={form.category} onValueChange={v => setForm({ ...form, category: v as ModelItem["category"] })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{MODEL_CATEGORIES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>模型描述</Label>
-              <Textarea value={form.description || ""} onChange={e => setForm({ ...form, description: e.target.value })} rows={2} />
+              <Textarea rows={2} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder="该模型的用途、输入与输出说明" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>类型 <span className="text-destructive">*</span></Label>
-                <Select value={form.type as string} onValueChange={v => setForm({ ...form, type: v as ModelItem["type"] })}>
-                  <SelectTrigger><SelectValue placeholder="请选择" /></SelectTrigger>
-                  <SelectContent>{MODEL_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>版本</Label>
-                <Input value={form.version || ""} onChange={e => setForm({ ...form, version: e.target.value })} placeholder="例如：v2.1.0" />
-              </div>
-            </div>
+
+            {/* Input fields */}
             <div className="space-y-1.5">
-              <Label>提供方</Label>
-              <Input value={form.provider || ""} onChange={e => setForm({ ...form, provider: e.target.value })} placeholder="例如：内部算法团队 / 第三方厂商" />
+              <Label>输入字段 <span className="text-xs text-muted-foreground font-normal">（将作为处理流程参数映射的可选项）</span></Label>
+              <div className="flex flex-wrap gap-1.5 p-2 border border-border rounded bg-muted/30 min-h-[42px]">
+                {INPUT_FIELD_OPTIONS.map(f => {
+                  const active = form.inputFields.includes(f);
+                  return (
+                    <button
+                      key={f}
+                      type="button"
+                      onClick={() => setForm(s => ({
+                        ...s,
+                        inputFields: active ? s.inputFields.filter(x => x !== f) : [...s.inputFields, f],
+                      }))}
+                      className={`text-xs px-2 py-1 rounded border transition ${
+                        active
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background text-foreground border-border hover:border-primary/50"
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>产出字段（用逗号分隔）</Label>
-              <Input
-                value={(form.outputFields || []).join("、")}
-                onChange={e => setForm({ ...form, outputFields: e.target.value.split(/[,，、]/).map(s => s.trim()).filter(Boolean) })}
-                placeholder="例如：情感类型、风险等级"
-              />
+
+            {/* Processors */}
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-2">
+                  <Workflow className="w-4 h-4 text-primary" />
+                  处理器配置
+                  <span className="text-xs text-muted-foreground font-normal">（按顺序串行执行；多个处理器可产出同一字段）</span>
+                </Label>
+                <div className="flex gap-2">
+                  <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-primary" onClick={addHttpProcessor}>
+                    <Plus className="w-3.5 h-3.5" /> 添加HTTP处理器
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-primary" onClick={addFormulaProcessor}>
+                    <Plus className="w-3.5 h-3.5" /> 添加公式处理器
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                {form.processors.map((p, idx) => (
+                  <ProcessorCard
+                    key={p.id}
+                    index={idx}
+                    processor={p}
+                    inputFields={form.inputFields}
+                    onMoveUp={() => moveProcessor(p.id, -1)}
+                    onMoveDown={() => moveProcessor(p.id, 1)}
+                    onRemove={() => removeProcessor(p.id)}
+                    onUpdate={(patch) => updateProcessor(p.id, patch)}
+                  />
+                ))}
+                {form.processors.length === 0 && (
+                  <div className="text-center text-xs text-muted-foreground border border-dashed border-border rounded py-6">
+                    暂无处理器，请添加一个 HTTP 或公式处理器
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="pt-2">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>取消</Button>
             <Button onClick={handleSave}>保存</Button>
           </DialogFooter>
@@ -254,4 +481,338 @@ export default function ModelManage() {
       </Dialog>
     </div>
   );
+}
+
+// ============ Sub components ============
+
+function StatTile({ label, value, icon: Icon }: { label: string; value: number; icon: any }) {
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">{label}</p>
+            <p className="text-2xl font-bold text-foreground">{value}</p>
+          </div>
+          <Icon className="w-8 h-8 text-primary opacity-60" />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProcessorCard({
+  index, processor, inputFields, onMoveUp, onMoveDown, onRemove, onUpdate,
+}: {
+  index: number;
+  processor: Processor;
+  inputFields: string[];
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onRemove: () => void;
+  onUpdate: (patch: Partial<Processor>) => void;
+}) {
+  const [open, setOpen] = useState(index === 0);
+  const isHttp = processor.type === "http";
+  const Icon = isHttp ? Globe2 : Code2;
+  const title = isHttp ? `处理器 #${index + 1} - HTTP接口` : `处理器 #${index + 1} - 公式`;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="border border-border rounded-md bg-card">
+      <div className="flex items-center justify-between px-3 py-2">
+        <CollapsibleTrigger className="flex items-center gap-2 flex-1 text-left">
+          {open ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+          <Icon className="w-4 h-4 text-primary" />
+          <span className="text-sm font-medium">{title}</span>
+        </CollapsibleTrigger>
+        <div className="flex items-center gap-0.5">
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={onMoveUp}><ArrowUp className="w-3.5 h-3.5" /></Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" onClick={onMoveDown}><ArrowDown className="w-3.5 h-3.5" /></Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={onRemove}><Trash2 className="w-3.5 h-3.5" /></Button>
+        </div>
+      </div>
+      <CollapsibleContent>
+        <div className="px-4 pb-4 pt-1 space-y-4 border-t border-border">
+          {isHttp
+            ? <HttpProcessorEditor processor={processor as HttpProcessor} inputFields={inputFields} onUpdate={onUpdate as (p: Partial<HttpProcessor>) => void} />
+            : <FormulaProcessorEditor processor={processor as FormulaProcessor} onUpdate={onUpdate as (p: Partial<FormulaProcessor>) => void} />}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+function HttpProcessorEditor({
+  processor, inputFields, onUpdate,
+}: {
+  processor: HttpProcessor;
+  inputFields: string[];
+  onUpdate: (patch: Partial<HttpProcessor>) => void;
+}) {
+  const update = (patch: Partial<HttpProcessor>) => onUpdate(patch);
+
+  // headers
+  const addHeader = () => update({ headers: [...processor.headers, { id: uid(), key: "", value: "" }] });
+  const updateHeader = (id: string, patch: Partial<HeaderPair>) =>
+    update({ headers: processor.headers.map(h => h.id === id ? { ...h, ...patch } : h) });
+  const removeHeader = (id: string) => update({ headers: processor.headers.filter(h => h.id !== id) });
+
+  // params
+  const addParam = () => update({ paramMappings: [...processor.paramMappings, { id: uid(), inputField: "", paramKey: "" }] });
+  const updateParam = (id: string, patch: Partial<ParamMapping>) =>
+    update({ paramMappings: processor.paramMappings.map(p => p.id === id ? { ...p, ...patch } : p) });
+  const removeParam = (id: string) => update({ paramMappings: processor.paramMappings.filter(p => p.id !== id) });
+
+  // results
+  const addResult = () => update({
+    resultMappings: [...processor.resultMappings, {
+      id: uid(), responseKey: "", outputField: "", outputAlias: "",
+      useAsFilter: false, useEnumMapping: false, enumValues: [],
+    }]
+  });
+  const updateResult = (id: string, patch: Partial<ResultMapping>) =>
+    update({ resultMappings: processor.resultMappings.map(r => r.id === id ? { ...r, ...patch } : r) });
+  const removeResult = (id: string) => update({ resultMappings: processor.resultMappings.filter(r => r.id !== id) });
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">接口类型</Label>
+          <Select value={processor.interfaceType} onValueChange={v => update({ interfaceType: v as InterfaceType })}>
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>{INTERFACE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">读取超时(秒)</Label>
+          <Input type="number" min={1} value={processor.timeout} onChange={e => update({ timeout: Number(e.target.value) || 0 })} className="h-9" />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs">URL</Label>
+        <Input value={processor.url} onChange={e => update({ url: e.target.value })} className="h-9" />
+      </div>
+
+      {/* Headers */}
+      <SectionHeader
+        title="请求头配置"
+        actionLabel="添加请求头"
+        onAdd={addHeader}
+      />
+      {processor.headers.length === 0 ? (
+        <EmptyHint text="暂无请求头配置" />
+      ) : (
+        <div className="space-y-2">
+          {processor.headers.map(h => (
+            <div key={h.id} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <Input placeholder="Header Key（如 Authorization）" className="h-9" value={h.key} onChange={e => updateHeader(h.id, { key: e.target.value })} />
+              <Input placeholder="Header Value" className="h-9" value={h.value} onChange={e => updateHeader(h.id, { value: e.target.value })} />
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removeHeader(h.id)}><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Param mappings */}
+      <SectionHeader
+        title="参数映射配置"
+        subtitle="将输入字段映射为请求体的参数 key"
+        actionLabel="添加参数映射"
+        onAdd={addParam}
+      />
+      {processor.paramMappings.length === 0 ? (
+        <EmptyHint text="暂无参数映射配置" />
+      ) : (
+        <div className="space-y-2">
+          {processor.paramMappings.map(p => (
+            <div key={p.id} className="grid grid-cols-[1fr_1fr_auto] gap-2">
+              <Select value={p.inputField} onValueChange={v => updateParam(p.id, { inputField: v })}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="选择输入字段" /></SelectTrigger>
+                <SelectContent>
+                  {inputFields.length === 0 && <div className="px-3 py-2 text-xs text-muted-foreground">请先在上方选择输入字段</div>}
+                  {inputFields.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Input placeholder="参数 key（如 title）" className="h-9" value={p.paramKey} onChange={e => updateParam(p.id, { paramKey: e.target.value })} />
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removeParam(p.id)}><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Result mappings */}
+      <SectionHeader
+        title="结果映射配置"
+        subtitle="将接口返回字段映射到 AI 标签字段；可启用过滤（仅索引字段）和枚举映射"
+        actionLabel="添加结果映射"
+        onAdd={addResult}
+      />
+      {processor.resultMappings.length === 0 ? (
+        <EmptyHint text="暂无结果映射配置" />
+      ) : (
+        <div className="space-y-3">
+          {processor.resultMappings.map(r => {
+            const target = AI_FIELD_CATALOG.find(f => f.key === r.outputField);
+            const filterDisabled = !target?.isIndex;
+            return (
+              <div key={r.id} className="space-y-2 border border-border rounded p-3 bg-muted/20">
+                <div className="grid grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">响应字段 key</Label>
+                    <Input placeholder="如 risk_level" className="h-9" value={r.responseKey} onChange={e => updateResult(r.id, { responseKey: e.target.value })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">目标 AI 字段</Label>
+                    <Select
+                      value={r.outputField}
+                      onValueChange={v => {
+                        const t = AI_FIELD_CATALOG.find(f => f.key === v);
+                        updateResult(r.id, {
+                          outputField: v,
+                          outputAlias: r.outputAlias || t?.label || "",
+                          useAsFilter: t?.isIndex ? r.useAsFilter : false,
+                        });
+                      }}
+                    >
+                      <SelectTrigger className="h-9"><SelectValue placeholder="选择标签字段" /></SelectTrigger>
+                      <SelectContent>
+                        {AI_FIELD_CATALOG.map(f => (
+                          <SelectItem key={f.key} value={f.key}>
+                            <span className="flex items-center gap-1.5">
+                              {f.label}
+                              {f.isIndex && <Badge variant="outline" className="text-[9px] py-0 px-1">索引</Badge>}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">显示别名</Label>
+                    <Input placeholder="如 风险等级" className="h-9" value={r.outputAlias} onChange={e => updateResult(r.id, { outputAlias: e.target.value })} />
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => removeResult(r.id)}><Trash2 className="w-4 h-4" /></Button>
+                </div>
+
+                <div className="flex items-center gap-4 pt-1">
+                  <label className={`flex items-center gap-2 text-xs ${filterDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
+                    title={filterDisabled ? "目标字段非索引字段，不可开启" : ""}>
+                    <Switch
+                      checked={r.useAsFilter}
+                      disabled={filterDisabled}
+                      onCheckedChange={v => updateResult(r.id, { useAsFilter: v })}
+                    />
+                    用于过滤
+                    {filterDisabled && r.outputField && <span className="text-[10px] text-muted-foreground">（非索引字段）</span>}
+                  </label>
+                  <label className="flex items-center gap-2 text-xs">
+                    <Switch checked={r.useEnumMapping} onCheckedChange={v => updateResult(r.id, { useEnumMapping: v })} />
+                    使用枚举映射
+                  </label>
+                </div>
+
+                {r.useEnumMapping && (
+                  <div className="space-y-2 pt-1">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[11px] text-muted-foreground">枚举映射</Label>
+                      <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-primary"
+                        onClick={() => updateResult(r.id, { enumValues: [...r.enumValues, { key: "", label: "" }] })}>
+                        <Plus className="w-3 h-3" /> 添加枚举
+                      </Button>
+                    </div>
+                    {r.enumValues.length === 0 && <EmptyHint text="暂无枚举映射" />}
+                    <div className="space-y-1.5">
+                      {r.enumValues.map((ev, i) => (
+                        <div key={i} className="grid grid-cols-[1fr_2fr_auto] gap-2">
+                          <Input placeholder="原始值" className="h-8" value={ev.key}
+                            onChange={e => {
+                              const next = [...r.enumValues]; next[i] = { ...next[i], key: e.target.value };
+                              updateResult(r.id, { enumValues: next });
+                            }} />
+                          <Input placeholder="显示标签" className="h-8" value={ev.label}
+                            onChange={e => {
+                              const next = [...r.enumValues]; next[i] = { ...next[i], label: e.target.value };
+                              updateResult(r.id, { enumValues: next });
+                            }} />
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"
+                            onClick={() => updateResult(r.id, { enumValues: r.enumValues.filter((_, j) => j !== i) })}>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-[120px_1fr] items-center gap-2 pt-1">
+                      <Label className="text-[11px] text-muted-foreground">未匹配时</Label>
+                      <Input placeholder="未匹配枚举的兜底标签（可选）" className="h-8"
+                        value={r.otherLabel || ""} onChange={e => updateResult(r.id, { otherLabel: e.target.value })} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
+function FormulaProcessorEditor({
+  processor, onUpdate,
+}: { processor: FormulaProcessor; onUpdate: (patch: Partial<FormulaProcessor>) => void; }) {
+  return (
+    <>
+      <div className="space-y-1.5">
+        <Label className="text-xs">公式表达式</Label>
+        <Textarea
+          rows={3}
+          placeholder="例如：likes * 0.3 + comments * 0.5 + shares * 0.2"
+          value={processor.expression}
+          onChange={e => onUpdate({ expression: e.target.value })}
+          className="font-mono text-xs"
+        />
+        <p className="text-[11px] text-muted-foreground">支持引用上游处理器产出的字段或输入字段</p>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">目标 AI 字段</Label>
+          <Select value={processor.outputField} onValueChange={v => {
+            const t = AI_FIELD_CATALOG.find(f => f.key === v);
+            onUpdate({ outputField: v, outputAlias: processor.outputAlias || t?.label || "" });
+          }}>
+            <SelectTrigger className="h-9"><SelectValue placeholder="选择标签字段" /></SelectTrigger>
+            <SelectContent>
+              {AI_FIELD_CATALOG.map(f => <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">显示别名</Label>
+          <Input className="h-9" value={processor.outputAlias} onChange={e => onUpdate({ outputAlias: e.target.value })} />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function SectionHeader({
+  title, subtitle, actionLabel, onAdd,
+}: { title: string; subtitle?: string; actionLabel: string; onAdd: () => void; }) {
+  return (
+    <div className="flex items-center justify-between pt-1">
+      <div>
+        <p className="text-sm font-medium text-foreground">{title}</p>
+        {subtitle && <p className="text-[11px] text-muted-foreground mt-0.5">{subtitle}</p>}
+      </div>
+      <Button type="button" size="sm" variant="ghost" className="h-7 gap-1 text-primary" onClick={onAdd}>
+        <Plus className="w-3.5 h-3.5" /> {actionLabel}
+      </Button>
+    </div>
+  );
+}
+
+function EmptyHint({ text }: { text: string }) {
+  return <p className="text-xs text-muted-foreground py-2 px-3 bg-muted/30 border border-dashed border-border rounded">{text}</p>;
 }
