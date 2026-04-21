@@ -667,12 +667,7 @@ function HttpProcessorEditor({
                       <SelectTrigger className="h-9"><SelectValue placeholder="选择标签字段" /></SelectTrigger>
                       <SelectContent>
                         {AI_FIELD_CATALOG.map(f => (
-                          <SelectItem key={f.key} value={f.key}>
-                            <span className="flex items-center gap-1.5">
-                              {f.label}
-                              {f.isIndex && <Badge variant="outline" className="text-[9px] py-0 px-1">索引</Badge>}
-                            </span>
-                          </SelectItem>
+                          <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
