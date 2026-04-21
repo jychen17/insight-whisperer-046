@@ -414,29 +414,11 @@ export default function ModelManage() {
 
             {/* Input fields */}
             <div className="space-y-1.5">
-              <Label>输入字段 <span className="text-xs text-muted-foreground font-normal">（将作为处理流程参数映射的可选项）</span></Label>
-              <div className="flex flex-wrap gap-1.5 p-2 border border-border rounded bg-muted/30 min-h-[42px]">
-                {INPUT_FIELD_OPTIONS.map(f => {
-                  const active = form.inputFields.includes(f);
-                  return (
-                    <button
-                      key={f}
-                      type="button"
-                      onClick={() => setForm(s => ({
-                        ...s,
-                        inputFields: active ? s.inputFields.filter(x => x !== f) : [...s.inputFields, f],
-                      }))}
-                      className={`text-xs px-2 py-1 rounded border transition ${
-                        active
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background text-foreground border-border hover:border-primary/50"
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  );
-                })}
-              </div>
+              <Label>输入字段 <span className="text-xs text-muted-foreground font-normal">（来自采集字段，作为处理流程参数映射的可选项）</span></Label>
+              <InputFieldsPicker
+                value={form.inputFields}
+                onChange={(v) => setForm(s => ({ ...s, inputFields: v }))}
+              />
             </div>
 
             {/* Processors */}
