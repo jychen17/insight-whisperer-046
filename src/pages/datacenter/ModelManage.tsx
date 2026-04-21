@@ -501,11 +501,12 @@ function StatTile({ label, value, icon: Icon }: { label: string; value: number; 
 }
 
 function ProcessorCard({
-  index, processor, inputFields, onMoveUp, onMoveDown, onRemove, onUpdate,
+  index, processor, inputFields, upstreamHttpKeys, onMoveUp, onMoveDown, onRemove, onUpdate,
 }: {
   index: number;
   processor: Processor;
   inputFields: string[];
+  upstreamHttpKeys: { key: string; label: string }[];
   onMoveUp: () => void;
   onMoveDown: () => void;
   onRemove: () => void;
@@ -534,7 +535,12 @@ function ProcessorCard({
         <div className="px-4 pb-4 pt-1 space-y-4 border-t border-border">
           {isHttp
             ? <HttpProcessorEditor processor={processor as HttpProcessor} inputFields={inputFields} onUpdate={onUpdate as (p: Partial<HttpProcessor>) => void} />
-            : <FormulaProcessorEditor processor={processor as FormulaProcessor} onUpdate={onUpdate as (p: Partial<FormulaProcessor>) => void} />}
+            : <FormulaProcessorEditor
+                processor={processor as FormulaProcessor}
+                inputFields={inputFields}
+                upstreamHttpKeys={upstreamHttpKeys}
+                onUpdate={onUpdate as (p: Partial<FormulaProcessor>) => void}
+              />}
         </div>
       </CollapsibleContent>
     </Collapsible>
