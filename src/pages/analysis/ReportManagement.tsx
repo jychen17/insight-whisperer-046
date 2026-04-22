@@ -10,10 +10,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   FileText, Eye, Download, Trash2, Search, Calendar, Share2,
   Copy, ExternalLink, AlertTriangle, Settings2, ChevronRight,
-  Repeat, Zap, ArrowLeft, Pencil,
+  Repeat, Zap, ArrowLeft, Pencil, Check, Plus, Database, LayoutTemplate, Sparkles,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import ReportHtmlPreview from "@/components/ReportHtmlPreview";
 
 type ScheduleType = "once" | "recurring";
 type RecurringFrequency = "daily" | "weekly" | "monthly";
@@ -124,6 +127,26 @@ const frequencyLabel: Record<RecurringFrequency, string> = {
 const typeOptions = ["全部", "日报", "周报", "月报", "季度报告", "年报", "专项报告"];
 const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
 
+// Wizard data
+const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题"];
+type SavedQuery = { id: string; name: string; theme: string; conditions: string };
+const savedQueries: SavedQuery[] = [
+  { id: "Q01", name: "国内机票业务-负面舆情", theme: "舆情主题", conditions: "业务=机票 AND 范围=国内 AND 情感=负面" },
+  { id: "Q02", name: "国内机票业务-全量", theme: "舆情主题", conditions: "业务=机票 AND 范围=国内" },
+  { id: "Q03", name: "国际机票业务-负面舆情", theme: "舆情主题", conditions: "业务=机票 AND 范围=国际 AND 情感=负面" },
+  { id: "Q04", name: "酒店业务-投诉聚焦", theme: "舆情主题", conditions: "业务=酒店 AND 类型=投诉" },
+  { id: "Q05", name: "OTA竞品对比", theme: "行业咨询主题", conditions: "类型=OTA AND 来源IN(携程,飞猪,去哪儿,同程,美团)" },
+  { id: "Q06", name: "新品上线热度追踪", theme: "热点洞察主题", conditions: "标签=新品 AND 时间=近7天" },
+  { id: "Q07", name: "App功能体验反馈", theme: "产品体验主题", conditions: "渠道=App AND 类型=体验反馈" },
+];
+type ReportTplChoice = { id: string; name: string; desc: string; tags: string[] };
+const reportTemplates: ReportTplChoice[] = [
+  { id: "TPL01", name: "舆情通用模板", desc: "总览·核心事件·风险预警·应对建议", tags: ["通用", "舆情"] },
+  { id: "TPL02", name: "竞品对比模板", desc: "声量·情感·渠道·话题对比", tags: ["竞品"] },
+  { id: "TPL03", name: "热点追踪模板", desc: "事件脉络·传播路径·关键观点", tags: ["热点"] },
+  { id: "TPL04", name: "体验洞察模板", desc: "功能·体验维度·NPS·用户声音", tags: ["体验"] },
+];
+
 export default function ReportManagement() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -137,12 +160,17 @@ export default function ReportManagement() {
   const [shareMode, setShareMode] = useState<"internal" | "public">("internal");
   const [drillReport, setDrillReport] = useState<Report | null>(null);
 
-  // Config sheet
+  // Config wizard
   const [configOpen, setConfigOpen] = useState(false);
-  const [configScheduleFilter, setConfigScheduleFilter] = useState<"all" | ScheduleType>("all");
-  const [configFreqFilter, setConfigFreqFilter] = useState<"all" | RecurringFrequency>("all");
-  const [configThemeFilter, setConfigThemeFilter] = useState("全部");
-  const [configSearch, setConfigSearch] = useState("");
+  const [wizStep, setWizStep] = useState(1);
+  const [wizSchedule, setWizSchedule] = useState<ScheduleType>("recurring");
+  const [wizFrequency, setWizFrequency] = useState<RecurringFrequency>("daily");
+  const [wizTheme, setWizTheme] = useState<string>("");
+  const [wizQueryId, setWizQueryId] = useState<string>("");
+  const [wizTemplateId, setWizTemplateId] = useState<string>("");
+  const [wizName, setWizName] = useState<string>("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewTitle, setPreviewTitle] = useState("");
 
   const filtered = useMemo(() => {
     return allReports.filter((r) => {
@@ -158,15 +186,26 @@ export default function ReportManagement() {
     });
   }, [search, typeFilter, themeFilter, statusFilter, scheduleFilter]);
 
-  const configList = useMemo(() => {
-    return allReports.filter(r => {
-      if (configScheduleFilter !== "all" && r.scheduleType !== configScheduleFilter) return false;
-      if (configFreqFilter !== "all" && r.frequency !== configFreqFilter) return false;
-      if (configThemeFilter !== "全部" && r.theme !== configThemeFilter) return false;
-      if (configSearch && !r.title.includes(configSearch)) return false;
-      return true;
-    });
-  }, [configScheduleFilter, configFreqFilter, configThemeFilter, configSearch]);
+  const wizFreqLabel = wizSchedule === "recurring" ? frequencyLabel[wizFrequency] : "一次性";
+  const wizQuery = savedQueries.find(q => q.id === wizQueryId);
+  const wizTemplate = reportTemplates.find(t => t.id === wizTemplateId);
+  const filteredQueries = wizTheme ? savedQueries.filter(q => q.theme === wizTheme) : [];
+
+  const resetWizard = () => {
+    setWizStep(1);
+    setWizSchedule("recurring");
+    setWizFrequency("daily");
+    setWizTheme("");
+    setWizQueryId("");
+    setWizTemplateId("");
+    setWizName("");
+  };
+
+  const autoName = () => {
+    if (!wizQuery || !wizTemplate) return "";
+    const freq = wizSchedule === "recurring" ? frequencyLabel[wizFrequency].replace("每", "") + "报" : "专项报告";
+    return `${wizQuery.name} ${freq}`;
+  };
 
   const handleDelete = () => {
     if (deleteReport) {
@@ -550,117 +589,239 @@ export default function ReportManagement() {
             </SheetDescription>
           </SheetHeader>
 
-          <div className="mt-5 space-y-4">
-            {/* Filter chips */}
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-muted-foreground shrink-0">调度类型：</span>
-                {([
-                  { v: "all", l: "全部" },
-                  { v: "once", l: "一次性" },
-                  { v: "recurring", l: "周期报告" },
-                ] as const).map(o => (
-                  <Badge
-                    key={o.v}
-                    variant={configScheduleFilter === o.v ? "default" : "outline"}
-                    className="cursor-pointer text-xs"
-                    onClick={() => setConfigScheduleFilter(o.v)}
-                  >
-                    {o.l}
-                  </Badge>
-                ))}
-              </div>
-
-              {(configScheduleFilter === "all" || configScheduleFilter === "recurring") && (
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-muted-foreground shrink-0">周期频率：</span>
-                  {([
-                    { v: "all", l: "全部" },
-                    { v: "daily", l: "日报" },
-                    { v: "weekly", l: "周报" },
-                    { v: "monthly", l: "月报" },
-                  ] as const).map(o => (
-                    <Badge
-                      key={o.v}
-                      variant={configFreqFilter === o.v ? "default" : "outline"}
-                      className="cursor-pointer text-xs"
-                      onClick={() => setConfigFreqFilter(o.v)}
-                    >
-                      {o.l}
-                    </Badge>
-                  ))}
+          <div className="mt-5 space-y-5">
+            {/* Stepper */}
+            <div className="flex items-center gap-1">
+              {[
+                { n: 1, l: "类型" },
+                { n: 2, l: "数据" },
+                { n: 3, l: "模板" },
+                { n: 4, l: "确认" },
+              ].map((s, i, arr) => (
+                <div key={s.n} className="flex items-center flex-1">
+                  <div className={`flex items-center gap-2 ${wizStep >= s.n ? "text-primary" : "text-muted-foreground"}`}>
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${wizStep > s.n ? "bg-primary text-primary-foreground border-primary" : wizStep === s.n ? "border-primary text-primary" : "border-border"}`}>
+                      {wizStep > s.n ? <Check className="w-3.5 h-3.5" /> : s.n}
+                    </div>
+                    <span className="text-xs font-medium">{s.l}</span>
+                  </div>
+                  {i < arr.length - 1 && <div className={`flex-1 h-0.5 mx-2 ${wizStep > s.n ? "bg-primary" : "bg-border"}`} />}
                 </div>
-              )}
+              ))}
+            </div>
 
-              <div className="flex items-center gap-2">
-                <Select value={configThemeFilter} onValueChange={setConfigThemeFilter}>
-                  <SelectTrigger className="w-40 h-9 text-sm"><SelectValue /></SelectTrigger>
-                  <SelectContent>{themeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                </Select>
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            {/* Step 1: schedule type */}
+            {wizStep === 1 && (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">报告类型</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      className={`text-left rounded-lg border p-4 transition ${wizSchedule === "once" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                      onClick={() => setWizSchedule("once")}
+                    >
+                      <div className="flex items-center gap-2 mb-2"><Zap className="w-4 h-4 text-primary" /><span className="font-medium text-sm">一次性报告</span></div>
+                      <p className="text-xs text-muted-foreground">基于当前数据立即生成单期报告</p>
+                    </button>
+                    <button
+                      type="button"
+                      className={`text-left rounded-lg border p-4 transition ${wizSchedule === "recurring" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                      onClick={() => setWizSchedule("recurring")}
+                    >
+                      <div className="flex items-center gap-2 mb-2"><Repeat className="w-4 h-4 text-primary" /><span className="font-medium text-sm">周期报告</span></div>
+                      <p className="text-xs text-muted-foreground">按日/周/月自动生成，可下钻各期</p>
+                    </button>
+                  </div>
+                </div>
+
+                {wizSchedule === "recurring" && (
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">周期频率</Label>
+                    <div className="flex gap-2">
+                      {(["daily", "weekly", "monthly"] as RecurringFrequency[]).map(f => (
+                        <Button
+                          key={f}
+                          variant={wizFrequency === f ? "default" : "outline"}
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => setWizFrequency(f)}
+                        >
+                          {frequencyLabel[f]}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 2: data */}
+            {wizStep === 2 && (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">所属主题</Label>
+                  <Select value={wizTheme} onValueChange={(v) => { setWizTheme(v); setWizQueryId(""); }}>
+                    <SelectTrigger><SelectValue placeholder="请选择主题" /></SelectTrigger>
+                    <SelectContent>{themeChoices.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+
+                {wizTheme && (
+                  <div>
+                    <Label className="text-sm font-medium mb-2 block">查询条件（命中数据集）</Label>
+                    <div className="space-y-2">
+                      {filteredQueries.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-6 text-center border border-dashed border-border rounded-lg">
+                          该主题下暂无已保存的查询条件
+                        </p>
+                      ) : filteredQueries.map(q => (
+                        <button
+                          type="button"
+                          key={q.id}
+                          className={`w-full text-left rounded-lg border p-3 transition ${wizQueryId === q.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                          onClick={() => setWizQueryId(q.id)}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium text-sm">{q.name}</p>
+                            {wizQueryId === q.id && <Check className="w-4 h-4 text-primary shrink-0" />}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground mt-1 font-mono">{q.conditions}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Step 3: template */}
+            {wizStep === 3 && (
+              <div className="space-y-3">
+                <Label className="text-sm font-medium block">选择报告模板</Label>
+                {reportTemplates.map(t => (
+                  <button
+                    type="button"
+                    key={t.id}
+                    className={`w-full text-left rounded-lg border p-3 transition ${wizTemplateId === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                    onClick={() => setWizTemplateId(t.id)}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <LayoutTemplate className="w-4 h-4 text-primary shrink-0" />
+                          <p className="font-medium text-sm">{t.name}</p>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">{t.desc}</p>
+                        <div className="flex gap-1 mt-2">
+                          {t.tags.map(tag => <Badge key={tag} variant="outline" className="text-[10px]">{tag}</Badge>)}
+                        </div>
+                      </div>
+                      {wizTemplateId === t.id && <Check className="w-4 h-4 text-primary shrink-0 mt-1" />}
+                    </div>
+                  </button>
+                ))}
+                <Button variant="ghost" size="sm" className="w-full gap-1.5" onClick={() => goEditTemplate()}>
+                  <Plus className="w-3.5 h-3.5" /> 没有合适模板？前往模板管理
+                </Button>
+              </div>
+            )}
+
+            {/* Step 4: confirm */}
+            {wizStep === 4 && (
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">报告名称</Label>
                   <Input
-                    value={configSearch}
-                    onChange={(e) => setConfigSearch(e.target.value)}
-                    placeholder="搜索报告配置..."
-                    className="pl-9 h-9"
+                    value={wizName || autoName()}
+                    onChange={(e) => setWizName(e.target.value)}
+                    placeholder="请输入报告名称"
                   />
                 </div>
-              </div>
-            </div>
-
-            {/* List */}
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">共 {configList.length} 个配置</p>
-              {configList.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground border border-dashed border-border rounded-lg">
-                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-sm">暂无匹配的报告配置</p>
+                <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
+                  <ConfirmRow label="报告类型" value={wizFreqLabel} />
+                  <ConfirmRow label="所属主题" value={wizTheme} />
+                  <ConfirmRow label="查询条件" value={wizQuery?.name ?? "-"} />
+                  <ConfirmRow label="查询表达式" value={wizQuery?.conditions ?? "-"} mono />
+                  <ConfirmRow label="报告模板" value={wizTemplate?.name ?? "-"} />
+                  <ConfirmRow label="导出格式" value="HTML（当前仅支持）" />
                 </div>
-              ) : (
-                configList.map(r => (
-                  <Card key={r.id} className="hover:border-primary/40 transition-colors">
-                    <CardContent className="p-3.5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 mb-1.5">
-                            {r.scheduleType === "recurring" ? (
-                              <Badge className="text-[10px] h-5 gap-1"><Repeat className="w-3 h-3" />{frequencyLabel[r.frequency!]}</Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-[10px] h-5 gap-1"><Zap className="w-3 h-3" />一次性</Badge>
-                            )}
-                            <Badge variant="outline" className="text-[10px] h-5">{r.theme}</Badge>
-                          </div>
-                          <p className="text-sm font-medium text-foreground truncate">{r.title}</p>
-                          <p className="text-[11px] text-muted-foreground mt-1">
-                            {r.templateName ? `模板：${r.templateName}` : "未关联模板"}
-                            {r.scheduleType === "recurring" && r.issues && ` · 已生成 ${r.issues.length} 期`}
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1.5 shrink-0 h-8"
-                          onClick={() => goEditTemplate(r.templateId)}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          编辑模板
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              )}
-            </div>
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-info/5 border border-info/20 text-xs text-foreground">
+                  <Sparkles className="w-4 h-4 text-info shrink-0 mt-0.5" />
+                  <p>确认后将立即生成首期报告，{wizSchedule === "recurring" ? `并按${frequencyLabel[wizFrequency]}自动生成后续期次` : "本次为一次性生成"}。</p>
+                </div>
+              </div>
+            )}
 
-            <div className="pt-2 border-t border-border">
-              <Button variant="outline" className="w-full gap-2" onClick={() => goEditTemplate()}>
-                <Settings2 className="w-4 h-4" /> 前往报告模板管理
+            {/* Footer actions */}
+            <div className="flex justify-between gap-2 pt-4 border-t border-border">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={wizStep === 1}
+                onClick={() => setWizStep(s => Math.max(1, s - 1))}
+              >
+                上一步
               </Button>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => { setConfigOpen(false); resetWizard(); }}>取消</Button>
+                {wizStep < 4 ? (
+                  <Button
+                    size="sm"
+                    disabled={
+                      (wizStep === 2 && (!wizTheme || !wizQueryId)) ||
+                      (wizStep === 3 && !wizTemplateId)
+                    }
+                    onClick={() => setWizStep(s => Math.min(4, s + 1))}
+                  >
+                    下一步
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      const name = wizName || autoName();
+                      toast.success(`已创建报告配置「${name}」并开始生成首期报告`);
+                      setConfigOpen(false);
+                      setPreviewTitle(name);
+                      setPreviewOpen(true);
+                      resetWizard();
+                    }}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    确认并生成报告
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* HTML Report Preview */}
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between pr-8">
+              <span className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /> 报告预览（HTML）</span>
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.success("已复制 HTML 报告链接")}>
+                <Copy className="w-3.5 h-3.5" /> 复制链接
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <ReportHtmlPreview title={previewTitle || "国内机票舆情日报"} />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ConfirmRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
+      <span className={`text-xs text-foreground text-right ${mono ? "font-mono" : "font-medium"}`}>{value}</span>
     </div>
   );
 }
