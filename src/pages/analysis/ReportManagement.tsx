@@ -932,6 +932,48 @@ export default function ReportManagement() {
             {/* Step 2 */}
             {wizStep === 2 && (
               <div className="space-y-4">
+                {wizPrefill && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        {wizPrefill.scope === "events"
+                          ? <Layers className="w-4 h-4 text-primary" />
+                          : <FileText className="w-4 h-4 text-primary" />}
+                        <span className="font-medium text-foreground">
+                          已锁定数据范围：{wizPrefill.scope === "events" ? "事件" : "文章"} · {wizPrefill.ids.length} 条
+                        </span>
+                        {wizPrefill.source && (
+                          <Badge variant="secondary" className="text-[10px] gap-1">
+                            <Link2 className="w-3 h-3" /> 来源：{wizPrefill.source}
+                          </Badge>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setWizPrefill(null)}
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        title="清除锁定范围"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {wizPrefill.titles && wizPrefill.titles.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {wizPrefill.titles.slice(0, 6).map((t, i) => (
+                          <Badge key={i} variant="outline" className="text-[10px] max-w-[260px]">
+                            <span className="truncate">{t}</span>
+                          </Badge>
+                        ))}
+                        {wizPrefill.titles.length > 6 && (
+                          <Badge variant="outline" className="text-[10px]">+{wizPrefill.titles.length - 6}</Badge>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-[11px] text-muted-foreground">
+                      报告将基于以上{wizPrefill.scope === "events" ? "事件" : "文章"}的数据生成；下方查询条件作为补充筛选（可选），仍需包含时间字段。
+                    </p>
+                  </div>
+                )}
                 <div>
                   <Label className="text-sm font-medium mb-2 block">所属主题</Label>
                   <Select value={wizTheme} onValueChange={setWizTheme}>
