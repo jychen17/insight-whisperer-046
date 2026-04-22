@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +12,10 @@ import {
   FileText, Eye, Download, Trash2, Search, Calendar,
   AlertTriangle, Settings2, ChevronRight,
   Repeat, Zap, ArrowLeft, Pencil, Check, Plus, LayoutTemplate, Sparkles, X, Clock,
-  Bell, Users, User as UserIcon,
+  Bell, Users, User as UserIcon, Layers, Link2,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 
 type ScheduleType = "once" | "recurring";
