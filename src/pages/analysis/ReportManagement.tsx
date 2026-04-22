@@ -7,19 +7,19 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
-  FileText, Eye, Download, Trash2, Search, Calendar, Share2,
-  Copy, ExternalLink, AlertTriangle, Settings2, ChevronRight,
-  Repeat, Zap, ArrowLeft, Pencil, Check, Plus, Database, LayoutTemplate, Sparkles,
+  FileText, Eye, Download, Trash2, Search, Calendar,
+  AlertTriangle, Settings2, ChevronRight,
+  Repeat, Zap, ArrowLeft, Pencil, Check, Plus, LayoutTemplate, Sparkles, X, Clock,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import ReportHtmlPreview from "@/components/ReportHtmlPreview";
 
 type ScheduleType = "once" | "recurring";
 type RecurringFrequency = "daily" | "weekly" | "monthly";
+type ConditionLogic = "any" | "all" | "none";
 
 interface ReportIssue {
   id: string;
@@ -28,6 +28,27 @@ interface ReportIssue {
   status: "completed" | "generating" | "failed";
   pages: number;
   size: string;
+}
+
+interface RuleCondition {
+  id: string;
+  field: string;
+  operator: string;
+  values: string[];   // for include/exclude lists (chips)
+  value?: string;     // single-value (e.g., 等于 业务类型)
+  numValue?: number;  // for "过去几天内"
+}
+
+interface ReportConfigDetail {
+  scheduleType: ScheduleType;
+  frequency?: RecurringFrequency;
+  weeklyStartDay?: number; // 1=Mon ... 7=Sun
+  timeField?: string;      // 发布时间 / 收录时间
+  themeName: string;
+  conditionLogic: ConditionLogic;
+  conditions: RuleCondition[];
+  templateId: string;
+  templateName: string;
 }
 
 interface Report {
@@ -46,20 +67,109 @@ interface Report {
   templateId?: string;
   templateName?: string;
   issues?: ReportIssue[];
+  config?: ReportConfigDetail;
 }
+
+// ------- Field catalog for condition builder -------
+type FieldDef = { key: string; label: string; type: "text" | "enum" | "time"; options?: string[] };
+const FIELD_CATALOG: FieldDef[] = [
+  { key: "business", label: "业务类型", type: "enum", options: ["机票", "酒店", "金服", "度假", "火车票", "用车"] },
+  { key: "scope", label: "业务范围", type: "enum", options: ["国内", "国际", "港澳台"] },
+  { key: "title", label: "标题", type: "text" },
+  { key: "content", label: "内容", type: "text" },
+  { key: "emotion", label: "情感", type: "enum", options: ["正面", "中性", "负面"] },
+  { key: "platform", label: "平台", type: "enum", options: ["微博", "小红书", "抖音", "新闻", "App Store"] },
+  { key: "publishTime", label: "发布时间", type: "time" },
+  { key: "collectTime", label: "收录时间", type: "time" },
+];
+const TIME_FIELD_KEYS = ["publishTime", "collectTime"];
+
+const OPERATORS_BY_TYPE: Record<FieldDef["type"], { value: string; label: string; mode: "single" | "chips" | "days" }[]> = {
+  enum: [
+    { value: "eq", label: "等于", mode: "single" },
+    { value: "neq", label: "不等于", mode: "single" },
+    { value: "in", label: "包含任意", mode: "chips" },
+    { value: "nin", label: "不包含任意", mode: "chips" },
+  ],
+  text: [
+    { value: "contains", label: "包含任意", mode: "chips" },
+    { value: "ncontains", label: "不包含任意", mode: "chips" },
+  ],
+  time: [
+    { value: "lastNDays", label: "过去几天内", mode: "days" },
+    { value: "lastNHours", label: "过去几小时内", mode: "days" },
+  ],
+};
+
+const fieldDef = (key: string) => FIELD_CATALOG.find(f => f.key === key);
+const operatorMode = (fkey: string, opval: string) => {
+  const f = fieldDef(fkey); if (!f) return "single";
+  return OPERATORS_BY_TYPE[f.type].find(o => o.value === opval)?.mode ?? "single";
+};
+const operatorLabel = (fkey: string, opval: string) => {
+  const f = fieldDef(fkey); if (!f) return opval;
+  return OPERATORS_BY_TYPE[f.type].find(o => o.value === opval)?.label ?? opval;
+};
+const defaultOperator = (fkey: string) => {
+  const f = fieldDef(fkey); if (!f) return "eq";
+  return OPERATORS_BY_TYPE[f.type][0].value;
+};
+
+const formatCondition = (c: RuleCondition): string => {
+  const f = fieldDef(c.field);
+  if (!f) return "";
+  const op = operatorLabel(c.field, c.operator);
+  const mode = operatorMode(c.field, c.operator);
+  if (mode === "days") return `${f.label} ${op} ${c.numValue ?? 0}`;
+  if (mode === "chips") return `${f.label} ${op} [${c.values.join(", ")}]`;
+  return `${f.label} ${op} ${c.value ?? ""}`;
+};
+
+const conditionLogicJoin: Record<ConditionLogic, string> = { any: " OR ", all: " AND ", none: "" };
+const formatExpression = (logic: ConditionLogic, conds: RuleCondition[]) => {
+  if (logic === "none" || conds.length === 0) return "—";
+  return conds.map(formatCondition).join(conditionLogicJoin[logic]);
+};
+
+// ------- Sample data -------
+const buildSentimentConfig = (): ReportConfigDetail => ({
+  scheduleType: "recurring",
+  frequency: "daily",
+  timeField: "publishTime",
+  themeName: "舆情主题",
+  conditionLogic: "all",
+  conditions: [
+    { id: "c1", field: "business", operator: "eq", values: [], value: "机票" },
+    { id: "c2", field: "scope", operator: "eq", values: [], value: "国内" },
+    { id: "c3", field: "emotion", operator: "eq", values: [], value: "负面" },
+    { id: "c4", field: "publishTime", operator: "lastNDays", values: [], numValue: 1 },
+  ],
+  templateId: "TPL01",
+  templateName: "舆情通用模板",
+});
 
 const allReports: Report[] = [
   {
     id: "RPT001", title: "Q1舆情态势分析报告", type: "季度报告", theme: "舆情主题",
-    status: "completed", createdAt: "2026-03-28 09:00", pages: 24, format: "PDF",
+    status: "completed", createdAt: "2026-03-28 09:00", pages: 24, format: "HTML",
     author: "李总监", size: "2.4MB", scheduleType: "once",
     templateId: "TPL01", templateName: "舆情日报模板",
+    config: { ...buildSentimentConfig(), scheduleType: "once", frequency: undefined },
   },
   {
     id: "RPT002", title: "行业竞品监测周报", type: "周报", theme: "行业咨询主题",
-    status: "completed", createdAt: "2026-03-29 10:00", pages: 12, format: "PDF+Excel",
+    status: "completed", createdAt: "2026-03-29 10:00", pages: 12, format: "HTML",
     author: "系统自动生成", size: "1.8MB", scheduleType: "recurring", frequency: "weekly",
     templateId: "TPL02", templateName: "竞品对比模板",
+    config: {
+      scheduleType: "recurring", frequency: "weekly", weeklyStartDay: 1, timeField: "publishTime",
+      themeName: "行业咨询主题", conditionLogic: "all",
+      conditions: [
+        { id: "c1", field: "platform", operator: "in", values: ["携程", "飞猪", "去哪儿", "同程", "美团"] },
+        { id: "c2", field: "publishTime", operator: "lastNDays", values: [], numValue: 7 },
+      ],
+      templateId: "TPL02", templateName: "竞品对比模板",
+    },
     issues: [
       { id: "RPT002-W14", period: "2026-W14（03/30-04/05）", createdAt: "2026-04-05 10:00", status: "completed", pages: 13, size: "1.9MB" },
       { id: "RPT002-W13", period: "2026-W13（03/23-03/29）", createdAt: "2026-03-29 10:00", status: "completed", pages: 12, size: "1.8MB" },
@@ -69,13 +179,13 @@ const allReports: Report[] = [
   },
   {
     id: "RPT003", title: "热点事件专项分析-清明出行", type: "专项报告", theme: "热点洞察主题",
-    status: "generating", createdAt: "2026-03-30 15:30", pages: 0, format: "PDF",
+    status: "generating", createdAt: "2026-03-30 15:30", pages: 0, format: "HTML",
     author: "AI生成中", size: "-", scheduleType: "once",
     templateId: "TPL03", templateName: "热点追踪模板",
   },
   {
     id: "RPT004", title: "产品体验月度报告", type: "月报", theme: "产品体验主题",
-    status: "completed", createdAt: "2026-03-25 08:00", pages: 18, format: "PDF+PPT",
+    status: "completed", createdAt: "2026-03-25 08:00", pages: 18, format: "HTML",
     author: "系统自动生成", size: "5.2MB", scheduleType: "recurring", frequency: "monthly",
     templateId: "TPL04", templateName: "体验洞察模板",
     issues: [
@@ -85,15 +195,11 @@ const allReports: Report[] = [
     ],
   },
   {
-    id: "RPT005", title: "品牌口碑年度总结", type: "年报", theme: "综合",
-    status: "completed", createdAt: "2026-03-20 09:00", pages: 42, format: "PPT",
-    author: "李总监", size: "12.6MB", scheduleType: "once",
-  },
-  {
-    id: "RPT007", title: "舆情日报", type: "日报", theme: "舆情主题",
-    status: "completed", createdAt: "2026-03-31 09:00", pages: 6, format: "PDF",
+    id: "RPT007", title: "国内机票负面舆情日报", type: "日报", theme: "舆情主题",
+    status: "completed", createdAt: "2026-03-31 09:00", pages: 6, format: "HTML",
     author: "系统自动生成", size: "0.8MB", scheduleType: "recurring", frequency: "daily",
-    templateId: "TPL01", templateName: "舆情日报模板",
+    templateId: "TPL01", templateName: "舆情通用模板",
+    config: buildSentimentConfig(),
     issues: [
       { id: "RPT007-0331", period: "2026-03-31", createdAt: "2026-03-31 09:00", status: "completed", pages: 6, size: "0.8MB" },
       { id: "RPT007-0330", period: "2026-03-30", createdAt: "2026-03-30 09:00", status: "completed", pages: 5, size: "0.7MB" },
@@ -104,12 +210,12 @@ const allReports: Report[] = [
   },
   {
     id: "RPT009", title: "XX产品投诉事件深度分析", type: "专项报告", theme: "舆情主题",
-    status: "completed", createdAt: "2026-03-28 16:00", pages: 15, format: "PDF",
+    status: "completed", createdAt: "2026-03-28 16:00", pages: 15, format: "HTML",
     author: "AI智能生成", size: "3.1MB", scheduleType: "once",
   },
   {
     id: "RPT010", title: "一级事件-退款纠纷追踪报告", type: "专项报告", theme: "舆情主题",
-    status: "failed", createdAt: "2026-03-27 11:00", pages: 0, format: "PDF",
+    status: "failed", createdAt: "2026-03-27 11:00", pages: 0, format: "HTML",
     author: "系统", size: "-", scheduleType: "once",
   },
 ];
@@ -124,21 +230,11 @@ const frequencyLabel: Record<RecurringFrequency, string> = {
   daily: "每日", weekly: "每周", monthly: "每月",
 };
 
-const typeOptions = ["全部", "日报", "周报", "月报", "季度报告", "年报", "专项报告"];
-const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
+const weekDayLabels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
-// Wizard data
+const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
 const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题"];
-type SavedQuery = { id: string; name: string; theme: string; conditions: string };
-const savedQueries: SavedQuery[] = [
-  { id: "Q01", name: "国内机票业务-负面舆情", theme: "舆情主题", conditions: "业务=机票 AND 范围=国内 AND 情感=负面" },
-  { id: "Q02", name: "国内机票业务-全量", theme: "舆情主题", conditions: "业务=机票 AND 范围=国内" },
-  { id: "Q03", name: "国际机票业务-负面舆情", theme: "舆情主题", conditions: "业务=机票 AND 范围=国际 AND 情感=负面" },
-  { id: "Q04", name: "酒店业务-投诉聚焦", theme: "舆情主题", conditions: "业务=酒店 AND 类型=投诉" },
-  { id: "Q05", name: "OTA竞品对比", theme: "行业咨询主题", conditions: "类型=OTA AND 来源IN(携程,飞猪,去哪儿,同程,美团)" },
-  { id: "Q06", name: "新品上线热度追踪", theme: "热点洞察主题", conditions: "标签=新品 AND 时间=近7天" },
-  { id: "Q07", name: "App功能体验反馈", theme: "产品体验主题", conditions: "渠道=App AND 类型=体验反馈" },
-];
+
 type ReportTplChoice = { id: string; name: string; desc: string; tags: string[] };
 const reportTemplates: ReportTplChoice[] = [
   { id: "TPL01", name: "舆情通用模板", desc: "总览·核心事件·风险预警·应对建议", tags: ["通用", "舆情"] },
@@ -147,17 +243,19 @@ const reportTemplates: ReportTplChoice[] = [
   { id: "TPL04", name: "体验洞察模板", desc: "功能·体验维度·NPS·用户声音", tags: ["体验"] },
 ];
 
+const newCondition = (field = "business"): RuleCondition => {
+  const op = defaultOperator(field);
+  return { id: Math.random().toString(36).slice(2, 9), field, operator: op, values: [], value: "", numValue: undefined };
+};
+
 export default function ReportManagement() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("全部");
   const [themeFilter, setThemeFilter] = useState("全部");
   const [statusFilter, setStatusFilter] = useState("全部");
   const [scheduleFilter, setScheduleFilter] = useState<"all" | ScheduleType>("all");
-  const [viewReport, setViewReport] = useState<Report | null>(null);
+  const [configDetailReport, setConfigDetailReport] = useState<Report | null>(null);
   const [deleteReport, setDeleteReport] = useState<Report | null>(null);
-  const [shareReport, setShareReport] = useState<Report | null>(null);
-  const [shareMode, setShareMode] = useState<"internal" | "public">("internal");
   const [drillReport, setDrillReport] = useState<Report | null>(null);
 
   // Config wizard
@@ -165,17 +263,17 @@ export default function ReportManagement() {
   const [wizStep, setWizStep] = useState(1);
   const [wizSchedule, setWizSchedule] = useState<ScheduleType>("recurring");
   const [wizFrequency, setWizFrequency] = useState<RecurringFrequency>("daily");
+  const [wizWeeklyStartDay, setWizWeeklyStartDay] = useState<number>(1);
+  const [wizTimeField, setWizTimeField] = useState<string>("publishTime");
   const [wizTheme, setWizTheme] = useState<string>("");
-  const [wizQueryId, setWizQueryId] = useState<string>("");
+  const [wizLogic, setWizLogic] = useState<ConditionLogic>("all");
+  const [wizConditions, setWizConditions] = useState<RuleCondition[]>([newCondition("business")]);
   const [wizTemplateId, setWizTemplateId] = useState<string>("");
   const [wizName, setWizName] = useState<string>("");
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewTitle, setPreviewTitle] = useState("");
 
   const filtered = useMemo(() => {
     return allReports.filter((r) => {
       if (search && !r.title.includes(search) && !r.id.includes(search)) return false;
-      if (typeFilter !== "全部" && r.type !== typeFilter) return false;
       if (themeFilter !== "全部" && r.theme !== themeFilter) return false;
       if (scheduleFilter !== "all" && r.scheduleType !== scheduleFilter) return false;
       if (statusFilter !== "全部") {
@@ -184,27 +282,29 @@ export default function ReportManagement() {
       }
       return true;
     });
-  }, [search, typeFilter, themeFilter, statusFilter, scheduleFilter]);
+  }, [search, themeFilter, statusFilter, scheduleFilter]);
 
   const wizFreqLabel = wizSchedule === "recurring" ? frequencyLabel[wizFrequency] : "一次性";
-  const wizQuery = savedQueries.find(q => q.id === wizQueryId);
   const wizTemplate = reportTemplates.find(t => t.id === wizTemplateId);
-  const filteredQueries = wizTheme ? savedQueries.filter(q => q.theme === wizTheme) : [];
+  const hasTimeCondition = wizConditions.some(c => TIME_FIELD_KEYS.includes(c.field));
 
   const resetWizard = () => {
     setWizStep(1);
     setWizSchedule("recurring");
     setWizFrequency("daily");
+    setWizWeeklyStartDay(1);
+    setWizTimeField("publishTime");
     setWizTheme("");
-    setWizQueryId("");
+    setWizLogic("all");
+    setWizConditions([newCondition("business")]);
     setWizTemplateId("");
     setWizName("");
   };
 
   const autoName = () => {
-    if (!wizQuery || !wizTemplate) return "";
+    if (!wizTemplate || !wizTheme) return "";
     const freq = wizSchedule === "recurring" ? frequencyLabel[wizFrequency].replace("每", "") + "报" : "专项报告";
-    return `${wizQuery.name} ${freq}`;
+    return `${wizTheme} ${freq}`;
   };
 
   const handleDelete = () => {
@@ -214,30 +314,43 @@ export default function ReportManagement() {
     }
   };
 
-  const handleExport = (report: { title: string }, format: string) => {
-    toast.success(`正在导出 ${report.title}（${format}格式）`);
-  };
-
-  const handleShare = () => {
-    toast.success(`已生成${shareMode === "internal" ? "内部" : "公开"}分享链接并复制到剪贴板`);
-    setShareReport(null);
-  };
-
   const goEditTemplate = (templateId?: string) => {
     setConfigOpen(false);
-    if (templateId) {
-      navigate(`/analysis/report-templates?templateId=${templateId}`);
-    } else {
-      navigate("/analysis/report-templates");
-    }
+    setConfigDetailReport(null);
+    if (templateId) navigate(`/analysis/report-templates?templateId=${templateId}`);
+    else navigate("/analysis/report-templates");
   };
+
+  const openReportView = (r: Report, issue?: ReportIssue) => {
+    const t = encodeURIComponent(r.title);
+    const id = issue?.id ?? r.id;
+    const period = issue ? `&period=${encodeURIComponent(issue.period)}` : "";
+    navigate(`/analysis/report-view/${id}?title=${t}${period}`);
+  };
+
+  const handleDownload = (title: string) => toast.success(`正在下载 ${title}（HTML）`);
+
+  // ------- Wizard validators -------
+  const conditionsValid = (conds: RuleCondition[]) => conds.every(c => {
+    const mode = operatorMode(c.field, c.operator);
+    if (mode === "days") return typeof c.numValue === "number" && c.numValue > 0;
+    if (mode === "chips") return c.values.length > 0;
+    return !!c.value;
+  });
+  const step2Valid = wizTheme && wizConditions.length > 0 && conditionsValid(wizConditions) && hasTimeCondition && (wizSchedule === "once" || !!wizTimeField);
+  const step1Valid = wizSchedule === "once" || !!wizFrequency;
+
+  const updateCondition = (id: string, patch: Partial<RuleCondition>) => {
+    setWizConditions(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
+  };
+  const removeCondition = (id: string) => setWizConditions(prev => prev.filter(c => c.id !== id));
 
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">报告管理</h1>
-          <p className="text-sm text-muted-foreground mt-1">查看、搜索、导出和管理所有已生成的分析报告</p>
+          <p className="text-sm text-muted-foreground mt-1">查看、搜索、下载和管理所有已生成的分析报告</p>
         </div>
         <Button className="gap-2" onClick={() => setConfigOpen(true)}>
           <Settings2 className="w-4 h-4" /> 报告配置
@@ -258,12 +371,7 @@ export default function ReportManagement() {
           <div className="flex items-center gap-3 flex-wrap">
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="搜索报告名称或ID..."
-                className="pl-9 h-9"
-              />
+              <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="搜索报告名称或ID..." className="pl-9 h-9" />
             </div>
             <Select value={scheduleFilter} onValueChange={(v) => setScheduleFilter(v as "all" | ScheduleType)}>
               <SelectTrigger className="w-32 h-9"><SelectValue /></SelectTrigger>
@@ -272,10 +380,6 @@ export default function ReportManagement() {
                 <SelectItem value="once">一次性报告</SelectItem>
                 <SelectItem value="recurring">周期报告</SelectItem>
               </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-32 h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>{typeOptions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
             <Select value={themeFilter} onValueChange={setThemeFilter}>
               <SelectTrigger className="w-36 h-9"><SelectValue /></SelectTrigger>
@@ -312,115 +416,88 @@ export default function ReportManagement() {
                   <TableHead>报告ID</TableHead>
                   <TableHead>报告名称</TableHead>
                   <TableHead>调度类型</TableHead>
-                  <TableHead>类型</TableHead>
                   <TableHead>所属主题</TableHead>
-                  <TableHead>格式</TableHead>
                   <TableHead>最近生成时间</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((r) => (
-                  <TableRow
-                    key={r.id}
-                    className={r.scheduleType === "recurring" ? "cursor-pointer hover:bg-muted/40" : ""}
-                    onClick={r.scheduleType === "recurring" ? () => setDrillReport(r) : undefined}
-                  >
-                    <TableCell className="font-mono text-xs text-muted-foreground">{r.id}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <p className="font-medium text-sm text-foreground">{r.title}</p>
-                        {r.scheduleType === "recurring" && (
-                          <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
+                {filtered.map((r) => {
+                  const isRecurring = r.scheduleType === "recurring";
+                  return (
+                    <TableRow
+                      key={r.id}
+                      className={isRecurring ? "cursor-pointer hover:bg-muted/40" : ""}
+                      onClick={isRecurring ? () => setDrillReport(r) : undefined}
+                    >
+                      <TableCell className="font-mono text-xs text-muted-foreground">{r.id}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium text-sm text-foreground">{r.title}</p>
+                          {isRecurring && <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          {r.author}
+                          {isRecurring && r.issues && ` · 共 ${r.issues.length} 期`}
+                        </p>
+                      </TableCell>
+                      <TableCell>
+                        {isRecurring ? (
+                          <Badge className="text-xs gap-1"><Repeat className="w-3 h-3" />周期 · {frequencyLabel[r.frequency!]}</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs gap-1"><Zap className="w-3 h-3" />一次性</Badge>
                         )}
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        {r.author}
-                        {r.scheduleType === "recurring" && r.issues && ` · 共 ${r.issues.length} 期`}
-                      </p>
-                    </TableCell>
-                    <TableCell>
-                      {r.scheduleType === "recurring" ? (
-                        <Badge className="text-xs gap-1"><Repeat className="w-3 h-3" />周期 · {frequencyLabel[r.frequency!]}</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="text-xs gap-1"><Zap className="w-3 h-3" />一次性</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell><Badge variant="outline" className="text-xs">{r.type}</Badge></TableCell>
-                    <TableCell><Badge variant="secondary" className="text-xs">{r.theme}</Badge></TableCell>
-                    <TableCell className="text-xs">{r.format}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
-                        {r.createdAt}
-                      </div>
-                    </TableCell>
-                    <TableCell><Badge variant={statusConfig[r.status].variant} className="text-xs">{statusConfig[r.status].label}</Badge></TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title={r.scheduleType === "recurring" ? "查看各期" : "查看"} onClick={() => r.scheduleType === "recurring" ? setDrillReport(r) : setViewReport(r)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        {r.status === "completed" && r.scheduleType === "once" && (
-                          <>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="导出" onClick={() => handleExport(r, r.format)}>
-                              <Download className="w-4 h-4" />
+                      </TableCell>
+                      <TableCell><Badge variant="secondary" className="text-xs">{r.theme}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <Calendar className="w-3 h-3" />{r.createdAt}
+                        </div>
+                      </TableCell>
+                      <TableCell><Badge variant={statusConfig[r.status].variant} className="text-xs">{statusConfig[r.status].label}</Badge></TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="报告配置详情" onClick={() => setConfigDetailReport(r)}>
+                            <Settings2 className="w-4 h-4" />
+                          </Button>
+                          {isRecurring ? (
+                            <Button variant="ghost" size="icon" className="h-8 w-8" title="查看各期" onClick={() => setDrillReport(r)}>
+                              <Eye className="w-4 h-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="分享" onClick={() => setShareReport(r)}>
-                              <Share2 className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="删除" onClick={() => setDeleteReport(r)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          ) : (
+                            <>
+                              <Button
+                                variant="ghost" size="icon" className="h-8 w-8" title="查看报告"
+                                disabled={r.status !== "completed"}
+                                onClick={() => openReportView(r)}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost" size="icon" className="h-8 w-8" title="下载报告"
+                                disabled={r.status !== "completed"}
+                                onClick={() => handleDownload(r.title)}
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                            </>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="删除" onClick={() => setDeleteReport(r)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
         </CardContent>
       </Card>
 
-      {/* View Dialog */}
-      <Dialog open={!!viewReport} onOpenChange={() => setViewReport(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>报告详情</DialogTitle></DialogHeader>
-          {viewReport && (
-            <div className="space-y-3">
-              <DetailRow label="报告ID" value={viewReport.id} />
-              <DetailRow label="报告名称" value={viewReport.title} />
-              <DetailRow label="调度类型" value={viewReport.scheduleType === "once" ? "一次性报告" : `周期报告（${frequencyLabel[viewReport.frequency!]}）`} />
-              <DetailRow label="报告类型" value={viewReport.type} />
-              <DetailRow label="所属主题" value={viewReport.theme} />
-              <DetailRow label="导出格式" value={viewReport.format} />
-              <DetailRow label="页数" value={viewReport.pages > 0 ? `${viewReport.pages} 页` : "-"} />
-              <DetailRow label="文件大小" value={viewReport.size} />
-              <DetailRow label="生成时间" value={viewReport.createdAt} />
-              <DetailRow label="生成方式" value={viewReport.author} />
-              <DetailRow label="状态" value={statusConfig[viewReport.status].label} />
-              {viewReport.status === "completed" && (
-                <div className="flex gap-2 pt-2 border-t border-border">
-                  <Button variant="outline" className="gap-1.5 flex-1" onClick={() => handleExport(viewReport, "PDF")}>
-                    <Download className="w-4 h-4" /> 导出 PDF
-                  </Button>
-                  <Button variant="outline" className="gap-1.5 flex-1" onClick={() => handleExport(viewReport, "Excel")}>
-                    <Download className="w-4 h-4" /> 导出 Excel
-                  </Button>
-                  <Button variant="outline" className="gap-1.5 flex-1" onClick={() => handleExport(viewReport, "HTML")}>
-                    <ExternalLink className="w-4 h-4" /> 在线查看
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Drill-down Dialog: recurring report periods */}
+      {/* Drill-down Dialog */}
       <Dialog open={!!drillReport} onOpenChange={() => setDrillReport(null)}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
@@ -446,16 +523,21 @@ export default function ReportManagement() {
                   <p className="font-medium mt-1">{drillReport.templateName ?? "-"}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-muted/40">
-                  <p className="text-xs text-muted-foreground">导出格式</p>
-                  <p className="font-medium mt-1">{drillReport.format}</p>
+                  <p className="text-xs text-muted-foreground">期次总数</p>
+                  <p className="font-medium mt-1">{drillReport.issues?.length ?? 0}</p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">各期报告（{drillReport.issues?.length ?? 0}）</p>
-                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => goEditTemplate(drillReport.templateId)}>
-                  <Pencil className="w-3.5 h-3.5" /> 编辑模板
-                </Button>
+                <p className="text-sm font-medium">各期报告</p>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setConfigDetailReport(drillReport)}>
+                    <Settings2 className="w-3.5 h-3.5" /> 配置详情
+                  </Button>
+                  <Button variant="outline" size="sm" className="gap-1.5" onClick={() => goEditTemplate(drillReport.templateId)}>
+                    <Pencil className="w-3.5 h-3.5" /> 编辑模板
+                  </Button>
+                </div>
               </div>
 
               <Table>
@@ -482,14 +564,20 @@ export default function ReportManagement() {
                       <TableCell><Badge variant={statusConfig[issue.status].variant} className="text-xs">{statusConfig[issue.status].label}</Badge></TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" title="查看">
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8" title="查看报告"
+                            disabled={issue.status !== "completed"}
+                            onClick={() => openReportView(drillReport, issue)}
+                          >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          {issue.status === "completed" && (
-                            <Button variant="ghost" size="icon" className="h-8 w-8" title="导出" onClick={() => handleExport({ title: `${drillReport.title} ${issue.period}` }, drillReport.format)}>
-                              <Download className="w-4 h-4" />
-                            </Button>
-                          )}
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8" title="下载报告"
+                            disabled={issue.status !== "completed"}
+                            onClick={() => handleDownload(`${drillReport.title} ${issue.period}`)}
+                          >
+                            <Download className="w-4 h-4" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -501,7 +589,57 @@ export default function ReportManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirm Dialog */}
+      {/* Config Detail Dialog */}
+      <Dialog open={!!configDetailReport} onOpenChange={() => setConfigDetailReport(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings2 className="w-4 h-4 text-primary" /> 报告配置详情
+            </DialogTitle>
+          </DialogHeader>
+          {configDetailReport && (
+            <div className="space-y-4">
+              <div className="rounded-lg bg-muted/30 border border-border p-4 space-y-2">
+                <ConfirmRow label="报告ID" value={configDetailReport.id} mono />
+                <ConfirmRow label="报告名称" value={configDetailReport.title} />
+                <ConfirmRow label="调度类型" value={configDetailReport.scheduleType === "recurring"
+                  ? `周期报告（${frequencyLabel[configDetailReport.frequency!]}${configDetailReport.config?.weeklyStartDay && configDetailReport.frequency === "weekly" ? `，${weekDayLabels[configDetailReport.config.weeklyStartDay - 1]}起` : ""}）`
+                  : "一次性报告"} />
+                <ConfirmRow label="所属主题" value={configDetailReport.theme} />
+                <ConfirmRow label="使用模板" value={configDetailReport.templateName ?? "-"} />
+                {configDetailReport.config?.timeField && (
+                  <ConfirmRow label="时间字段" value={fieldDef(configDetailReport.config.timeField)?.label ?? "-"} />
+                )}
+              </div>
+              {configDetailReport.config && (
+                <div>
+                  <Label className="text-sm font-medium mb-2 block">查询条件</Label>
+                  <div className="rounded-lg border border-border p-3 bg-background space-y-2">
+                    <p className="text-xs text-muted-foreground">
+                      规则关系：{configDetailReport.config.conditionLogic === "all" ? "满足所有条件" : configDetailReport.config.conditionLogic === "any" ? "满足任一条件" : "不配置"}
+                    </p>
+                    <div className="space-y-1.5">
+                      {configDetailReport.config.conditions.map(c => (
+                        <div key={c.id} className="text-xs font-mono bg-muted/40 rounded px-2 py-1.5">
+                          {formatCondition(c)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => goEditTemplate(configDetailReport.templateId)}>
+                  <Pencil className="w-3.5 h-3.5" /> 编辑模板
+                </Button>
+                <Button size="sm" onClick={() => setConfigDetailReport(null)}>关闭</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm */}
       <Dialog open={!!deleteReport} onOpenChange={() => setDeleteReport(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>确认删除</DialogTitle></DialogHeader>
@@ -523,81 +661,22 @@ export default function ReportManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Share Dialog */}
-      <Dialog open={!!shareReport} onOpenChange={() => setShareReport(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>分享报告</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">{shareReport?.title}</p>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">分享权限</p>
-              <div className="flex gap-2">
-                <Button
-                  variant={shareMode === "internal" ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setShareMode("internal")}
-                >
-                  内部分享
-                </Button>
-                <Button
-                  variant={shareMode === "public" ? "default" : "outline"}
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => setShareMode("public")}
-                >
-                  公开链接
-                </Button>
-              </div>
-              <p className="text-[11px] text-muted-foreground">
-                {shareMode === "internal" ? "仅组织内成员可通过链接访问" : "任何获得链接的人都可以查看"}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 p-2 rounded-md bg-muted border border-border">
-              <Input
-                readOnly
-                value={`https://app.lingquan.com/reports/${shareReport?.id}`}
-                className="h-8 text-xs border-0 bg-transparent"
-              />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={handleShare}
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="flex justify-end">
-              <Button size="sm" className="gap-1.5" onClick={handleShare}>
-                <Share2 className="w-3 h-3" /> 复制链接
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Report Configuration Sheet */}
+      {/* Report Configuration Wizard Sheet */}
       <Sheet open={configOpen} onOpenChange={setConfigOpen}>
-        <SheetContent side="right" className="w-[640px] sm:max-w-[640px] overflow-y-auto">
+        <SheetContent side="right" className="w-[720px] sm:max-w-[720px] overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
               <Settings2 className="w-5 h-5 text-primary" /> 报告配置
             </SheetTitle>
             <SheetDescription>
-              管理一次性报告与周期报告的生成配置，可直接跳转到对应模板编辑页
+              配置一次性或周期报告：选择类型、自定义查询条件、选择模板，确认后立即生成
             </SheetDescription>
           </SheetHeader>
 
           <div className="mt-5 space-y-5">
             {/* Stepper */}
             <div className="flex items-center gap-1">
-              {[
-                { n: 1, l: "类型" },
-                { n: 2, l: "数据" },
-                { n: 3, l: "模板" },
-                { n: 4, l: "确认" },
-              ].map((s, i, arr) => (
+              {[{ n: 1, l: "类型" }, { n: 2, l: "数据" }, { n: 3, l: "模板" }, { n: 4, l: "确认" }].map((s, i, arr) => (
                 <div key={s.n} className="flex items-center flex-1">
                   <div className={`flex items-center gap-2 ${wizStep >= s.n ? "text-primary" : "text-muted-foreground"}`}>
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${wizStep > s.n ? "bg-primary text-primary-foreground border-primary" : wizStep === s.n ? "border-primary text-primary" : "border-border"}`}>
@@ -610,25 +689,17 @@ export default function ReportManagement() {
               ))}
             </div>
 
-            {/* Step 1: schedule type */}
+            {/* Step 1 */}
             {wizStep === 1 && (
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm font-medium mb-2 block">报告类型</Label>
                   <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      className={`text-left rounded-lg border p-4 transition ${wizSchedule === "once" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-                      onClick={() => setWizSchedule("once")}
-                    >
+                    <button type="button" className={`text-left rounded-lg border p-4 transition ${wizSchedule === "once" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`} onClick={() => setWizSchedule("once")}>
                       <div className="flex items-center gap-2 mb-2"><Zap className="w-4 h-4 text-primary" /><span className="font-medium text-sm">一次性报告</span></div>
-                      <p className="text-xs text-muted-foreground">基于当前数据立即生成单期报告</p>
+                      <p className="text-xs text-muted-foreground">基于查询条件立即生成单期报告</p>
                     </button>
-                    <button
-                      type="button"
-                      className={`text-left rounded-lg border p-4 transition ${wizSchedule === "recurring" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-                      onClick={() => setWizSchedule("recurring")}
-                    >
+                    <button type="button" className={`text-left rounded-lg border p-4 transition ${wizSchedule === "recurring" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`} onClick={() => setWizSchedule("recurring")}>
                       <div className="flex items-center gap-2 mb-2"><Repeat className="w-4 h-4 text-primary" /><span className="font-medium text-sm">周期报告</span></div>
                       <p className="text-xs text-muted-foreground">按日/周/月自动生成，可下钻各期</p>
                     </button>
@@ -636,76 +707,121 @@ export default function ReportManagement() {
                 </div>
 
                 {wizSchedule === "recurring" && (
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">周期频率</Label>
-                    <div className="flex gap-2">
-                      {(["daily", "weekly", "monthly"] as RecurringFrequency[]).map(f => (
-                        <Button
-                          key={f}
-                          variant={wizFrequency === f ? "default" : "outline"}
-                          size="sm"
-                          className="flex-1"
-                          onClick={() => setWizFrequency(f)}
-                        >
-                          {frequencyLabel[f]}
-                        </Button>
-                      ))}
+                  <>
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">周期频率</Label>
+                      <div className="flex gap-2">
+                        {(["daily", "weekly", "monthly"] as RecurringFrequency[]).map(f => (
+                          <Button key={f} variant={wizFrequency === f ? "default" : "outline"} size="sm" className="flex-1" onClick={() => setWizFrequency(f)}>
+                            {frequencyLabel[f]}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+
+                    {wizFrequency === "weekly" && (
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">周报开始于</Label>
+                        <div className="grid grid-cols-7 gap-1.5">
+                          {weekDayLabels.map((d, idx) => (
+                            <Button
+                              key={d}
+                              size="sm"
+                              variant={wizWeeklyStartDay === idx + 1 ? "default" : "outline"}
+                              onClick={() => setWizWeeklyStartDay(idx + 1)}
+                              className="h-8 text-xs"
+                            >
+                              {d}
+                            </Button>
+                          ))}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1.5">每周的统计周期将从所选日期开始</p>
+                      </div>
+                    )}
+
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" /> 周期统计依据时间字段
+                      </Label>
+                      <RadioGroup value={wizTimeField} onValueChange={setWizTimeField} className="grid grid-cols-2 gap-2">
+                        {FIELD_CATALOG.filter(f => f.type === "time").map(f => (
+                          <label key={f.key} className={`flex items-center gap-2 rounded-lg border p-3 cursor-pointer transition ${wizTimeField === f.key ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}>
+                            <RadioGroupItem value={f.key} />
+                            <span className="text-sm">{f.label}</span>
+                          </label>
+                        ))}
+                      </RadioGroup>
+                      <p className="text-[11px] text-muted-foreground mt-1.5">周期报告将按该时间字段切分各期数据</p>
+                    </div>
+                  </>
                 )}
               </div>
             )}
 
-            {/* Step 2: data */}
+            {/* Step 2 */}
             {wizStep === 2 && (
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm font-medium mb-2 block">所属主题</Label>
-                  <Select value={wizTheme} onValueChange={(v) => { setWizTheme(v); setWizQueryId(""); }}>
+                  <Select value={wizTheme} onValueChange={setWizTheme}>
                     <SelectTrigger><SelectValue placeholder="请选择主题" /></SelectTrigger>
                     <SelectContent>{themeChoices.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
 
-                {wizTheme && (
-                  <div>
-                    <Label className="text-sm font-medium mb-2 block">查询条件（命中数据集）</Label>
-                    <div className="space-y-2">
-                      {filteredQueries.length === 0 ? (
-                        <p className="text-xs text-muted-foreground py-6 text-center border border-dashed border-border rounded-lg">
-                          该主题下暂无已保存的查询条件
-                        </p>
-                      ) : filteredQueries.map(q => (
-                        <button
-                          type="button"
-                          key={q.id}
-                          className={`w-full text-left rounded-lg border p-3 transition ${wizQueryId === q.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-                          onClick={() => setWizQueryId(q.id)}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="font-medium text-sm">{q.name}</p>
-                            {wizQueryId === q.id && <Check className="w-4 h-4 text-primary shrink-0" />}
-                          </div>
-                          <p className="text-[11px] text-muted-foreground mt-1 font-mono">{q.conditions}</p>
-                        </button>
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium">查询条件</Label>
+                    <RadioGroup value={wizLogic} onValueChange={(v) => setWizLogic(v as ConditionLogic)} className="flex items-center gap-3">
+                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                        <RadioGroupItem value="none" /> <span>不配置</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                        <RadioGroupItem value="any" /> <span>满足任一条件</span>
+                      </label>
+                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
+                        <RadioGroupItem value="all" /> <span>满足所有条件</span>
+                      </label>
+                    </RadioGroup>
+                  </div>
+
+                  {wizLogic !== "none" && (
+                    <div className="space-y-2 rounded-lg border border-border p-3 bg-muted/20">
+                      {wizConditions.map(c => (
+                        <ConditionRow
+                          key={c.id}
+                          condition={c}
+                          onChange={(patch) => updateCondition(c.id, patch)}
+                          onRemove={() => removeCondition(c.id)}
+                        />
                       ))}
+                      <Button variant="outline" size="sm" className="gap-1.5 text-primary border-primary/40" onClick={() => setWizConditions(prev => [...prev, newCondition("business")])}>
+                        <Plus className="w-3.5 h-3.5" /> 添加条件
+                      </Button>
+                      {!hasTimeCondition && (
+                        <p className="text-[11px] text-warning flex items-center gap-1 mt-1">
+                          <AlertTriangle className="w-3 h-3" /> 请添加至少一个时间字段条件（发布时间 / 收录时间）
+                        </p>
+                      )}
                     </div>
+                  )}
+                </div>
+
+                {wizConditions.length > 0 && wizLogic !== "none" && (
+                  <div className="rounded-lg bg-info/5 border border-info/20 p-3">
+                    <p className="text-xs text-muted-foreground mb-1">表达式预览</p>
+                    <p className="text-xs font-mono text-foreground break-all">{formatExpression(wizLogic, wizConditions)}</p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Step 3: template */}
+            {/* Step 3 */}
             {wizStep === 3 && (
               <div className="space-y-3">
                 <Label className="text-sm font-medium block">选择报告模板</Label>
                 {reportTemplates.map(t => (
-                  <button
-                    type="button"
-                    key={t.id}
-                    className={`w-full text-left rounded-lg border p-3 transition ${wizTemplateId === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
-                    onClick={() => setWizTemplateId(t.id)}
-                  >
+                  <button type="button" key={t.id} className={`w-full text-left rounded-lg border p-3 transition ${wizTemplateId === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`} onClick={() => setWizTemplateId(t.id)}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
@@ -727,22 +843,24 @@ export default function ReportManagement() {
               </div>
             )}
 
-            {/* Step 4: confirm */}
+            {/* Step 4 */}
             {wizStep === 4 && (
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm font-medium mb-2 block">报告名称</Label>
-                  <Input
-                    value={wizName || autoName()}
-                    onChange={(e) => setWizName(e.target.value)}
-                    placeholder="请输入报告名称"
-                  />
+                  <Input value={wizName || autoName()} onChange={(e) => setWizName(e.target.value)} placeholder="请输入报告名称" />
                 </div>
                 <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
                   <ConfirmRow label="报告类型" value={wizFreqLabel} />
+                  {wizSchedule === "recurring" && wizFrequency === "weekly" && (
+                    <ConfirmRow label="周报起始" value={weekDayLabels[wizWeeklyStartDay - 1]} />
+                  )}
+                  {wizSchedule === "recurring" && (
+                    <ConfirmRow label="时间字段" value={fieldDef(wizTimeField)?.label ?? "-"} />
+                  )}
                   <ConfirmRow label="所属主题" value={wizTheme} />
-                  <ConfirmRow label="查询条件" value={wizQuery?.name ?? "-"} />
-                  <ConfirmRow label="查询表达式" value={wizQuery?.conditions ?? "-"} mono />
+                  <ConfirmRow label="规则关系" value={wizLogic === "all" ? "满足所有条件" : wizLogic === "any" ? "满足任一条件" : "不配置"} />
+                  <ConfirmRow label="查询表达式" value={formatExpression(wizLogic, wizConditions)} mono />
                   <ConfirmRow label="报告模板" value={wizTemplate?.name ?? "-"} />
                   <ConfirmRow label="导出格式" value="HTML（当前仅支持）" />
                 </div>
@@ -753,44 +871,32 @@ export default function ReportManagement() {
               </div>
             )}
 
-            {/* Footer actions */}
+            {/* Footer */}
             <div className="flex justify-between gap-2 pt-4 border-t border-border">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={wizStep === 1}
-                onClick={() => setWizStep(s => Math.max(1, s - 1))}
-              >
-                上一步
-              </Button>
+              <Button variant="outline" size="sm" disabled={wizStep === 1} onClick={() => setWizStep(s => Math.max(1, s - 1))}>上一步</Button>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => { setConfigOpen(false); resetWizard(); }}>取消</Button>
                 {wizStep < 4 ? (
                   <Button
                     size="sm"
                     disabled={
-                      (wizStep === 2 && (!wizTheme || !wizQueryId)) ||
+                      (wizStep === 1 && !step1Valid) ||
+                      (wizStep === 2 && !step2Valid) ||
                       (wizStep === 3 && !wizTemplateId)
                     }
                     onClick={() => setWizStep(s => Math.min(4, s + 1))}
-                  >
-                    下一步
-                  </Button>
+                  >下一步</Button>
                 ) : (
                   <Button
-                    size="sm"
-                    className="gap-1.5"
+                    size="sm" className="gap-1.5"
                     onClick={() => {
                       const name = wizName || autoName();
                       toast.success(`已创建报告配置「${name}」并开始生成首期报告`);
                       setConfigOpen(false);
-                      setPreviewTitle(name);
-                      setPreviewOpen(true);
                       resetWizard();
                     }}
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    确认并生成报告
+                    <Sparkles className="w-3.5 h-3.5" /> 确认并生成报告
                   </Button>
                 )}
               </div>
@@ -798,21 +904,120 @@ export default function ReportManagement() {
           </div>
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
 
-      {/* HTML Report Preview */}
-      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between pr-8">
-              <span className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /> 报告预览（HTML）</span>
-              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => toast.success("已复制 HTML 报告链接")}>
-                <Copy className="w-3.5 h-3.5" /> 复制链接
-              </Button>
-            </DialogTitle>
-          </DialogHeader>
-          <ReportHtmlPreview title={previewTitle || "国内机票舆情日报"} />
-        </DialogContent>
-      </Dialog>
+// ============ Sub-components ============
+
+function ConditionRow({ condition, onChange, onRemove }: {
+  condition: RuleCondition;
+  onChange: (patch: Partial<RuleCondition>) => void;
+  onRemove: () => void;
+}) {
+  const f = fieldDef(condition.field);
+  if (!f) return null;
+  const operators = OPERATORS_BY_TYPE[f.type];
+  const mode = operatorMode(condition.field, condition.operator);
+
+  const handleFieldChange = (newField: string) => {
+    const newOp = defaultOperator(newField);
+    onChange({ field: newField, operator: newOp, values: [], value: "", numValue: undefined });
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      {/* Field */}
+      <Select value={condition.field} onValueChange={handleFieldChange}>
+        <SelectTrigger className="w-32 h-9 text-xs"><SelectValue /></SelectTrigger>
+        <SelectContent>{FIELD_CATALOG.map(opt => <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>)}</SelectContent>
+      </Select>
+      {/* Operator */}
+      <Select value={condition.operator} onValueChange={(v) => onChange({ operator: v, values: [], value: "", numValue: undefined })}>
+        <SelectTrigger className="w-32 h-9 text-xs"><SelectValue /></SelectTrigger>
+        <SelectContent>{operators.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+      </Select>
+      {/* Value control */}
+      <div className="flex-1 min-w-0">
+        {mode === "single" && f.type === "enum" && (
+          <Select value={condition.value || ""} onValueChange={(v) => onChange({ value: v })}>
+            <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="请选择" /></SelectTrigger>
+            <SelectContent>{f.options?.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+          </Select>
+        )}
+        {mode === "single" && f.type === "text" && (
+          <Input value={condition.value || ""} onChange={(e) => onChange({ value: e.target.value })} placeholder="请输入值" className="h-9 text-xs" />
+        )}
+        {mode === "chips" && (
+          <ChipsInput
+            values={condition.values}
+            onChange={(values) => onChange({ values })}
+            options={f.type === "enum" ? f.options : undefined}
+            placeholder={f.type === "enum" ? "选择或输入值" : "采用包含形式匹配参数"}
+          />
+        )}
+        {mode === "days" && (
+          <div className="flex items-center gap-2">
+            <Input type="number" min={1} value={condition.numValue ?? ""} onChange={(e) => onChange({ numValue: parseInt(e.target.value) || 0 })} className="h-9 text-xs w-24" />
+            <span className="text-xs text-muted-foreground">{condition.operator === "lastNHours" ? "小时" : "天"}</span>
+          </div>
+        )}
+      </div>
+      <Button variant="ghost" size="sm" className="h-9 px-2 text-destructive hover:text-destructive shrink-0" onClick={onRemove}>
+        删除
+      </Button>
+    </div>
+  );
+}
+
+function ChipsInput({ values, onChange, options, placeholder }: {
+  values: string[]; onChange: (v: string[]) => void; options?: string[]; placeholder?: string;
+}) {
+  const [input, setInput] = useState("");
+  const addValue = (v: string) => {
+    const t = v.trim();
+    if (!t || values.includes(t)) return;
+    onChange([...values, t]);
+  };
+  const removeValue = (v: string) => onChange(values.filter(x => x !== v));
+
+  return (
+    <div className="min-h-9 px-2 py-1 rounded-md border border-input bg-background flex flex-wrap items-center gap-1">
+      {values.map(v => (
+        <Badge key={v} variant="secondary" className="gap-1 text-[11px] h-6 px-1.5">
+          {v}
+          <button type="button" onClick={() => removeValue(v)} className="hover:text-destructive">
+            <X className="w-3 h-3" />
+          </button>
+        </Badge>
+      ))}
+      {options ? (
+        <Select value="" onValueChange={addValue}>
+          <SelectTrigger className="h-7 border-0 text-xs flex-1 min-w-[120px] focus:ring-0 shadow-none px-1">
+            <SelectValue placeholder={placeholder} />
+          </SelectTrigger>
+          <SelectContent>
+            {options.filter(o => !values.includes(o)).map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ) : (
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && input.trim()) {
+              e.preventDefault();
+              addValue(input);
+              setInput("");
+            }
+            if (e.key === "Backspace" && !input && values.length) {
+              removeValue(values[values.length - 1]);
+            }
+          }}
+          placeholder={placeholder}
+          className="flex-1 min-w-[120px] bg-transparent border-0 outline-none text-xs px-1 py-1 placeholder:text-muted-foreground"
+        />
+      )}
     </div>
   );
 }
@@ -822,15 +1027,6 @@ function ConfirmRow({ label, value, mono }: { label: string; value: string; mono
     <div className="flex items-start justify-between gap-3">
       <span className="text-xs text-muted-foreground shrink-0">{label}</span>
       <span className={`text-xs text-foreground text-right ${mono ? "font-mono" : "font-medium"}`}>{value}</span>
-    </div>
-  );
-}
-
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between py-2 border-b border-border last:border-0">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium text-foreground">{value}</span>
     </div>
   );
 }

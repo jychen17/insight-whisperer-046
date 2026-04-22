@@ -31,6 +31,7 @@ import DashboardConfig from "@/pages/datacenter/DashboardConfig";
 import SmartReports from "@/pages/analysis/SmartReports";
 import ReportManagement from "@/pages/analysis/ReportManagement";
 import ReportTemplates from "@/pages/analysis/ReportTemplates";
+import ReportView from "@/pages/analysis/ReportView";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => (
             <Route path="/analysis/reports" element={<SmartReports />} />
             <Route path="/analysis/report-manage" element={<ReportManagement />} />
             <Route path="/analysis/report-templates" element={<ReportTemplates />} />
+            <Route path="/analysis/report-view/:id" element={<ReportView />} />
             {/* 系统设置 */}
             <Route path="/settings/fields" element={<PlaceholderPage title="字段管理" />} />
             <Route path="/settings/crawlers" element={<PlaceholderPage title="爬虫管理" />} />
