@@ -57,13 +57,24 @@ const mockTemplates: ReportTemplateItem[] = [
     format: "PDF+PPT", status: true, usageCount: 18, createdAt: "2026-01-20", updatedAt: "2026-03-15",
   },
   {
-    id: "TPL05", name: "管理层摘要模板", description: "面向管理层的精简汇报模板",
+    id: "TPL05", name: "事件分析报告模板", description: "围绕单一事件，从概况、时间线、核心问题、风险评估到应对建议的全景分析",
+    category: "事件", type: "global",
+    sections: ["事件概况", "事件时间线", "核心问题分析", "风险等级评估", "应对建议", "总结"],
+    charts: [
+      { name: "舆情概览KPI", type: "卡片" },
+      { name: "事件时间线", type: "时间轴" },
+      { name: "核心问题分布", type: "饼图" },
+      { name: "风险等级矩阵", type: "热力图" },
+    ],
+    format: "HTML+PDF", status: true, usageCount: 24, createdAt: "2026-04-10", updatedAt: "2026-04-14",
+  },
+  {
+    id: "TPL06", name: "管理层摘要模板", description: "面向管理层的精简汇报模板",
     category: "综合", type: "custom", sections: ["平台概览", "各主题摘要", "风险预警回顾", "下期展望"],
     charts: [{ name: "平台概览", type: "仪表盘" }],
     format: "PPT", status: false, usageCount: 6, createdAt: "2026-03-01", updatedAt: "2026-03-15",
     uploadedFileName: "管理层摘要-v2.pptx",
   },
-];
 
 const categoryOptions = ["全部", "舆情", "行业", "热点", "体验", "事件", "综合"];
 
