@@ -155,11 +155,17 @@ export default function ThemeRules() {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-[10px] gap-1">
-                      {a.pushTiming === "realtime" ? <Zap className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
-                      {a.pushTiming === "realtime" ? "实时推送" : "定时汇总"}
+                      {a.pushTiming === "realtime" ? <Zap className="w-2.5 h-2.5" /> : a.pushTiming === "threshold" ? <Hash className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                      {a.pushTiming === "realtime" ? "实时推送" : a.pushTiming === "threshold" ? `阈值≥${a.articleThreshold ?? 10}篇` : "定时汇总"}
                     </Badge>
+                    {a.triggerDimension === "node" && a.pushOnce && (
+                      <div className="text-[10px] text-muted-foreground mt-0.5">同事件只推一次</div>
+                    )}
                   </TableCell>
-                  <TableCell className="text-right font-medium">{a.triggerCount}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="font-semibold text-primary">{a.yesterdayTriggerCount ?? 0}</div>
+                    <div className="text-[10px] text-muted-foreground">7日 {a.weekTriggerCount ?? 0}</div>
+                  </TableCell>
                   <TableCell><Switch checked={a.enabled} onCheckedChange={() => themeAlertStore.toggle(a.id)} /></TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
