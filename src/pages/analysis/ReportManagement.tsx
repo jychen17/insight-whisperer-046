@@ -159,6 +159,15 @@ const buildSentimentConfig = (): ReportConfigDetail => ({
   ],
   templateId: "TPL01",
   templateName: "舆情通用模板",
+  push: {
+    enabled: true,
+    channel: "wecom",
+    targets: [
+      { id: "t1", type: "group", name: "舆情应急群" },
+      { id: "t2", type: "person", name: "张敏（产品）" },
+    ],
+    timing: { mode: "scheduled", time: "09:00" },
+  },
 });
 
 const allReports: Report[] = [
