@@ -245,6 +245,18 @@ const frequencyLabel: Record<RecurringFrequency, string> = {
 
 const weekDayLabels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
+// 周报起始日 -> "周X 至 下周X(前一天)"
+const weeklyRangeHint = (startDay: number) => {
+  const start = weekDayLabels[(startDay - 1 + 7) % 7];
+  const endIdx = (startDay - 1 + 6) % 7; // 上一天
+  const end = weekDayLabels[endIdx];
+  return `每期统计：${start} 至 下${end}`;
+};
+
+// 推送目标候选
+const personOptions = ["张敏（产品）", "李伟（运营）", "王芳（市场）", "陈强（客服）", "刘涛（技术）"];
+const groupOptions = ["舆情应急群", "市场分析周报群", "客服日报群", "产品体验反馈群"];
+
 const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
 const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题"];
 
