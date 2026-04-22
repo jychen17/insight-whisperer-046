@@ -33,6 +33,9 @@ const FIELD_LABELS: Record<string, string> = {
   event_likes: "事件总点赞", event_time: "事件首发时间", event_category: "事件分类",
   importance: "初始风险等级", category: "舆情问题分类", publish_time: "发布时间",
   sentiment_count: "文章总量", comment_count: "总评论量", like_count: "总点赞量",
+  // 热点洞察主题字段
+  heat_score: "综合热度分", heat_trend: "热度增幅", platform_share: "平台占比",
+  biz_relevance: "业务相关度", cross_source: "跨源覆盖数", city: "活动城市", platform: "来源平台",
 };
 
 export default function EventAlert() {
