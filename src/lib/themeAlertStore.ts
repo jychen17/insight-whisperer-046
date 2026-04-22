@@ -20,7 +20,7 @@ export interface PushChannel {
   groupWebhook: string;
 }
 
-export type PushTiming = "realtime" | "scheduled";
+export type PushTiming = "realtime" | "scheduled" | "threshold";
 export type ConditionLogic = "none" | "any" | "all";
 
 export interface ThemeAlertRule {
@@ -35,13 +35,23 @@ export interface ThemeAlertRule {
   triggerNodeName?: string;
   conditionLogic: ConditionLogic;
   conditions: RuleCondition[];
+  /** 推送时机：realtime 实时 / threshold 文章数阈值 / scheduled 定时汇总 */
   pushTiming: PushTiming;
+  /** 当 pushTiming === "threshold" 时生效：节点下文章数达到阈值才推送 */
+  articleThreshold?: number;
+  /** 节点维度下：同一事件只推送一次（后续新增文章不重复推） */
+  pushOnce?: boolean;
   scheduledInterval?: "hour" | "day" | "week";
   scheduledTimeStart?: string;
   scheduledTimeEnd?: string;
   channels: PushChannel[];
   level: "warning" | "critical";
+  /** 累计触发次数（保留用于历史统计） */
   triggerCount: number;
+  /** 昨天触发次数 */
+  yesterdayTriggerCount?: number;
+  /** 近 7 天触发次数 */
+  weekTriggerCount?: number;
   createdAt: string;
 }
 
