@@ -835,45 +835,59 @@ export default function ReportManagement() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-medium">查询条件</Label>
-                    <RadioGroup value={wizLogic} onValueChange={(v) => setWizLogic(v as ConditionLogic)} className="flex items-center gap-3">
-                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                        <RadioGroupItem value="none" /> <span>不配置</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                        <RadioGroupItem value="any" /> <span>满足任一条件</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                        <RadioGroupItem value="all" /> <span>满足所有条件</span>
-                      </label>
-                    </RadioGroup>
+                    <div className="inline-flex rounded-md border border-border bg-muted/30 p-0.5">
+                      <button
+                        type="button"
+                        className={`px-3 py-1 text-xs rounded transition ${wizLogic === "all" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        onClick={() => setWizLogic("all")}
+                      >满足所有条件</button>
+                      <button
+                        type="button"
+                        className={`px-3 py-1 text-xs rounded transition ${wizLogic === "any" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        onClick={() => setWizLogic("any")}
+                      >满足任一条件</button>
+                    </div>
                   </div>
 
-                  {wizLogic !== "none" && (
-                    <div className="space-y-2 rounded-lg border border-border p-3 bg-muted/20">
-                      {wizConditions.map(c => (
-                        <ConditionRow
-                          key={c.id}
-                          condition={c}
-                          onChange={(patch) => updateCondition(c.id, patch)}
-                          onRemove={() => removeCondition(c.id)}
-                        />
-                      ))}
-                      <Button variant="outline" size="sm" className="gap-1.5 text-primary border-primary/40" onClick={() => setWizConditions(prev => [...prev, newCondition("business")])}>
-                        <Plus className="w-3.5 h-3.5" /> 添加条件
-                      </Button>
-                      {!hasTimeCondition && (
-                        <p className="text-[11px] text-warning flex items-center gap-1 mt-1">
-                          <AlertTriangle className="w-3 h-3" /> 请添加至少一个时间字段条件（发布时间 / 收录时间）
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  <div className="space-y-2 rounded-lg border border-border p-3 bg-muted/20">
+                    {wizConditions.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-2">暂无条件，点击下方按钮添加</p>
+                    )}
+                    {wizConditions.map((c, idx) => (
+                      <div key={c.id} className="flex items-start gap-2">
+                        {idx > 0 && (
+                          <div className="pt-2 shrink-0">
+                            <Badge variant="outline" className="text-[10px] font-mono">
+                              {wizLogic === "all" ? "AND" : "OR"}
+                            </Badge>
+                          </div>
+                        )}
+                        <div className={`flex-1 ${idx > 0 ? "" : "ml-[52px]"}`}>
+                          <ConditionRow
+                            condition={c}
+                            onChange={(patch) => updateCondition(c.id, patch)}
+                            onRemove={() => removeCondition(c.id)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" className="gap-1.5 text-primary border-primary/40" onClick={() => setWizConditions(prev => [...prev, newCondition("business")])}>
+                      <Plus className="w-3.5 h-3.5" /> 添加条件
+                    </Button>
+                    {!hasTimeCondition && (
+                      <p className="text-[11px] text-warning flex items-center gap-1 mt-1">
+                        <AlertTriangle className="w-3 h-3" /> 请添加至少一个时间字段条件（发布时间 / 收录时间）
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                {wizConditions.length > 0 && wizLogic !== "none" && (
+                {wizConditions.length > 0 && (
                   <div className="rounded-lg bg-info/5 border border-info/20 p-3">
-                    <p className="text-xs text-muted-foreground mb-1">表达式预览</p>
-                    <p className="text-xs font-mono text-foreground break-all">{formatExpression(wizLogic, wizConditions)}</p>
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> 实时表达式预览
+                    </p>
+                    <p className="text-xs font-mono text-foreground break-all leading-relaxed">{formatExpression(wizLogic, wizConditions)}</p>
                   </div>
                 )}
               </div>
