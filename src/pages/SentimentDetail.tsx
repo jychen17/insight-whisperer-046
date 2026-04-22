@@ -1261,6 +1261,19 @@ export default function SentimentDetail() {
                           <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); openHandleDialog("event", event.id); }}>
                             <ClipboardList className="w-3 h-3" /> 处置
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-[11px] gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate("/analysis/report-manage", {
+                                state: { reportPrefill: { theme: "舆情主题", scope: "events", ids: [event.id], titles: [event.title], source: "舆情列表 · 事件" } }
+                              });
+                            }}
+                          >
+                            <FileText className="w-3 h-3" /> 报告
+                          </Button>
                           <Button size="sm" variant="ghost" className="h-6 text-[11px] gap-1" onClick={(e) => { e.stopPropagation(); navigate(`/sentiment/event-detail?id=${event.id}`); }}>
                             <ExternalLink className="w-3 h-3" /> 详情
                           </Button>
