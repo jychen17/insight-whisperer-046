@@ -294,8 +294,17 @@ const newCondition = (field = "business"): RuleCondition => {
   return { id: Math.random().toString(36).slice(2, 9), field, operator: op, values: [], value: "", numValue: undefined };
 };
 
+interface ReportPrefill {
+  theme?: string;
+  scope: "articles" | "events";
+  ids: string[];
+  titles?: string[];
+  source?: string; // 来源页（用于提示）
+}
+
 export default function ReportManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [search, setSearch] = useState("");
   const [themeFilter, setThemeFilter] = useState("全部");
   const [statusFilter, setStatusFilter] = useState("全部");
