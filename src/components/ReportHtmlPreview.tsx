@@ -1,9 +1,10 @@
-import { Flame, AlertTriangle, Trophy, Sparkles, Bell, Lightbulb, FileText, BarChart3 } from "lucide-react";
+import { Flame, AlertTriangle, Trophy, Sparkles, Bell, Lightbulb, FileText, BarChart3, Gamepad2, Clock, Smartphone, Zap, Wrench, Megaphone } from "lucide-react";
 
 interface Props {
   title: string;
   date?: string;
   source?: string;
+  variant?: "default" | "event";
 }
 
 /**
@@ -11,7 +12,10 @@ interface Props {
  * Used inside the report preview dialog so users see what the generated
  * report looks like in HTML format.
  */
-export default function ReportHtmlPreview({ title, date = "2026年4月15日", source = "灵泉舆情系统" }: Props) {
+export default function ReportHtmlPreview({ title, date = "2026年4月15日", source = "灵泉舆情系统", variant = "default" }: Props) {
+  if (variant === "event") {
+    return <EventReport title={title} date={date} source={source} />;
+  }
   return (
     <div className="bg-background space-y-5 text-sm">
       {/* Header banner */}
