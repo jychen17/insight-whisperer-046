@@ -20,9 +20,10 @@ import {
 } from "@/lib/themeAlertStore";
 import { defaultThemes } from "@/pages/ThemeSettings";
 
-const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", scheduled: "定时汇总" };
+const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", threshold: "阈值推送", scheduled: "定时汇总" };
 const timingIcons: Record<PushTiming, React.ReactNode> = {
   realtime: <Zap className="w-3 h-3" />,
+  threshold: <Hash className="w-3 h-3" />,
   scheduled: <Clock className="w-3 h-3" />,
 };
 const logicLabels: Record<ConditionLogic, string> = { none: "不配置", any: "满足任一条件", all: "满足所有条件" };

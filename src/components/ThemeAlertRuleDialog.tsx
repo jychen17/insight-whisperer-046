@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Plus, Zap, Clock, MessageCircle, Layers, FileText } from "lucide-react";
+import { Bell, Plus, Zap, Clock, MessageCircle, Layers, FileText, Hash } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
   themeAlertStore,
@@ -58,10 +59,16 @@ const isTimeField = (f: string) => ["event_time", "publish_time"].includes(f);
 const getOperators = (f: string) => OPERATORS[f] || OPERATORS._default;
 
 const logicLabels: Record<ConditionLogic, string> = { none: "不配置", any: "满足任一条件", all: "满足所有条件" };
-const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", scheduled: "定时汇总" };
+const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", threshold: "阈值推送", scheduled: "定时汇总" };
 const timingIcons: Record<PushTiming, React.ReactNode> = {
   realtime: <Zap className="w-3 h-3" />,
+  threshold: <Hash className="w-3 h-3" />,
   scheduled: <Clock className="w-3 h-3" />,
+};
+const timingDesc: Record<PushTiming, string> = {
+  realtime: "满足条件立即推送",
+  threshold: "节点下文章数达到阈值才推送",
+  scheduled: "按时间段汇总后推送",
 };
 
 interface Props {
