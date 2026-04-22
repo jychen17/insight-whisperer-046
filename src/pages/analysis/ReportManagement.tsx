@@ -796,7 +796,9 @@ export default function ReportManagement() {
                             </Button>
                           ))}
                         </div>
-                        <p className="text-[11px] text-muted-foreground mt-1.5">每周的统计周期将从所选日期开始</p>
+                        <p className="text-[11px] text-primary mt-1.5 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> {weeklyRangeHint(wizWeeklyStartDay)}
+                        </p>
                       </div>
                     )}
 
