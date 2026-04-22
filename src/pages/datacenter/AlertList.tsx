@@ -38,16 +38,12 @@ export default function AlertList() {
   const messages = useAlertMessages();
   const [keyword, setKeyword] = useState("");
   const [themeFilter, setThemeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<AlertStatus | "all">("all");
-  const [levelFilter, setLevelFilter] = useState<"all" | AlertMessage["level"]>("all");
   const [rangeFilter, setRangeFilter] = useState<"all" | "yesterday" | "week">("all");
   const [detail, setDetail] = useState<AlertMessage | null>(null);
 
   const filtered = useMemo(() => {
     return messages.filter((m) => {
       if (themeFilter !== "all" && m.themeId !== themeFilter) return false;
-      if (statusFilter !== "all" && m.status !== statusFilter) return false;
-      if (levelFilter !== "all" && m.level !== levelFilter) return false;
       if (rangeFilter === "yesterday" && !isYesterday(m.pushedAt)) return false;
       if (rangeFilter === "week" && !isWithin7Days(m.pushedAt)) return false;
       if (keyword) {
@@ -56,15 +52,29 @@ export default function AlertList() {
       }
       return true;
     });
-  }, [messages, themeFilter, statusFilter, levelFilter, rangeFilter, keyword]);
+  }, [messages, themeFilter, rangeFilter, keyword]);
+
+  // Jump to the source object in its theme list
+  const jumpToTrigger = (m: AlertMessage) => {
+    if (m.themeId === "sentiment") {
+      if (m.triggerType === "event") {
+        // pseudo eventId from rule (mock data has no real id) — use rule id as fallback
+        navigate(`/sentiment/event-detail?id=${m.ruleId}&from=alert&node=${encodeURIComponent(m.triggerNodeName || "")}`);
+      } else {
+        navigate(`/sentiment/article/${m.id}`, { state: { from: "alert", title: m.triggerTitle } });
+      }
+    } else {
+      // Other themes: jump to the theme's detail/list page filtered to this node
+      navigate(`/sentiment/detail?themeId=${m.themeId}&node=${encodeURIComponent(m.triggerNodeName || "")}&q=${encodeURIComponent(m.triggerTitle)}`);
+    }
+  };
 
   // Stats
   const stats = useMemo(() => ({
     total: messages.length,
     yesterday: messages.filter((m) => isYesterday(m.pushedAt)).length,
     week: messages.filter((m) => isWithin7Days(m.pushedAt)).length,
-    failed: messages.filter((m) => m.status === "failed").length,
-    pending: messages.filter((m) => m.status === "pending").length,
+    critical: messages.filter((m) => m.level === "critical").length,
   }), [messages]);
 
   const handleResend = (id: string) => {
@@ -94,12 +104,11 @@ export default function AlertList() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-4 gap-4">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">累计预警</p><p className="text-2xl font-bold text-foreground mt-1">{stats.total}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">昨天预警</p><p className="text-2xl font-bold text-primary mt-1">{stats.yesterday}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">近 7 天预警</p><p className="text-2xl font-bold text-amber-500 mt-1">{stats.week}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">推送失败</p><p className="text-2xl font-bold text-destructive mt-1">{stats.failed}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">待推送</p><p className="text-2xl font-bold text-amber-500 mt-1">{stats.pending}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">严重预警</p><p className="text-2xl font-bold text-destructive mt-1">{stats.critical}</p></CardContent></Card>
       </div>
 
       {/* Filter bar */}
@@ -120,24 +129,6 @@ export default function AlertList() {
                 {defaultThemes.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as AlertStatus | "all")}>
-              <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue placeholder="状态" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="pushed">已推送</SelectItem>
-                <SelectItem value="read">已查看</SelectItem>
-                <SelectItem value="failed">推送失败</SelectItem>
-                <SelectItem value="pending">待推送</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={levelFilter} onValueChange={(v) => setLevelFilter(v as "all" | AlertMessage["level"])}>
-              <SelectTrigger className="h-9 w-[120px] text-xs"><SelectValue placeholder="级别" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部级别</SelectItem>
-                <SelectItem value="critical">严重</SelectItem>
-                <SelectItem value="warning">一般</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={rangeFilter} onValueChange={(v) => setRangeFilter(v as "all" | "yesterday" | "week")}>
               <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue placeholder="时间范围" /></SelectTrigger>
               <SelectContent>
@@ -152,77 +143,67 @@ export default function AlertList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[80px]">级别</TableHead>
+                <TableHead className="w-[140px]">所属主题</TableHead>
                 <TableHead>触发对象 / 规则</TableHead>
-                <TableHead>所属主题</TableHead>
                 <TableHead>命中条件</TableHead>
                 <TableHead>推送目标</TableHead>
                 <TableHead>推送时间</TableHead>
-                <TableHead>状态</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((m) => {
-                const status = STATUS_META[m.status];
-                const level = LEVEL_META[m.level];
-                return (
-                  <TableRow key={m.id} className={m.status === "read" ? "opacity-70" : ""}>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-[10px] ${level.tone}`}>{level.label}</Badge>
-                    </TableCell>
-                    <TableCell className="max-w-[280px]">
-                      <div className="text-sm font-medium text-foreground truncate">{m.triggerTitle}</div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
-                        <Badge variant="outline" className="text-[10px]">{m.triggerType === "event" ? `节点：${m.triggerNodeName}` : "单条文章"}</Badge>
-                        <span>规则：{m.ruleName}</span>
-                        {m.articleCount && <span>· {m.articleCount} 篇</span>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-[10px]">{m.themeName}</Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-[200px]">
-                      <span className="bg-muted px-1.5 py-0.5 rounded text-[10px]">{m.hitConditions}</span>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {m.channels.map((c, i) => (
-                          <Badge key={i} variant="outline" className="text-[10px] gap-0.5">
-                            {c.type === "wechat_group" ? <Users className="w-2.5 h-2.5" /> : <MessageCircle className="w-2.5 h-2.5" />}
-                            {c.target}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{m.pushedAt}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className={`text-[10px] gap-1 ${status.tone}`}>
-                        {status.icon} {status.label}
+              {filtered.map((m) => (
+                <TableRow key={m.id}>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[10px]">{m.themeName}</Badge>
+                  </TableCell>
+                  <TableCell className="max-w-[320px]">
+                    <button
+                      type="button"
+                      onClick={() => jumpToTrigger(m)}
+                      className="text-sm font-medium text-foreground hover:text-primary hover:underline text-left truncate inline-flex items-center gap-1 max-w-full"
+                      title={`跳转到 ${m.themeName} - ${m.triggerNodeName || "文章列表"}`}
+                    >
+                      <span className="truncate">{m.triggerTitle}</span>
+                      <ExternalLink className="w-3 h-3 shrink-0 opacity-60" />
+                    </button>
+                    <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
+                      <Badge variant="outline" className="text-[10px]">
+                        {m.triggerType === "event" ? `节点：${m.triggerNodeName}` : "单条文章"}
                       </Badge>
-                      {m.remark && <div className="text-[10px] text-destructive mt-0.5 max-w-[160px] truncate" title={m.remark}>{m.remark}</div>}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" title="查看详情" onClick={() => { setDetail(m); if (m.status === "pushed") handleMarkRead(m.id); }}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        {m.status === "failed" && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" title="重新推送" onClick={() => handleResend(m.id)}>
-                            <RefreshCcw className="w-4 h-4" />
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="删除" onClick={() => handleDelete(m.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+                      <span>规则：{m.ruleName}</span>
+                      {m.articleCount && <span>· {m.articleCount} 篇</span>}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-[200px]">
+                    <span className="bg-muted px-1.5 py-0.5 rounded text-[10px]">{m.hitConditions}</span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {m.channels.map((c, i) => (
+                        <Badge key={i} variant="outline" className="text-[10px] gap-0.5">
+                          {c.type === "wechat_group" ? <Users className="w-2.5 h-2.5" /> : <MessageCircle className="w-2.5 h-2.5" />}
+                          {c.target}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{m.pushedAt}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="查看详情" onClick={() => setDetail(m)}>
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" title="删除" onClick={() => handleDelete(m.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-12">
+                  <TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-12">
                     暂无符合条件的预警记录
                   </TableCell>
                 </TableRow>
