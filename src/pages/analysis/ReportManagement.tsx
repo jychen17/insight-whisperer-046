@@ -21,6 +21,18 @@ type ScheduleType = "once" | "recurring";
 type RecurringFrequency = "daily" | "weekly" | "monthly";
 type ConditionLogic = "any" | "all" | "none";
 
+type PushTarget = { id: string; type: "person" | "group"; name: string };
+type PushTiming =
+  | { mode: "realtime" }
+  | { mode: "scheduled"; time: string }; // HH:mm for daily/weekly/monthly
+
+interface PushConfig {
+  enabled: boolean;
+  channel: "wecom"; // 当前仅支持企业微信
+  targets: PushTarget[];
+  timing: PushTiming;
+}
+
 interface ReportIssue {
   id: string;
   period: string;
