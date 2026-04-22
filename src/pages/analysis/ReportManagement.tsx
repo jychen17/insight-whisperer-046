@@ -87,7 +87,7 @@ interface Report {
 }
 
 // ------- Field catalog for condition builder -------
-type FieldDef = { key: string; label: string; type: "text" | "enum" | "time"; options?: string[] };
+type FieldDef = { key: string; label: string; type: "text" | "enum" | "time" | "lockset"; options?: string[] };
 const FIELD_CATALOG: FieldDef[] = [
   { key: "business", label: "业务类型", type: "enum", options: ["机票", "酒店", "金服", "度假", "火车票", "用车"] },
   { key: "scope", label: "业务范围", type: "enum", options: ["国内", "国际", "港澳台"] },
@@ -97,10 +97,14 @@ const FIELD_CATALOG: FieldDef[] = [
   { key: "platform", label: "平台", type: "enum", options: ["微博", "小红书", "抖音", "新闻", "App Store"] },
   { key: "publishTime", label: "发布时间", type: "time" },
   { key: "collectTime", label: "收录时间", type: "time" },
+  // 数据集锁定（来自外部预填）
+  { key: "eventSet", label: "事件集合", type: "lockset" },
+  { key: "articleSet", label: "文章集合", type: "lockset" },
 ];
 const TIME_FIELD_KEYS = ["publishTime", "collectTime"];
+const LOCKSET_FIELD_KEYS = ["eventSet", "articleSet"];
 
-const OPERATORS_BY_TYPE: Record<FieldDef["type"], { value: string; label: string; mode: "single" | "chips" | "days" }[]> = {
+const OPERATORS_BY_TYPE: Record<FieldDef["type"], { value: string; label: string; mode: "single" | "chips" | "days" | "lockset" }[]> = {
   enum: [
     { value: "eq", label: "等于", mode: "single" },
     { value: "neq", label: "不等于", mode: "single" },
@@ -114,6 +118,9 @@ const OPERATORS_BY_TYPE: Record<FieldDef["type"], { value: string; label: string
   time: [
     { value: "lastNDays", label: "过去几天内", mode: "days" },
     { value: "lastNHours", label: "过去几小时内", mode: "days" },
+  ],
+  lockset: [
+    { value: "in_set", label: "属于已选集合", mode: "lockset" },
   ],
 };
 
