@@ -1196,12 +1196,15 @@ export default function ReportManagement() {
                         </div>
                       )}
                       {wizSchedule === "once" && wizPushTimingMode === "scheduled" && (
-                        <Input
-                          type="time"
-                          value={wizPushTime}
-                          onChange={(e) => setWizPushTime(e.target.value)}
-                          className="h-9 w-32 text-sm mt-2"
-                        />
+                        <div className="rounded-lg border border-border p-3 bg-muted/20 mt-2">
+                          <p className="text-[11px] text-muted-foreground mb-2">推送时间点</p>
+                          <Input
+                            type="time"
+                            value={wizPushTime}
+                            onChange={(e) => setWizPushTime(e.target.value)}
+                            className="h-9 w-32 text-sm"
+                          />
+                        </div>
                       )}
                     </div>
                   </>
