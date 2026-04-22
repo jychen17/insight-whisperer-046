@@ -22,7 +22,9 @@ type ScheduleType = "once" | "recurring";
 type RecurringFrequency = "daily" | "weekly" | "monthly";
 type ConditionLogic = "any" | "all" | "none";
 
-type PushTarget = { id: string; type: "person" | "group"; name: string };
+type PushTarget =
+  | { id: string; type: "person"; name: string; empId: string }
+  | { id: string; type: "group"; name: string; webhook: string };
 type PushTiming =
   | { mode: "realtime" }
   | { mode: "scheduled"; time: string }; // HH:mm for daily/weekly/monthly
