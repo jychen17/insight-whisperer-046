@@ -12,6 +12,7 @@ import {
   FileText, Eye, Download, Trash2, Search, Calendar,
   AlertTriangle, Settings2, ChevronRight,
   Repeat, Zap, ArrowLeft, Pencil, Check, Plus, LayoutTemplate, Sparkles, X, Clock,
+  Bell, Users, User as UserIcon,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
@@ -20,6 +21,18 @@ import { toast } from "sonner";
 type ScheduleType = "once" | "recurring";
 type RecurringFrequency = "daily" | "weekly" | "monthly";
 type ConditionLogic = "any" | "all" | "none";
+
+type PushTarget = { id: string; type: "person" | "group"; name: string };
+type PushTiming =
+  | { mode: "realtime" }
+  | { mode: "scheduled"; time: string }; // HH:mm for daily/weekly/monthly
+
+interface PushConfig {
+  enabled: boolean;
+  channel: "wecom"; // 当前仅支持企业微信
+  targets: PushTarget[];
+  timing: PushTiming;
+}
 
 interface ReportIssue {
   id: string;
@@ -49,6 +62,7 @@ interface ReportConfigDetail {
   conditions: RuleCondition[];
   templateId: string;
   templateName: string;
+  push?: PushConfig;
 }
 
 interface Report {
@@ -146,6 +160,15 @@ const buildSentimentConfig = (): ReportConfigDetail => ({
   ],
   templateId: "TPL01",
   templateName: "舆情通用模板",
+  push: {
+    enabled: true,
+    channel: "wecom",
+    targets: [
+      { id: "t1", type: "group", name: "舆情应急群" },
+      { id: "t2", type: "person", name: "张敏（产品）" },
+    ],
+    timing: { mode: "scheduled", time: "09:00" },
+  },
 });
 
 const allReports: Report[] = [
@@ -232,6 +255,18 @@ const frequencyLabel: Record<RecurringFrequency, string> = {
 
 const weekDayLabels = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
+// 周报起始日 -> "周X 至 下周X(前一天)"
+const weeklyRangeHint = (startDay: number) => {
+  const start = weekDayLabels[(startDay - 1 + 7) % 7];
+  const endIdx = (startDay - 1 + 6) % 7; // 上一天
+  const end = weekDayLabels[endIdx];
+  return `每期统计：${start} 至 下${end}`;
+};
+
+// 推送目标候选
+const personOptions = ["张敏（产品）", "李伟（运营）", "王芳（市场）", "陈强（客服）", "刘涛（技术）"];
+const groupOptions = ["舆情应急群", "市场分析周报群", "客服日报群", "产品体验反馈群"];
+
 const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
 const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题"];
 
@@ -270,6 +305,11 @@ export default function ReportManagement() {
   const [wizConditions, setWizConditions] = useState<RuleCondition[]>([newCondition("business")]);
   const [wizTemplateId, setWizTemplateId] = useState<string>("");
   const [wizName, setWizName] = useState<string>("");
+  // Push config
+  const [wizPushEnabled, setWizPushEnabled] = useState<boolean>(true);
+  const [wizPushTargets, setWizPushTargets] = useState<PushTarget[]>([]);
+  const [wizPushTimingMode, setWizPushTimingMode] = useState<"realtime" | "scheduled">("scheduled");
+  const [wizPushTime, setWizPushTime] = useState<string>("09:00");
 
   const filtered = useMemo(() => {
     return allReports.filter((r) => {
@@ -288,6 +328,14 @@ export default function ReportManagement() {
   const wizTemplate = reportTemplates.find(t => t.id === wizTemplateId);
   const hasTimeCondition = wizConditions.some(c => TIME_FIELD_KEYS.includes(c.field));
 
+  // 一次性报告默认实时推送；周期报告默认定时
+  const effectivePushTiming: PushTiming = wizSchedule === "once" && wizPushTimingMode === "realtime"
+    ? { mode: "realtime" }
+    : { mode: "scheduled", time: wizPushTime };
+
+  const pushTimingLabel = (timing: PushTiming) =>
+    timing.mode === "realtime" ? "实时推送" : `定时推送 · ${timing.time}`;
+
   const resetWizard = () => {
     setWizStep(1);
     setWizSchedule("recurring");
@@ -299,6 +347,10 @@ export default function ReportManagement() {
     setWizConditions([newCondition("business")]);
     setWizTemplateId("");
     setWizName("");
+    setWizPushEnabled(true);
+    setWizPushTargets([]);
+    setWizPushTimingMode("scheduled");
+    setWizPushTime("09:00");
   };
 
   const autoName = () => {
@@ -339,11 +391,20 @@ export default function ReportManagement() {
   });
   const step2Valid = wizTheme && wizConditions.length > 0 && conditionsValid(wizConditions) && hasTimeCondition && (wizSchedule === "once" || !!wizTimeField);
   const step1Valid = wizSchedule === "once" || !!wizFrequency;
+  const step4Valid = !wizPushEnabled || (wizPushTargets.length > 0 && (effectivePushTiming.mode === "realtime" || /^\d{2}:\d{2}$/.test(wizPushTime)));
 
   const updateCondition = (id: string, patch: Partial<RuleCondition>) => {
     setWizConditions(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   };
   const removeCondition = (id: string) => setWizConditions(prev => prev.filter(c => c.id !== id));
+
+  const togglePushTarget = (type: "person" | "group", name: string) => {
+    setWizPushTargets(prev => {
+      const exists = prev.find(t => t.type === type && t.name === name);
+      if (exists) return prev.filter(t => !(t.type === type && t.name === name));
+      return [...prev, { id: Math.random().toString(36).slice(2, 9), type, name }];
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -605,6 +666,12 @@ export default function ReportManagement() {
                 <ConfirmRow label="调度类型" value={configDetailReport.scheduleType === "recurring"
                   ? `周期报告（${frequencyLabel[configDetailReport.frequency!]}${configDetailReport.config?.weeklyStartDay && configDetailReport.frequency === "weekly" ? `，${weekDayLabels[configDetailReport.config.weeklyStartDay - 1]}起` : ""}）`
                   : "一次性报告"} />
+                {configDetailReport.frequency === "weekly" && configDetailReport.config?.weeklyStartDay && (
+                  <ConfirmRow
+                    label="周报统计周期"
+                    value={weeklyRangeHint(configDetailReport.config.weeklyStartDay).replace("每期统计：", "")}
+                  />
+                )}
                 <ConfirmRow label="所属主题" value={configDetailReport.theme} />
                 <ConfirmRow label="使用模板" value={configDetailReport.templateName ?? "-"} />
                 {configDetailReport.config?.timeField && (
@@ -619,11 +686,44 @@ export default function ReportManagement() {
                       规则关系：{configDetailReport.config.conditionLogic === "all" ? "满足所有条件" : configDetailReport.config.conditionLogic === "any" ? "满足任一条件" : "不配置"}
                     </p>
                     <div className="space-y-1.5">
-                      {configDetailReport.config.conditions.map(c => (
-                        <div key={c.id} className="text-xs font-mono bg-muted/40 rounded px-2 py-1.5">
-                          {formatCondition(c)}
+                      {configDetailReport.config.conditions.map((c, idx) => (
+                        <div key={c.id} className="flex items-center gap-2">
+                          {idx > 0 && (
+                            <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                              {configDetailReport.config!.conditionLogic === "all" ? "AND" : "OR"}
+                            </Badge>
+                          )}
+                          <div className={`flex-1 text-xs font-mono bg-muted/40 rounded px-2 py-1.5 ${idx === 0 ? "ml-[42px]" : ""}`}>
+                            {formatCondition(c)}
+                          </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {configDetailReport.config?.push?.enabled && (
+                <div>
+                  <Label className="text-sm font-medium mb-2 block flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5" /> 推送配置
+                  </Label>
+                  <div className="rounded-lg border border-border p-3 bg-background space-y-2">
+                    <ConfirmRow label="渠道" value="企业微信" />
+                    <ConfirmRow label="推送时机" value={
+                      configDetailReport.config.push.timing.mode === "realtime"
+                        ? "实时推送"
+                        : `定时推送 · ${configDetailReport.config.push.timing.time}`
+                    } />
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1.5">推送对象（{configDetailReport.config.push.targets.length}）</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {configDetailReport.config.push.targets.map(t => (
+                          <Badge key={t.id} variant="secondary" className="gap-1 text-[11px]">
+                            {t.type === "group" ? <Users className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
+                            {t.name}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -676,7 +776,7 @@ export default function ReportManagement() {
           <div className="mt-5 space-y-5">
             {/* Stepper */}
             <div className="flex items-center gap-1">
-              {[{ n: 1, l: "类型" }, { n: 2, l: "数据" }, { n: 3, l: "模板" }, { n: 4, l: "确认" }].map((s, i, arr) => (
+              {[{ n: 1, l: "类型" }, { n: 2, l: "数据" }, { n: 3, l: "模板" }, { n: 4, l: "推送" }, { n: 5, l: "确认" }].map((s, i, arr) => (
                 <div key={s.n} className="flex items-center flex-1">
                   <div className={`flex items-center gap-2 ${wizStep >= s.n ? "text-primary" : "text-muted-foreground"}`}>
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${wizStep > s.n ? "bg-primary text-primary-foreground border-primary" : wizStep === s.n ? "border-primary text-primary" : "border-border"}`}>
@@ -735,7 +835,9 @@ export default function ReportManagement() {
                             </Button>
                           ))}
                         </div>
-                        <p className="text-[11px] text-muted-foreground mt-1.5">每周的统计周期将从所选日期开始</p>
+                        <p className="text-[11px] text-primary mt-1.5 flex items-center gap-1">
+                          <Calendar className="w-3 h-3" /> {weeklyRangeHint(wizWeeklyStartDay)}
+                        </p>
                       </div>
                     )}
 
@@ -772,45 +874,59 @@ export default function ReportManagement() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-sm font-medium">查询条件</Label>
-                    <RadioGroup value={wizLogic} onValueChange={(v) => setWizLogic(v as ConditionLogic)} className="flex items-center gap-3">
-                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                        <RadioGroupItem value="none" /> <span>不配置</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                        <RadioGroupItem value="any" /> <span>满足任一条件</span>
-                      </label>
-                      <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                        <RadioGroupItem value="all" /> <span>满足所有条件</span>
-                      </label>
-                    </RadioGroup>
+                    <div className="inline-flex rounded-md border border-border bg-muted/30 p-0.5">
+                      <button
+                        type="button"
+                        className={`px-3 py-1 text-xs rounded transition ${wizLogic === "all" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        onClick={() => setWizLogic("all")}
+                      >满足所有条件</button>
+                      <button
+                        type="button"
+                        className={`px-3 py-1 text-xs rounded transition ${wizLogic === "any" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                        onClick={() => setWizLogic("any")}
+                      >满足任一条件</button>
+                    </div>
                   </div>
 
-                  {wizLogic !== "none" && (
-                    <div className="space-y-2 rounded-lg border border-border p-3 bg-muted/20">
-                      {wizConditions.map(c => (
-                        <ConditionRow
-                          key={c.id}
-                          condition={c}
-                          onChange={(patch) => updateCondition(c.id, patch)}
-                          onRemove={() => removeCondition(c.id)}
-                        />
-                      ))}
-                      <Button variant="outline" size="sm" className="gap-1.5 text-primary border-primary/40" onClick={() => setWizConditions(prev => [...prev, newCondition("business")])}>
-                        <Plus className="w-3.5 h-3.5" /> 添加条件
-                      </Button>
-                      {!hasTimeCondition && (
-                        <p className="text-[11px] text-warning flex items-center gap-1 mt-1">
-                          <AlertTriangle className="w-3 h-3" /> 请添加至少一个时间字段条件（发布时间 / 收录时间）
-                        </p>
-                      )}
-                    </div>
-                  )}
+                  <div className="space-y-2 rounded-lg border border-border p-3 bg-muted/20">
+                    {wizConditions.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-2">暂无条件，点击下方按钮添加</p>
+                    )}
+                    {wizConditions.map((c, idx) => (
+                      <div key={c.id} className="flex items-start gap-2">
+                        {idx > 0 && (
+                          <div className="pt-2 shrink-0">
+                            <Badge variant="outline" className="text-[10px] font-mono">
+                              {wizLogic === "all" ? "AND" : "OR"}
+                            </Badge>
+                          </div>
+                        )}
+                        <div className={`flex-1 ${idx > 0 ? "" : "ml-[52px]"}`}>
+                          <ConditionRow
+                            condition={c}
+                            onChange={(patch) => updateCondition(c.id, patch)}
+                            onRemove={() => removeCondition(c.id)}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    <Button variant="outline" size="sm" className="gap-1.5 text-primary border-primary/40" onClick={() => setWizConditions(prev => [...prev, newCondition("business")])}>
+                      <Plus className="w-3.5 h-3.5" /> 添加条件
+                    </Button>
+                    {!hasTimeCondition && (
+                      <p className="text-[11px] text-warning flex items-center gap-1 mt-1">
+                        <AlertTriangle className="w-3 h-3" /> 请添加至少一个时间字段条件（发布时间 / 收录时间）
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                {wizConditions.length > 0 && wizLogic !== "none" && (
+                {wizConditions.length > 0 && (
                   <div className="rounded-lg bg-info/5 border border-info/20 p-3">
-                    <p className="text-xs text-muted-foreground mb-1">表达式预览</p>
-                    <p className="text-xs font-mono text-foreground break-all">{formatExpression(wizLogic, wizConditions)}</p>
+                    <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3" /> 实时表达式预览
+                    </p>
+                    <p className="text-xs font-mono text-foreground break-all leading-relaxed">{formatExpression(wizLogic, wizConditions)}</p>
                   </div>
                 )}
               </div>
@@ -843,8 +959,141 @@ export default function ReportManagement() {
               </div>
             )}
 
-            {/* Step 4 */}
+            {/* Step 4 — Push */}
             {wizStep === 4 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium">报告推送</p>
+                      <p className="text-[11px] text-muted-foreground">报告生成后自动通过企业微信推送</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={wizPushEnabled}
+                    onClick={() => setWizPushEnabled(v => !v)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${wizPushEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}
+                  >
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-background shadow transition-all ${wizPushEnabled ? "left-[22px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+
+                {wizPushEnabled && (
+                  <>
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">推送渠道</Label>
+                      <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 flex items-center gap-2">
+                        <div className="w-7 h-7 rounded bg-[#07C160] flex items-center justify-center text-white text-[10px] font-bold shrink-0">微</div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">企业微信</p>
+                          <p className="text-[11px] text-muted-foreground">当前仅支持企业微信推送</p>
+                        </div>
+                        <Check className="w-4 h-4 text-primary" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5" /> 推送对象
+                        {wizPushTargets.length > 0 && (
+                          <span className="text-[11px] text-muted-foreground font-normal">已选 {wizPushTargets.length}</span>
+                        )}
+                      </Label>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1"><Users className="w-3 h-3" /> 群组</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {groupOptions.map(g => {
+                              const active = !!wizPushTargets.find(t => t.type === "group" && t.name === g);
+                              return (
+                                <button
+                                  key={g}
+                                  type="button"
+                                  onClick={() => togglePushTarget("group", g)}
+                                  className={`px-2.5 py-1 rounded-md border text-xs transition ${active ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
+                                >
+                                  {active && <Check className="w-3 h-3 inline mr-1" />}{g}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1"><UserIcon className="w-3 h-3" /> 个人</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {personOptions.map(p => {
+                              const active = !!wizPushTargets.find(t => t.type === "person" && t.name === p);
+                              return (
+                                <button
+                                  key={p}
+                                  type="button"
+                                  onClick={() => togglePushTarget("person", p)}
+                                  className={`px-2.5 py-1 rounded-md border text-xs transition ${active ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
+                                >
+                                  {active && <Check className="w-3 h-3 inline mr-1" />}{p}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" /> 推送时机
+                      </Label>
+                      {wizSchedule === "once" ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setWizPushTimingMode("realtime")}
+                            className={`text-left rounded-lg border p-3 transition ${wizPushTimingMode === "realtime" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                          >
+                            <p className="font-medium text-sm flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-primary" /> 实时推送</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">报告生成完成后立即推送</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setWizPushTimingMode("scheduled")}
+                            className={`text-left rounded-lg border p-3 transition ${wizPushTimingMode === "scheduled" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                          >
+                            <p className="font-medium text-sm flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-primary" /> 定时推送</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">指定时间点推送</p>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-border p-3 bg-muted/20">
+                          <p className="text-[11px] text-muted-foreground mb-2">
+                            {wizFrequency === "daily" ? "每日推送时间" : wizFrequency === "weekly" ? `每周${weekDayLabels[wizWeeklyStartDay - 1]}推送时间` : "每月首日推送时间"}
+                          </p>
+                          <Input
+                            type="time"
+                            value={wizPushTime}
+                            onChange={(e) => setWizPushTime(e.target.value)}
+                            className="h-9 w-32 text-sm"
+                          />
+                        </div>
+                      )}
+                      {wizSchedule === "once" && wizPushTimingMode === "scheduled" && (
+                        <Input
+                          type="time"
+                          value={wizPushTime}
+                          onChange={(e) => setWizPushTime(e.target.value)}
+                          className="h-9 w-32 text-sm mt-2"
+                        />
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Step 5 — Confirm */}
+            {wizStep === 5 && (
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm font-medium mb-2 block">报告名称</Label>
@@ -853,20 +1102,31 @@ export default function ReportManagement() {
                 <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
                   <ConfirmRow label="报告类型" value={wizFreqLabel} />
                   {wizSchedule === "recurring" && wizFrequency === "weekly" && (
-                    <ConfirmRow label="周报起始" value={weekDayLabels[wizWeeklyStartDay - 1]} />
+                    <>
+                      <ConfirmRow label="周报起始" value={weekDayLabels[wizWeeklyStartDay - 1]} />
+                      <ConfirmRow label="统计周期" value={weeklyRangeHint(wizWeeklyStartDay).replace("每期统计：", "")} />
+                    </>
                   )}
                   {wizSchedule === "recurring" && (
                     <ConfirmRow label="时间字段" value={fieldDef(wizTimeField)?.label ?? "-"} />
                   )}
                   <ConfirmRow label="所属主题" value={wizTheme} />
-                  <ConfirmRow label="规则关系" value={wizLogic === "all" ? "满足所有条件" : wizLogic === "any" ? "满足任一条件" : "不配置"} />
+                  <ConfirmRow label="规则关系" value={wizLogic === "all" ? "满足所有条件" : "满足任一条件"} />
                   <ConfirmRow label="查询表达式" value={formatExpression(wizLogic, wizConditions)} mono />
                   <ConfirmRow label="报告模板" value={wizTemplate?.name ?? "-"} />
+                  <ConfirmRow
+                    label="推送配置"
+                    value={
+                      wizPushEnabled
+                        ? `企业微信 · ${wizPushTargets.length} 个对象 · ${pushTimingLabel(effectivePushTiming)}`
+                        : "未开启"
+                    }
+                  />
                   <ConfirmRow label="导出格式" value="HTML（当前仅支持）" />
                 </div>
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-info/5 border border-info/20 text-xs text-foreground">
                   <Sparkles className="w-4 h-4 text-info shrink-0 mt-0.5" />
-                  <p>确认后将立即生成首期报告，{wizSchedule === "recurring" ? `并按${frequencyLabel[wizFrequency]}自动生成后续期次` : "本次为一次性生成"}。</p>
+                  <p>确认后将立即生成首期报告，{wizSchedule === "recurring" ? `并按${frequencyLabel[wizFrequency]}自动生成后续期次` : "本次为一次性生成"}。{wizPushEnabled && wizPushTargets.length > 0 ? `生成后将通过企业微信推送给 ${wizPushTargets.length} 个对象。` : ""}</p>
                 </div>
               </div>
             )}
@@ -876,15 +1136,16 @@ export default function ReportManagement() {
               <Button variant="outline" size="sm" disabled={wizStep === 1} onClick={() => setWizStep(s => Math.max(1, s - 1))}>上一步</Button>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => { setConfigOpen(false); resetWizard(); }}>取消</Button>
-                {wizStep < 4 ? (
+                {wizStep < 5 ? (
                   <Button
                     size="sm"
                     disabled={
                       (wizStep === 1 && !step1Valid) ||
                       (wizStep === 2 && !step2Valid) ||
-                      (wizStep === 3 && !wizTemplateId)
+                      (wizStep === 3 && !wizTemplateId) ||
+                      (wizStep === 4 && !step4Valid)
                     }
-                    onClick={() => setWizStep(s => Math.min(4, s + 1))}
+                    onClick={() => setWizStep(s => Math.min(5, s + 1))}
                   >下一步</Button>
                 ) : (
                   <Button
