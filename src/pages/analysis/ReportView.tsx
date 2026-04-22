@@ -11,6 +11,9 @@ export default function ReportView() {
   const [params] = useSearchParams();
   const title = params.get("title") || "舆情分析报告";
   const period = params.get("period") || "";
+  const template = params.get("template") || "";
+  const variant: "default" | "event" =
+    template.includes("事件") || title.includes("事件") ? "event" : "default";
 
   return (
     <div className="space-y-4">
