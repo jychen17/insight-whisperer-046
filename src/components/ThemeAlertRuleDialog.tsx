@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Plus, Zap, Clock, MessageCircle, Layers, FileText } from "lucide-react";
+import { Bell, Plus, Zap, Clock, MessageCircle, Layers, FileText, Hash } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import {
   themeAlertStore,
@@ -58,10 +59,16 @@ const isTimeField = (f: string) => ["event_time", "publish_time"].includes(f);
 const getOperators = (f: string) => OPERATORS[f] || OPERATORS._default;
 
 const logicLabels: Record<ConditionLogic, string> = { none: "不配置", any: "满足任一条件", all: "满足所有条件" };
-const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", scheduled: "定时汇总" };
+const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", threshold: "阈值推送", scheduled: "定时汇总" };
 const timingIcons: Record<PushTiming, React.ReactNode> = {
   realtime: <Zap className="w-3 h-3" />,
+  threshold: <Hash className="w-3 h-3" />,
   scheduled: <Clock className="w-3 h-3" />,
+};
+const timingDesc: Record<PushTiming, string> = {
+  realtime: "满足条件立即推送",
+  threshold: "节点下文章数达到阈值才推送",
+  scheduled: "按时间段汇总后推送",
 };
 
 interface Props {
@@ -85,12 +92,16 @@ const emptyRule = (themeId: string, themeName: string): ThemeAlertRule => ({
   conditionLogic: "all",
   conditions: [{ field: "importance", operator: "=", value: "重大" }],
   pushTiming: "realtime",
+  articleThreshold: 10,
+  pushOnce: true,
   scheduledInterval: "day",
   scheduledTimeStart: "08:00",
   scheduledTimeEnd: "20:00",
   channels: [{ type: "wechat", personal: true, group: false, personalTargets: [], groupWebhook: "" }],
   level: "warning",
   triggerCount: 0,
+  yesterdayTriggerCount: 0,
+  weekTriggerCount: 0,
   createdAt: new Date().toISOString().slice(0, 10),
 });
 
@@ -218,42 +229,57 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
         </DialogHeader>
 
         {showThemePicker ? (
-          <div className="py-6 space-y-4">
+          <div className="py-6 space-y-3">
             <p className="text-sm text-muted-foreground">请选择该预警规则要绑定的洞察主题：</p>
-            <div className="grid grid-cols-2 gap-3">
-              {defaultThemes.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setPickedThemeId(t.id)}
-                  className="p-3 rounded-lg border border-border text-left hover:border-primary hover:bg-primary/5 transition"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{t.icon}</span>
-                    <span className="text-sm font-medium text-foreground">{t.name}</span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">{t.description}</p>
-                  <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
-                    <Layers className="w-3 h-3" /> {(t.mergeNodes || []).length} 个节点
-                  </div>
-                </button>
-              ))}
-            </div>
+            <Select value={pickedThemeId} onValueChange={setPickedThemeId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="请选择主题..." />
+              </SelectTrigger>
+              <SelectContent>
+                {defaultThemes.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    <span className="flex items-center gap-2">
+                      <span>{t.icon}</span>
+                      <span>{t.name}</span>
+                      <span className="text-[10px] text-muted-foreground">· {(t.mergeNodes || []).length} 节点</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ) : draft ? (
           <div className="space-y-5 py-2">
-            {/* Theme readonly hint */}
-            {!themeId && (
-              <div className="flex items-center gap-2 p-2 rounded-md bg-primary/5 border border-primary/20 text-xs">
-                <FileText className="w-3.5 h-3.5 text-primary" />
-                <span className="text-foreground">所属主题：</span>
-                <span className="font-medium text-primary">{draft.themeName}</span>
-                {!isEdit && (
-                  <Button variant="ghost" size="sm" className="ml-auto h-6 text-[11px]" onClick={() => { setPickedThemeId(""); setDraft(null); }}>
-                    切换主题
-                  </Button>
-                )}
-              </div>
-            )}
+            {/* Theme picker (always shown so user can switch) */}
+            <div className="flex items-center gap-2 p-2 rounded-md bg-primary/5 border border-primary/20 text-xs">
+              <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-foreground shrink-0">所属主题：</span>
+              <Select
+                value={draft.themeId}
+                onValueChange={(v) => {
+                  const t = defaultThemes.find((x) => x.id === v);
+                  if (!t) return;
+                  setDraft({ ...draft, themeId: v, themeName: t.name, triggerNodeId: undefined, triggerNodeName: undefined, triggerDimension: "single", conditions: [{ field: "importance", operator: "=", value: "重大" }] });
+                  setPickedThemeId(v);
+                }}
+                disabled={isEdit}
+              >
+                <SelectTrigger className="h-7 text-xs flex-1 max-w-[280px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {defaultThemes.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      <span className="flex items-center gap-2">
+                        <span>{t.icon}</span>
+                        <span>{t.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isEdit && <Badge variant="outline" className="text-[10px] ml-auto">编辑模式不可切换</Badge>}
+            </div>
 
             {/* Name */}
             <div>
@@ -366,17 +392,31 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
             {/* Push timing (推送事件) */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-2 block">推送事件 / 推送时机</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(["realtime", "scheduled"] as const).map((opt) => (
+              <div className="grid grid-cols-3 gap-2">
+                {(["realtime", "threshold", "scheduled"] as const).map((opt) => (
                   <button key={opt} onClick={() => setDraftField("pushTiming", opt)} className={`p-2.5 rounded-lg border text-left transition ${draft.pushTiming === opt ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}>
                     <div className="flex items-center gap-1.5">
                       {timingIcons[opt]}
                       <span className="text-xs font-medium text-foreground">{timingLabels[opt]}</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{opt === "realtime" ? "满足条件立即推送" : "按时间段汇总后推送"}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{timingDesc[opt]}</p>
                   </button>
                 ))}
               </div>
+              {draft.pushTiming === "threshold" && (
+                <div className="flex items-center gap-2 mt-3 p-3 rounded-md bg-muted/40 border border-border">
+                  <Hash className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs text-muted-foreground">该节点下文章数达到</span>
+                  <input
+                    type="number"
+                    min={1}
+                    className="w-20 px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={draft.articleThreshold ?? 10}
+                    onChange={(e) => setDraftField("articleThreshold", Number(e.target.value) || 1)}
+                  />
+                  <span className="text-xs text-muted-foreground">篇时推送</span>
+                </div>
+              )}
               {draft.pushTiming === "scheduled" && (
                 <div className="space-y-2 mt-3">
                   <div className="flex items-center gap-2">
@@ -394,6 +434,20 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
                     <input type="time" className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground" value={draft.scheduledTimeEnd || "20:00"} onChange={(e) => setDraftField("scheduledTimeEnd", e.target.value)} />
                   </div>
                 </div>
+              )}
+              {draft.triggerDimension === "node" && (
+                <label className="flex items-start gap-2 mt-3 cursor-pointer p-2 rounded-md bg-muted/40 border border-border">
+                  <input
+                    type="checkbox"
+                    checked={draft.pushOnce ?? true}
+                    onChange={(e) => setDraftField("pushOnce", e.target.checked)}
+                    className="accent-primary mt-0.5"
+                  />
+                  <div>
+                    <span className="text-xs font-medium text-foreground">同一事件只推送一次</span>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">事件首次命中后推送通知；后续该事件再有新文章进入，将不再重复推送</p>
+                  </div>
+                </label>
               )}
             </div>
 

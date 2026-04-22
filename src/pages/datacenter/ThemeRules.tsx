@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Settings2, Bell, Trash2, ExternalLink, Layers, MessageCircle, Zap, Clock } from "lucide-react";
+import { Plus, Settings2, Bell, Trash2, ExternalLink, Layers, MessageCircle, Zap, Clock, Hash, ListTodo } from "lucide-react";
 import { toast } from "sonner";
 import ThemeAlertRuleDialog from "@/components/ThemeAlertRuleDialog";
 import {
@@ -38,7 +38,8 @@ export default function ThemeRules() {
   );
 
   const activeCount = allRules.filter((a) => a.enabled).length;
-  const totalTriggers = allRules.reduce((s, a) => s + a.triggerCount, 0);
+  const yesterdayCount = allRules.reduce((s, a) => s + (a.yesterdayTriggerCount ?? 0), 0);
+  const weekCount = allRules.reduce((s, a) => s + (a.weekTriggerCount ?? 0), 0);
   const criticalCount = allRules.filter((a) => a.level === "critical" && a.enabled).length;
 
   const openCreate = () => {
@@ -73,16 +74,21 @@ export default function ThemeRules() {
             汇总各洞察主题下的预警规则，可在此新建预警并指定主题；与「洞察主题 · 预警设置」双向联动
           </p>
         </div>
-        <Button className="gap-2" onClick={openCreate}>
-          <Plus className="w-4 h-4" /> 新建预警
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="gap-2" onClick={() => navigate("/datacenter/alerts/list")}>
+            <ListTodo className="w-4 h-4" /> 查看预警列表
+          </Button>
+          <Button className="gap-2" onClick={openCreate}>
+            <Plus className="w-4 h-4" /> 新建预警
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">预警总数</p><p className="text-2xl font-bold text-foreground mt-1">{allRules.length}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">活跃预警</p><p className="text-2xl font-bold text-emerald-500 mt-1">{activeCount}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">累计触发</p><p className="text-2xl font-bold text-amber-500 mt-1">{totalTriggers}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">严重预警</p><p className="text-2xl font-bold text-destructive mt-1">{criticalCount}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">预警规则总数</p><p className="text-2xl font-bold text-foreground mt-1">{allRules.length}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">当前启用规则</p><p className="text-2xl font-bold text-emerald-500 mt-1">{activeCount}</p><p className="text-[11px] text-muted-foreground mt-0.5">含 {criticalCount} 条严重级</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">近 7 天触发预警</p><p className="text-2xl font-bold text-amber-500 mt-1">{weekCount}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">昨天触发预警</p><p className="text-2xl font-bold text-primary mt-1">{yesterdayCount}</p></CardContent></Card>
       </div>
 
       <Card>
@@ -106,7 +112,7 @@ export default function ThemeRules() {
                 <TableHead>触发条件</TableHead>
                 <TableHead>推送方式</TableHead>
                 <TableHead>推送时机</TableHead>
-                <TableHead className="text-right">触发次数</TableHead>
+                <TableHead className="text-right">昨日触发</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead className="text-right">操作</TableHead>
               </TableRow>
@@ -149,11 +155,17 @@ export default function ThemeRules() {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-[10px] gap-1">
-                      {a.pushTiming === "realtime" ? <Zap className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
-                      {a.pushTiming === "realtime" ? "实时推送" : "定时汇总"}
+                      {a.pushTiming === "realtime" ? <Zap className="w-2.5 h-2.5" /> : a.pushTiming === "threshold" ? <Hash className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                      {a.pushTiming === "realtime" ? "实时推送" : a.pushTiming === "threshold" ? `阈值≥${a.articleThreshold ?? 10}篇` : "定时汇总"}
                     </Badge>
+                    {a.triggerDimension === "node" && a.pushOnce && (
+                      <div className="text-[10px] text-muted-foreground mt-0.5">同事件只推一次</div>
+                    )}
                   </TableCell>
-                  <TableCell className="text-right font-medium">{a.triggerCount}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="font-semibold text-primary">{a.yesterdayTriggerCount ?? 0}</div>
+                    <div className="text-[10px] text-muted-foreground">7日 {a.weekTriggerCount ?? 0}</div>
+                  </TableCell>
                   <TableCell><Switch checked={a.enabled} onCheckedChange={() => themeAlertStore.toggle(a.id)} /></TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">

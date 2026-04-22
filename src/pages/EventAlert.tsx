@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft, Bell, Plus, Trash2, MessageCircle,
   ChevronDown, ChevronUp, Settings2, Zap, Clock, ExternalLink,
-  Flame, BarChart3, ThumbsUp, Layers, FileText
+  Flame, BarChart3, ThumbsUp, Layers, FileText, Hash
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import ThemeAlertRuleDialog from "@/components/ThemeAlertRuleDialog";
@@ -20,9 +20,10 @@ import {
 } from "@/lib/themeAlertStore";
 import { defaultThemes } from "@/pages/ThemeSettings";
 
-const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", scheduled: "定时汇总" };
+const timingLabels: Record<PushTiming, string> = { realtime: "实时推送", threshold: "阈值推送", scheduled: "定时汇总" };
 const timingIcons: Record<PushTiming, React.ReactNode> = {
   realtime: <Zap className="w-3 h-3" />,
+  threshold: <Hash className="w-3 h-3" />,
   scheduled: <Clock className="w-3 h-3" />,
 };
 const logicLabels: Record<ConditionLogic, string> = { none: "不配置", any: "满足任一条件", all: "满足所有条件" };
@@ -100,6 +101,7 @@ export default function EventAlert() {
                       </Badge>
                       <Badge variant="outline" className={`text-[10px] ${rule.pushTiming === "realtime" ? "border-primary/40 text-primary" : ""}`}>
                         {timingIcons[rule.pushTiming]} {timingLabels[rule.pushTiming]}
+                        {rule.pushTiming === "threshold" && <span className="ml-1">≥{rule.articleThreshold ?? 10}篇</span>}
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1 flex-wrap">
@@ -147,12 +149,18 @@ export default function EventAlert() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">推送时机</span>
-                        <p className="text-foreground mt-0.5 flex items-center gap-1">
+                        <p className="text-foreground mt-0.5 flex items-center gap-1 flex-wrap">
                           {timingIcons[rule.pushTiming]} {timingLabels[rule.pushTiming]}
                           {rule.pushTiming === "scheduled" && rule.scheduledInterval && (
                             <span className="text-muted-foreground ml-1">
                               ({rule.scheduledInterval === "hour" ? "每小时" : rule.scheduledInterval === "day" ? "每天" : "每周"} {rule.scheduledTimeStart}-{rule.scheduledTimeEnd})
                             </span>
+                          )}
+                          {rule.pushTiming === "threshold" && (
+                            <span className="text-muted-foreground ml-1">(节点下文章数 ≥ {rule.articleThreshold ?? 10} 篇)</span>
+                          )}
+                          {rule.triggerDimension === "node" && rule.pushOnce && (
+                            <Badge variant="outline" className="text-[10px] ml-1">同事件只推一次</Badge>
                           )}
                         </p>
                       </div>

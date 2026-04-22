@@ -20,7 +20,7 @@ export interface PushChannel {
   groupWebhook: string;
 }
 
-export type PushTiming = "realtime" | "scheduled";
+export type PushTiming = "realtime" | "scheduled" | "threshold";
 export type ConditionLogic = "none" | "any" | "all";
 
 export interface ThemeAlertRule {
@@ -35,13 +35,23 @@ export interface ThemeAlertRule {
   triggerNodeName?: string;
   conditionLogic: ConditionLogic;
   conditions: RuleCondition[];
+  /** 推送时机：realtime 实时 / threshold 文章数阈值 / scheduled 定时汇总 */
   pushTiming: PushTiming;
+  /** 当 pushTiming === "threshold" 时生效：节点下文章数达到阈值才推送 */
+  articleThreshold?: number;
+  /** 节点维度下：同一事件只推送一次（后续新增文章不重复推） */
+  pushOnce?: boolean;
   scheduledInterval?: "hour" | "day" | "week";
   scheduledTimeStart?: string;
   scheduledTimeEnd?: string;
   channels: PushChannel[];
   level: "warning" | "critical";
+  /** 累计触发次数（保留用于历史统计） */
   triggerCount: number;
+  /** 昨天触发次数 */
+  yesterdayTriggerCount?: number;
+  /** 近 7 天触发次数 */
+  weekTriggerCount?: number;
   createdAt: string;
 }
 
@@ -61,11 +71,14 @@ const seed: ThemeAlertRule[] = [
       { field: "event_time", operator: "within", value: "14" },
     ],
     pushTiming: "realtime",
+    pushOnce: true,
     channels: [
       { type: "wechat", personal: true, group: true, personalTargets: ["陈佳燕-1227152"], groupWebhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=c4ee8b65..." },
     ],
     level: "critical",
     triggerCount: 5,
+    yesterdayTriggerCount: 2,
+    weekTriggerCount: 9,
     createdAt: "2026-03-20",
   },
   {
@@ -82,10 +95,14 @@ const seed: ThemeAlertRule[] = [
       { field: "event_comments", operator: ">=", value: "100" },
       { field: "event_likes", operator: ">=", value: "200" },
     ],
-    pushTiming: "realtime",
+    pushTiming: "threshold",
+    articleThreshold: 10,
+    pushOnce: true,
     channels: [{ type: "wechat", personal: true, group: false, personalTargets: ["张三"], groupWebhook: "" }],
     level: "warning",
     triggerCount: 23,
+    yesterdayTriggerCount: 4,
+    weekTriggerCount: 18,
     createdAt: "2026-03-15",
   },
   {
@@ -101,6 +118,8 @@ const seed: ThemeAlertRule[] = [
     channels: [{ type: "wechat", personal: true, group: false, personalTargets: ["王五"], groupWebhook: "" }],
     level: "critical",
     triggerCount: 12,
+    yesterdayTriggerCount: 1,
+    weekTriggerCount: 7,
     createdAt: "2026-03-10",
   },
   {
@@ -118,9 +137,12 @@ const seed: ThemeAlertRule[] = [
     scheduledInterval: "day",
     scheduledTimeStart: "09:00",
     scheduledTimeEnd: "18:00",
+    pushOnce: true,
     channels: [{ type: "wechat", personal: false, group: true, personalTargets: [], groupWebhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=hotspot..." }],
     level: "warning",
     triggerCount: 45,
+    yesterdayTriggerCount: 6,
+    weekTriggerCount: 28,
     createdAt: "2026-03-01",
   },
   {
@@ -128,7 +150,7 @@ const seed: ThemeAlertRule[] = [
     themeId: "experience",
     themeName: "产品体验主题",
     name: "严重体验问题预警",
-    enabled: true,
+    enabled: false,
     triggerDimension: "single",
     conditionLogic: "all",
     conditions: [{ field: "importance", operator: "=", value: "重大" }],
@@ -136,6 +158,8 @@ const seed: ThemeAlertRule[] = [
     channels: [{ type: "wechat", personal: true, group: true, personalTargets: ["赵六"], groupWebhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=exp..." }],
     level: "critical",
     triggerCount: 8,
+    yesterdayTriggerCount: 0,
+    weekTriggerCount: 3,
     createdAt: "2026-03-05",
   },
 ];
