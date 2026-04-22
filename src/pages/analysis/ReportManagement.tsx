@@ -666,6 +666,12 @@ export default function ReportManagement() {
                 <ConfirmRow label="调度类型" value={configDetailReport.scheduleType === "recurring"
                   ? `周期报告（${frequencyLabel[configDetailReport.frequency!]}${configDetailReport.config?.weeklyStartDay && configDetailReport.frequency === "weekly" ? `，${weekDayLabels[configDetailReport.config.weeklyStartDay - 1]}起` : ""}）`
                   : "一次性报告"} />
+                {configDetailReport.frequency === "weekly" && configDetailReport.config?.weeklyStartDay && (
+                  <ConfirmRow
+                    label="周报统计周期"
+                    value={weeklyRangeHint(configDetailReport.config.weeklyStartDay).replace("每期统计：", "")}
+                  />
+                )}
                 <ConfirmRow label="所属主题" value={configDetailReport.theme} />
                 <ConfirmRow label="使用模板" value={configDetailReport.templateName ?? "-"} />
                 {configDetailReport.config?.timeField && (
@@ -680,11 +686,44 @@ export default function ReportManagement() {
                       规则关系：{configDetailReport.config.conditionLogic === "all" ? "满足所有条件" : configDetailReport.config.conditionLogic === "any" ? "满足任一条件" : "不配置"}
                     </p>
                     <div className="space-y-1.5">
-                      {configDetailReport.config.conditions.map(c => (
-                        <div key={c.id} className="text-xs font-mono bg-muted/40 rounded px-2 py-1.5">
-                          {formatCondition(c)}
+                      {configDetailReport.config.conditions.map((c, idx) => (
+                        <div key={c.id} className="flex items-center gap-2">
+                          {idx > 0 && (
+                            <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                              {configDetailReport.config!.conditionLogic === "all" ? "AND" : "OR"}
+                            </Badge>
+                          )}
+                          <div className={`flex-1 text-xs font-mono bg-muted/40 rounded px-2 py-1.5 ${idx === 0 ? "ml-[42px]" : ""}`}>
+                            {formatCondition(c)}
+                          </div>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {configDetailReport.config?.push?.enabled && (
+                <div>
+                  <Label className="text-sm font-medium mb-2 block flex items-center gap-1.5">
+                    <Bell className="w-3.5 h-3.5" /> 推送配置
+                  </Label>
+                  <div className="rounded-lg border border-border p-3 bg-background space-y-2">
+                    <ConfirmRow label="渠道" value="企业微信" />
+                    <ConfirmRow label="推送时机" value={
+                      configDetailReport.config.push.timing.mode === "realtime"
+                        ? "实时推送"
+                        : `定时推送 · ${configDetailReport.config.push.timing.time}`
+                    } />
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1.5">推送对象（{configDetailReport.config.push.targets.length}）</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {configDetailReport.config.push.targets.map(t => (
+                          <Badge key={t.id} variant="secondary" className="gap-1 text-[11px]">
+                            {t.type === "group" ? <Users className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
+                            {t.name}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>
