@@ -61,6 +61,7 @@ interface ReportConfigDetail {
   conditions: RuleCondition[];
   templateId: string;
   templateName: string;
+  push?: PushConfig;
 }
 
 interface Report {
