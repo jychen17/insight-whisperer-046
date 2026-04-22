@@ -38,10 +38,36 @@ export default function AlertList() {
   const messages = useAlertMessages();
   const [keyword, setKeyword] = useState("");
   const [themeFilter, setThemeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState<AlertStatus | "all">("all");
-  const [levelFilter, setLevelFilter] = useState<"all" | AlertMessage["level"]>("all");
   const [rangeFilter, setRangeFilter] = useState<"all" | "yesterday" | "week">("all");
   const [detail, setDetail] = useState<AlertMessage | null>(null);
+
+  const filtered = useMemo(() => {
+    return messages.filter((m) => {
+      if (themeFilter !== "all" && m.themeId !== themeFilter) return false;
+      if (rangeFilter === "yesterday" && !isYesterday(m.pushedAt)) return false;
+      if (rangeFilter === "week" && !isWithin7Days(m.pushedAt)) return false;
+      if (keyword) {
+        const k = keyword.toLowerCase();
+        if (!m.triggerTitle.toLowerCase().includes(k) && !m.ruleName.toLowerCase().includes(k)) return false;
+      }
+      return true;
+    });
+  }, [messages, themeFilter, rangeFilter, keyword]);
+
+  // Jump to the source object in its theme list
+  const jumpToTrigger = (m: AlertMessage) => {
+    if (m.themeId === "sentiment") {
+      if (m.triggerType === "event") {
+        // pseudo eventId from rule (mock data has no real id) — use rule id as fallback
+        navigate(`/sentiment/event-detail?id=${m.ruleId}&from=alert&node=${encodeURIComponent(m.triggerNodeName || "")}`);
+      } else {
+        navigate(`/sentiment/article/${m.id}`, { state: { from: "alert", title: m.triggerTitle } });
+      }
+    } else {
+      // Other themes: jump to the theme's detail/list page filtered to this node
+      navigate(`/sentiment/detail?themeId=${m.themeId}&node=${encodeURIComponent(m.triggerNodeName || "")}&q=${encodeURIComponent(m.triggerTitle)}`);
+    }
+  };
 
   const filtered = useMemo(() => {
     return messages.filter((m) => {
