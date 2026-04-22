@@ -37,25 +37,62 @@ const SINGLE_CONDITION_FIELDS = [
   { value: "publish_time", label: "发布时间" },
 ];
 
+/* 热点洞察主题专用字段 */
+const HOTSPOT_EVENT_FIELDS = [
+  { value: "heat_score", label: "综合热度分" },
+  { value: "heat_trend", label: "热度增幅(%)" },
+  { value: "platform_share", label: "平台占比(%)" },
+  { value: "biz_relevance", label: "业务相关度(★)" },
+  { value: "cross_source", label: "跨源覆盖数" },
+  { value: "event_category", label: "活动品类" },
+  { value: "city", label: "活动城市" },
+  { value: "event_time", label: "活动开始时间" },
+];
+
+const HOTSPOT_SINGLE_FIELDS = [
+  { value: "heat_score", label: "热度分" },
+  { value: "platform", label: "来源平台" },
+  { value: "city", label: "城市" },
+  { value: "publish_time", label: "采集时间" },
+];
+
 const OPERATORS: Record<string, { value: string; label: string }[]> = {
   event_risk: [{ value: "=", label: "等于" }, { value: ">=", label: "大于等于" }],
   event_count: [{ value: ">=", label: "≥" }, { value: ">", label: ">" }, { value: "=", label: "=" }],
   event_comments: [{ value: ">=", label: "≥" }, { value: ">", label: ">" }],
   event_likes: [{ value: ">=", label: "≥" }, { value: ">", label: ">" }],
-  event_time: [{ value: "within", label: "过去几天内" }],
+  event_time: [{ value: "within", label: "过去几天内" }, { value: ">=", label: "晚于(日期)" }],
   event_category: [{ value: "in", label: "在集合中" }],
   importance: [{ value: "=", label: "等于" }, { value: ">=", label: "大于等于" }],
   category: [{ value: "in", label: "在集合中" }],
   publish_time: [{ value: "within", label: "过去几天内" }],
+  // 热点字段
+  heat_score: [{ value: ">=", label: "≥" }, { value: ">", label: ">" }, { value: "=", label: "=" }],
+  heat_trend: [{ value: ">=", label: "≥" }, { value: ">", label: ">" }],
+  platform_share: [{ value: ">=", label: "≥" }, { value: "<=", label: "≤" }],
+  biz_relevance: [{ value: ">=", label: "≥" }, { value: "=", label: "=" }],
+  cross_source: [{ value: ">=", label: "≥" }, { value: "=", label: "=" }],
+  city: [{ value: "in", label: "在集合中" }],
+  platform: [{ value: "in", label: "在集合中" }],
   _default: [{ value: ">", label: ">" }, { value: ">=", label: "≥" }, { value: "=", label: "=" }, { value: "<", label: "<" }],
 };
 
 const RISK_VALUES = ["重大", "一般"];
 const CATEGORY_OPTIONS = ["票价吐槽", "辅营加购", "盲盒吐槽", "演出赛事抢票", "抢票吐槽", "催出票", "舆情跟评", "其他"];
+const HOTSPOT_CATEGORY_OPTIONS = ["演唱会", "音乐节", "展览", "市集", "节庆", "亲子", "线上热议"];
+const HOTSPOT_CITY_OPTIONS = ["上海", "北京", "成都", "广州", "深圳", "杭州", "全国"];
+const HOTSPOT_PLATFORM_OPTIONS = ["大麦网", "本地宝", "微博热搜", "抖音热点", "小红书热搜"];
 
-const isSetField = (f: string) => ["event_category", "category"].includes(f);
+const isSetField = (f: string) => ["event_category", "category", "city", "platform"].includes(f);
 const isRiskField = (f: string) => ["event_risk", "importance"].includes(f);
 const isTimeField = (f: string) => ["event_time", "publish_time"].includes(f);
+const isHotspotTheme = (themeId?: string) => themeId === "hotspot";
+const getSetOptions = (f: string) => {
+  if (f === "city") return HOTSPOT_CITY_OPTIONS;
+  if (f === "platform") return HOTSPOT_PLATFORM_OPTIONS;
+  if (f === "event_category") return HOTSPOT_CATEGORY_OPTIONS;
+  return CATEGORY_OPTIONS;
+};
 const getOperators = (f: string) => OPERATORS[f] || OPERATORS._default;
 
 const logicLabels: Record<ConditionLogic, string> = { none: "不配置", any: "满足任一条件", all: "满足所有条件" };
