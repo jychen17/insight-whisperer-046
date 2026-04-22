@@ -10,8 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   FileText, Eye, Download, Trash2, Search, Calendar, Share2,
   Copy, ExternalLink, AlertTriangle, Settings2, ChevronRight,
-  Repeat, Zap, ArrowLeft, Pencil,
+  Repeat, Zap, ArrowLeft, Pencil, Check, Plus, Database, LayoutTemplate, Sparkles,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
