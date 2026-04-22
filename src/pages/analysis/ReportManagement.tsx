@@ -428,13 +428,23 @@ export default function ReportManagement() {
   };
   const removeCondition = (id: string) => setWizConditions(prev => prev.filter(c => c.id !== id));
 
-  const togglePushTarget = (type: "person" | "group", name: string) => {
-    setWizPushTargets(prev => {
-      const exists = prev.find(t => t.type === type && t.name === name);
-      if (exists) return prev.filter(t => !(t.type === type && t.name === name));
-      return [...prev, { id: Math.random().toString(36).slice(2, 9), type, name }];
-    });
+  const togglePerson = (emp: Employee) => {
+    setWizPushPersons(prev => prev.find(p => p.empId === emp.empId)
+      ? prev.filter(p => p.empId !== emp.empId)
+      : [...prev, emp]);
   };
+  const removePerson = (empId: string) => setWizPushPersons(prev => prev.filter(p => p.empId !== empId));
+  const updateWebhook = (idx: number, val: string) => setWizPushWebhooks(prev => prev.map((w, i) => i === idx ? val : w));
+  const addWebhook = () => setWizPushWebhooks(prev => [...prev, ""]);
+  const removeWebhook = (idx: number) => setWizPushWebhooks(prev => prev.length === 1 ? [""] : prev.filter((_, i) => i !== idx));
+
+  const personMatches = useMemo(() => {
+    const q = wizPersonSearch.trim().toLowerCase();
+    if (!q) return employeeDirectory;
+    return employeeDirectory.filter(e =>
+      e.name.toLowerCase().includes(q) || e.empId.toLowerCase().includes(q) || e.dept.toLowerCase().includes(q)
+    );
+  }, [wizPersonSearch]);
 
   return (
     <div className="space-y-6">
