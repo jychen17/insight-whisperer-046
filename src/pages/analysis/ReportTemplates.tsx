@@ -309,6 +309,43 @@ export default function ReportTemplates() {
           </DialogHeader>
 
           <div className="space-y-5 mt-2">
+            {/* Type selector */}
+            <div className="space-y-2">
+              <Label className="text-sm">模板类型</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFormType("global")}
+                  className={`p-3 rounded-lg border text-left transition-colors ${
+                    formType === "global"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Globe className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">全局模板</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">系统预置，可被所有用户复用</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormType("custom")}
+                  className={`p-3 rounded-lg border text-left transition-colors ${
+                    formType === "custom"
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-muted/30"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <User className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">自定义模板</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">上传模板文件定义报告逻辑</p>
+                </button>
+              </div>
+            </div>
+
             {/* Basic */}
             <div className="space-y-3">
               <h3 className="text-sm font-semibold text-foreground">基础信息</h3>
@@ -337,6 +374,31 @@ export default function ReportTemplates() {
                 </Select>
               </div>
             </div>
+
+            {/* Custom file upload */}
+            {formType === "custom" && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-foreground">模板文件</h3>
+                <p className="text-xs text-muted-foreground">上传 .docx / .pptx / .xlsx 模板文件，系统按其中的占位符与样式生成报告</p>
+                <div className="flex items-center gap-3 p-3 rounded-lg border border-dashed border-border bg-muted/20">
+                  <Upload className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-foreground flex-1 truncate">
+                    {formUploadedFile || "尚未上传模板文件"}
+                  </span>
+                  <Button asChild variant="outline" size="sm" className="gap-1 text-xs h-7">
+                    <label className="cursor-pointer">
+                      {formUploadedFile ? "重新上传" : "选择文件"}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept=".docx,.pptx,.xlsx,.doc,.ppt,.xls"
+                        onChange={handleFileUpload}
+                      />
+                    </label>
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {/* Content Modules */}
             <div className="space-y-3">
