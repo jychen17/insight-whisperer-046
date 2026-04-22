@@ -384,6 +384,7 @@ export default function ReportManagement() {
     setWizConditions([newCondition("business")]);
     setWizTemplateId("");
     setWizName("");
+    setWizPrefill(null);
     setWizPushEnabled(true);
     setWizPushChannels({ person: false, group: true });
     setWizPushPersons([]);
@@ -392,6 +393,22 @@ export default function ReportManagement() {
     setWizPushTimingMode("scheduled");
     setWizPushTime("09:00");
   };
+
+  // 从外部页面（如舆情列表/事件详情）携带 prefill 跳转过来时，自动打开向导并预填
+  useEffect(() => {
+    const state = location.state as { reportPrefill?: ReportPrefill } | null;
+    const pf = state?.reportPrefill;
+    if (!pf || pf.ids.length === 0) return;
+    resetWizard();
+    setWizPrefill(pf);
+    if (pf.theme) setWizTheme(pf.theme);
+    setWizSchedule("once"); // 选定数据范围 → 默认一次性
+    setWizStep(2);
+    setConfigOpen(true);
+    // 清掉 state，避免再次切回时重复触发
+    navigate(location.pathname, { replace: true, state: {} });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const autoName = () => {
     if (!wizTemplate || !wizTheme) return "";
