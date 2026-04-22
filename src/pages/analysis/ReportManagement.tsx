@@ -469,6 +469,7 @@ export default function ReportManagement() {
   // ------- Wizard validators -------
   const conditionsValid = (conds: RuleCondition[]) => conds.every(c => {
     const mode = operatorMode(c.field, c.operator);
+    if (mode === "lockset") return c.values.length > 0;
     if (mode === "days") return typeof c.numValue === "number" && c.numValue > 0;
     if (mode === "chips") return c.values.length > 0;
     return !!c.value;
