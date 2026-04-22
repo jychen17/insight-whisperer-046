@@ -87,10 +87,10 @@ const isSetField = (f: string) => ["event_category", "category", "city", "platfo
 const isRiskField = (f: string) => ["event_risk", "importance"].includes(f);
 const isTimeField = (f: string) => ["event_time", "publish_time"].includes(f);
 const isHotspotTheme = (themeId?: string) => themeId === "hotspot";
-const getSetOptions = (f: string) => {
+const getSetOptions = (f: string, themeId?: string) => {
   if (f === "city") return HOTSPOT_CITY_OPTIONS;
   if (f === "platform") return HOTSPOT_PLATFORM_OPTIONS;
-  if (f === "event_category") return HOTSPOT_CATEGORY_OPTIONS;
+  if (f === "event_category") return themeId === "hotspot" ? HOTSPOT_CATEGORY_OPTIONS : CATEGORY_OPTIONS;
   return CATEGORY_OPTIONS;
 };
 const getOperators = (f: string) => OPERATORS[f] || OPERATORS._default;
