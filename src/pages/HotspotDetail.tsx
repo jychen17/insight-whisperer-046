@@ -1,8 +1,10 @@
 import { useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList,
   BreadcrumbPage, BreadcrumbSeparator,
@@ -10,12 +12,12 @@ import {
 import {
   ArrowLeft, Flame, MapPin, Calendar, Sparkles, Bell, FileText, ExternalLink,
   Music2, Palette, Hash, Ticket, BookOpen, TrendingUp, Globe, ArrowUpRight, Eye, Layers,
+  Clock, BarChart3, ListChecks,
 } from "lucide-react";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import StatCard from "@/components/StatCard";
 import { hotspotEvents, type HotspotEvent, type Category, type SourceKind } from "@/lib/hotspotData";
 
 const CATEGORY_META: Record<Category, { icon: typeof Music2; cls: string }> = {
@@ -27,14 +29,20 @@ const CATEGORY_META: Record<Category, { icon: typeof Music2; cls: string }> = {
   "亲子": { icon: Sparkles, cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
   "线上热议": { icon: Hash, cls: "bg-orange-100 text-orange-700 border-orange-200" },
 };
-const SOURCE_META: Record<SourceKind, { icon: typeof Ticket; label: string; cls: string; color: string }> = {
-  damai: { icon: Ticket, label: "大麦", cls: "text-rose-600", color: "#e11d48" },
-  bendibao: { icon: BookOpen, label: "本地宝", cls: "text-blue-600", color: "#2563eb" },
-  ranking: { icon: TrendingUp, label: "热榜", cls: "text-orange-600", color: "#ea580c" },
+const SOURCE_META: Record<SourceKind, { icon: typeof Ticket; label: string; cls: string }> = {
+  damai: { icon: Ticket, label: "大麦", cls: "text-rose-600" },
+  bendibao: { icon: BookOpen, label: "本地宝", cls: "text-blue-600" },
+  ranking: { icon: TrendingUp, label: "热榜", cls: "text-orange-600" },
 };
 const formatHeat = (n: number) => n >= 10000 ? `${(n / 10000).toFixed(1)}w` : `${n}`;
 
-// 模拟热度时间线
+const importanceMap = {
+  high: { label: "重大", cls: "bg-destructive/10 text-destructive border-destructive/30" },
+  medium: { label: "一般", cls: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
+  low: { label: "低", cls: "bg-muted text-muted-foreground" },
+};
+
+// ─── Mock builders ───
 const buildTimeline = (event: HotspotEvent) => {
   const base = event.heatScore;
   return Array.from({ length: 7 }, (_, i) => ({
@@ -44,19 +52,38 @@ const buildTimeline = (event: HotspotEvent) => {
   }));
 };
 
-// 模拟原始线索
-const buildClues = (event: HotspotEvent) => [
-  { id: "c1", source: event.sources[0]?.label || "大麦网", title: `${event.title.slice(0, 20)} - 票务详情页`, time: event.firstTime, kind: event.sources[0]?.kind || "damai", url: "#" },
-  { id: "c2", source: "微博热搜", title: `#${event.title.split("·")[0]}# 上榜微博热搜 第 ${Math.ceil(Math.random() * 30)} 位`, time: event.firstTime, kind: "ranking", url: "#" },
-  { id: "c3", source: "小红书", title: `网友分享：${event.city}${event.category}打卡攻略`, time: event.latestTime, kind: "ranking", url: "#" },
-  { id: "c4", source: "抖音", title: `${event.title} 现场视频热度上升`, time: event.latestTime, kind: "ranking", url: "#" },
-  { id: "c5", source: `${event.city}本地宝`, title: `${event.city}周边活动汇总收录`, time: event.firstTime, kind: "bendibao", url: "#" },
+const buildEventTimeline = (event: HotspotEvent) => [
+  { time: event.firstTime, desc: `首次发现于 ${event.sources[0]?.label ?? "数据源"}` },
+  { time: event.firstTime, desc: `${event.city} 本地宝活动攻略收录` },
+  { time: event.latestTime, desc: `跨 ${event.crossSource} 个数据源同步上榜，热度上升 ${event.heatTrend}%` },
+  { time: event.latestTime, desc: `综合热度达到 ${formatHeat(event.heatScore)}，关联线索 ${event.itemCount} 条` },
 ];
 
-const importanceMap = {
-  high: { label: "重大", cls: "bg-destructive/10 text-destructive border-destructive/30" },
-  medium: { label: "一般", cls: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
-  low: { label: "低", cls: "bg-muted text-muted-foreground" },
+interface ClueItem {
+  id: string;
+  title: string;
+  source: string;
+  kind: SourceKind;
+  author: string;
+  publishTime: string;
+  region: string;
+  heat: number;
+  comments: number;
+  likes: number;
+  url: string;
+}
+
+const buildClues = (event: HotspotEvent): ClueItem[] => {
+  const base: ClueItem[] = [
+    { id: "c1", title: `${event.title} - 票务详情页`, source: "大麦网", kind: "damai", author: "大麦官方", publishTime: event.firstTime, region: event.city, heat: 5200, comments: 312, likes: 1240, url: "#" },
+    { id: "c2", title: `#${event.title.split("·")[0]}# 上榜微博热搜`, source: "微博热搜", kind: "ranking", author: "微博热搜榜", publishTime: event.firstTime, region: "全国", heat: 98700, comments: 4280, likes: 32100, url: "#" },
+    { id: "c3", title: `${event.city}${event.category}打卡攻略，亲测好玩`, source: "小红书", kind: "ranking", author: "城市探索家", publishTime: event.latestTime, region: event.city, heat: 18900, comments: 521, likes: 8200, url: "#" },
+    { id: "c4", title: `${event.title} 现场视频热度上升`, source: "抖音", kind: "ranking", author: "现场达人", publishTime: event.latestTime, region: event.city, heat: 67200, comments: 1820, likes: 12400, url: "#" },
+    { id: "c5", title: `${event.city}周边活动汇总收录`, source: `${event.city}本地宝`, kind: "bendibao", author: "本地宝小编", publishTime: event.firstTime, region: event.city, heat: 4200, comments: 56, likes: 320, url: "#" },
+    { id: "c6", title: `周边交通指引 - ${event.venue ?? event.city}`, source: `${event.city}本地宝`, kind: "bendibao", author: "本地宝小编", publishTime: event.firstTime, region: event.city, heat: 3100, comments: 42, likes: 280, url: "#" },
+  ];
+  // 按 itemCount 截断
+  return base.slice(0, Math.max(3, Math.min(base.length, Math.ceil(event.itemCount / 50))));
 };
 
 export default function HotspotDetail() {
@@ -65,24 +92,24 @@ export default function HotspotDetail() {
   const id = params.get("id");
   const event = useMemo(() => hotspotEvents.find(e => e.id === id), [id]);
 
-  // 返回列表时保留筛选条件 (从 returnFilters 参数还原)
   const returnFilters = params.get("returnFilters") || "";
   const goBack = () => {
     const target = returnFilters ? `/hotspot/detail?${returnFilters}` : "/hotspot/detail";
     navigate(target);
   };
 
-  // hooks must run unconditionally — provide safe fallback
-  const timeline = useMemo(() => event ? buildTimeline(event) : [], [event]);
+  // hooks must run unconditionally
+  const heatTimeline = useMemo(() => event ? buildTimeline(event) : [], [event]);
+  const eventTimeline = useMemo(() => event ? buildEventTimeline(event) : [], [event]);
   const clues = useMemo(() => event ? buildClues(event) : [], [event]);
   const sourceDistribution = useMemo(() => {
     if (!event) return [];
     return [
-      { name: "大麦/票务", value: event.sources.filter(s => s.kind === "damai").length * 1000 || 100, kind: "damai" as SourceKind },
-      { name: "本地宝", value: event.sources.filter(s => s.kind === "bendibao").length * 1500 || 100, kind: "bendibao" as SourceKind },
-      { name: "微博讨论", value: event.relatedVolume.weibo, kind: "ranking" as SourceKind },
-      { name: "小红书笔记", value: event.relatedVolume.xhs, kind: "ranking" as SourceKind },
-      { name: "抖音播放", value: event.relatedVolume.douyin, kind: "ranking" as SourceKind },
+      { name: "大麦/票务", value: event.sources.filter(s => s.kind === "damai").length * 1000 || 100 },
+      { name: "本地宝", value: event.sources.filter(s => s.kind === "bendibao").length * 1500 || 100 },
+      { name: "微博讨论", value: event.relatedVolume.weibo },
+      { name: "小红书笔记", value: event.relatedVolume.xhs },
+      { name: "抖音播放", value: event.relatedVolume.douyin },
     ].filter(d => d.value > 0);
   }, [event]);
 
@@ -104,104 +131,150 @@ export default function HotspotDetail() {
   const PIE_COLORS = ["#e11d48", "#2563eb", "#f97316", "#ec4899", "#10b981"];
   const importance = importanceMap[event.importance];
 
+  const importanceBadge = (
+    <Badge variant="outline" className={`text-[10px] justify-center py-1.5 gap-1 ${importance.cls}`}>
+      <Flame className="w-3 h-3" /> {importance.label}
+    </Badge>
+  );
+
   return (
     <div className="space-y-5">
       {/* Breadcrumb */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
+            <BreadcrumbLink onClick={() => navigate("/")} className="cursor-pointer">首页</BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
             <BreadcrumbLink onClick={goBack} className="cursor-pointer">热点洞察列表</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{event.title}</BreadcrumbPage>
+            <BreadcrumbPage>事件详情</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={goBack}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={goBack}>
             <ArrowLeft className="w-4 h-4" />
           </Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              <Badge variant="outline" className={`text-[11px] gap-1 ${Cat.cls}`}>
-                <CatIcon className="w-3 h-3" /> {event.category}
-              </Badge>
-              <Badge variant="outline" className={`text-[11px] gap-1 ${importance.cls}`}>
-                <Flame className="w-3 h-3" /> {importance.label}
-              </Badge>
-              {event.isNew && <Badge className="text-[10px] bg-rose-500">NEW</Badge>}
-              <span className="text-[10px] text-muted-foreground/60 font-mono">#{event.id}</span>
-            </div>
-            <h1 className="text-xl font-semibold text-foreground">{event.title}</h1>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1.5 flex-wrap">
-              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{event.dateRange ?? event.date}</span>
-              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{event.city}{event.venue ? ` · ${event.venue}` : ""}</span>
-              <span>首次发现 {event.firstTime}</span>
-              <span>最近更新 {event.latestTime}</span>
-            </div>
-          </div>
+          <h1 className="text-xl font-semibold text-foreground">事件详情</h1>
+          <Badge variant="outline" className={`text-[11px] gap-1 ${Cat.cls}`}>
+            <CatIcon className="w-3 h-3" /> {event.category}
+          </Badge>
+          {event.isNew && <Badge className="text-[10px] bg-rose-500">NEW</Badge>}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => navigate(`/sentiment/event-alert?themeId=hotspot&eventId=${event.id}`)}>
-            <Bell className="w-3.5 h-3.5" /> 加入预警
+            <Bell className="w-3 h-3" /> 设置预警
           </Button>
           <Button size="sm" className="text-xs gap-1" onClick={() => navigate("/analysis/report-manage", { state: { reportPrefill: { theme: "热点洞察", scope: "events", ids: [event.id], titles: [event.title], source: "热点洞察详情" } } })}>
-            <FileText className="w-3.5 h-3.5" /> 生成报告
+            <FileText className="w-3 h-3" /> 生成报告
           </Button>
         </div>
       </div>
 
-      {/* Key metrics */}
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard title="综合热度" value={formatHeat(event.heatScore)} subtitle={`↑ ${event.heatTrend}%`} />
-        <StatCard title="关联讨论" value={formatHeat(totalVol)} subtitle={`${event.crossSource} 个数据源`} />
-        <StatCard title="业务相关度" value={"⭐".repeat(event.businessRelevance)} />
-        <StatCard title="关联线索" value={event.itemCount} />
-      </div>
+      {/* Event title & summary */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">{event.title}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">{event.description}</p>
+        </CardContent>
+      </Card>
 
-      {/* AI tag fields */}
-      <Card className="p-4 border-primary/20 bg-primary/5">
-        <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold text-primary">AI 标签字段</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {event.sentiment.neg > 30 && <Badge className="bg-destructive/10 text-destructive border-0 text-[11px]">负向占比 {event.sentiment.neg}%</Badge>}
-          {event.sentiment.pos > 60 && <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[11px]">正向占比 {event.sentiment.pos}%</Badge>}
-          <Badge className="bg-primary/15 text-primary border-0 text-[11px]">业务相关 {"⭐".repeat(event.businessRelevance)}</Badge>
-          <Badge className="bg-primary/10 text-primary border-0 text-[11px]">跨源数 {event.crossSource}</Badge>
-          <Badge className="bg-amber-500/10 text-amber-600 border-0 text-[11px]">活动品类 · {event.category}</Badge>
-          <Badge className="bg-blue-500/10 text-blue-600 border-0 text-[11px]">城市 · {event.city}</Badge>
-        </div>
-        <div className="mt-3 p-3 rounded-md bg-card/60 border border-border">
-          <div className="text-xs font-medium text-foreground mb-1 flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-primary" /> AI 洞察摘要
+      {/* AI 标签字段 */}
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="pt-4 space-y-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            {event.sentiment.neg > 0 && <Badge className="bg-destructive/10 text-destructive border-0 text-[10px]">负向 {event.sentiment.neg}%</Badge>}
+            {event.sentiment.neu > 0 && <Badge className="bg-muted text-muted-foreground border-0 text-[10px]">中性 {event.sentiment.neu}%</Badge>}
+            {event.sentiment.pos > 0 && <Badge className="bg-emerald-500/10 text-emerald-600 border-0 text-[10px]">正向 {event.sentiment.pos}%</Badge>}
+            <Badge className="bg-primary/20 text-primary border-0 text-[10px]">活动品类: {event.category}</Badge>
+            <Badge className="bg-primary/10 text-primary border-0 text-[10px]">城市: {event.city}</Badge>
+            <Badge className="bg-amber-500/10 text-amber-600 border-0 text-[10px]">业务相关 {"⭐".repeat(event.businessRelevance)}</Badge>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed">{event.description}</p>
-        </div>
+          <div className="grid grid-cols-1 gap-2">
+            <div className="bg-muted/30 rounded-md p-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <BarChart3 className="w-4 h-4" /> 关联线索总量
+              </div>
+              <div className="text-lg font-semibold text-foreground">{event.itemCount}</div>
+            </div>
+          </div>
+          <div className="p-3 rounded-md bg-card/60 border border-border">
+            <div className="text-xs font-medium text-foreground mb-1 flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-primary" /> AI 洞察摘要
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">{event.description}</p>
+          </div>
+        </CardContent>
       </Card>
 
-      {/* Calculated fields */}
-      <Card className="p-4 border-emerald-500/20 bg-emerald-500/5">
-        <div className="flex items-center gap-2 mb-3">
-          <ArrowUpRight className="w-4 h-4 text-emerald-600" />
-          <span className="text-sm font-semibold text-emerald-700">计算字段</span>
-        </div>
-        <div className="grid grid-cols-6 gap-3">
-          <Metric label="综合热度" value={formatHeat(event.heatScore)} className="text-rose-600" />
-          <Metric label="热度增幅" value={`+${event.heatTrend}%`} className="text-emerald-600" />
-          <Metric label="微博讨论" value={formatHeat(event.relatedVolume.weibo)} />
-          <Metric label="小红书笔记" value={formatHeat(event.relatedVolume.xhs)} />
-          <Metric label="抖音播放" value={formatHeat(event.relatedVolume.douyin)} />
-          <Metric label="正向情感" value={`${event.sentiment.pos}%`} className="text-emerald-600" />
-        </div>
+      {/* 计算字段 */}
+      <Card className="border-emerald-500/20 bg-emerald-500/5">
+        <CardContent className="pt-4">
+          <div className="grid grid-cols-6 gap-3">
+            {importanceBadge}
+            <div className="bg-muted/30 rounded-md p-3 text-center">
+              <Flame className="w-4 h-4 mx-auto text-rose-600 mb-1" />
+              <div className="text-base font-semibold text-rose-600">{formatHeat(event.heatScore)}</div>
+              <div className="text-[11px] text-muted-foreground">综合热度</div>
+            </div>
+            <div className="bg-muted/30 rounded-md p-3 text-center">
+              <ArrowUpRight className="w-4 h-4 mx-auto text-emerald-600 mb-1" />
+              <div className="text-base font-semibold text-emerald-600">+{event.heatTrend}%</div>
+              <div className="text-[11px] text-muted-foreground">热度增幅</div>
+            </div>
+            <div className="bg-muted/30 rounded-md p-3 text-center">
+              <div className="text-base font-semibold text-foreground">{formatHeat(event.relatedVolume.weibo)}</div>
+              <div className="text-[11px] text-muted-foreground">微博讨论</div>
+            </div>
+            <div className="bg-muted/30 rounded-md p-3 text-center">
+              <div className="text-base font-semibold text-foreground">{formatHeat(event.relatedVolume.xhs)}</div>
+              <div className="text-[11px] text-muted-foreground">小红书</div>
+            </div>
+            <div className="bg-muted/30 rounded-md p-3 text-center">
+              <div className="text-base font-semibold text-foreground">{formatHeat(event.relatedVolume.douyin)}</div>
+              <div className="text-[11px] text-muted-foreground">抖音播放</div>
+            </div>
+          </div>
+        </CardContent>
       </Card>
 
-      {/* Charts row: timeline + source distribution */}
+      {/* 原始字段 */}
+      <Card className="bg-muted/20">
+        <CardContent className="pt-4 grid grid-cols-4 gap-4 text-sm">
+          <div>
+            <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Calendar className="w-3 h-3" />活动日期</div>
+            <div className="text-foreground text-sm">{event.dateRange ?? event.date}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><MapPin className="w-3 h-3" />地点</div>
+            <div className="text-foreground text-sm">{event.city}{event.venue ? ` · ${event.venue}` : ""}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground mb-1">首发时间 / 最新时间</div>
+            <div className="text-foreground text-xs">{event.firstTime}<br/>{event.latestTime}</div>
+          </div>
+          <div>
+            <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1"><Globe className="w-3 h-3" />覆盖数据源（{event.sources.length}）</div>
+            <div className="flex gap-1.5 flex-wrap">
+              {event.sources.map((s, i) => {
+                const Meta = SOURCE_META[s.kind];
+                return <Badge key={i} variant="outline" className={`text-[10px] ${Meta.cls}`}>{s.label}</Badge>;
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Charts row */}
       <div className="grid grid-cols-3 gap-4">
         <Card className="p-4 col-span-2">
           <div className="flex items-center justify-between mb-3">
@@ -210,8 +283,8 @@ export default function HotspotDetail() {
             </h3>
             <span className="text-[11px] text-muted-foreground">综合热度 + 讨论量</span>
           </div>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={timeline}>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={heatTimeline}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="day" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
               <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
@@ -228,9 +301,9 @@ export default function HotspotDetail() {
               <Globe className="w-4 h-4 text-primary" /> 来源分布
             </h3>
           </div>
-          <ResponsiveContainer width="100%" height={240}>
+          <ResponsiveContainer width="100%" height={220}>
             <PieChart>
-              <Pie data={sourceDistribution} dataKey="value" nameKey="name" outerRadius={70} label={(p) => `${p.name}`} labelLine={false} fontSize={10}>
+              <Pie data={sourceDistribution} dataKey="value" nameKey="name" outerRadius={65} label={(p) => `${p.name}`} labelLine={false} fontSize={10}>
                 {sourceDistribution.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
               </Pie>
               <Tooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", fontSize: 12, borderRadius: 6 }} />
@@ -239,54 +312,25 @@ export default function HotspotDetail() {
         </Card>
       </div>
 
-      {/* Sources detail */}
-      <Card className="p-4">
-        <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-1.5">
-          <Layers className="w-4 h-4 text-primary" /> 数据来源（{event.sources.length}）
-        </h3>
-        <div className="grid grid-cols-2 gap-3">
-          {event.sources.map((s, i) => {
-            const Meta = SOURCE_META[s.kind];
-            const Icon = Meta.icon;
-            return (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-muted/30">
-                <div className={`w-8 h-8 rounded-md flex items-center justify-center ${Meta.cls.replace("text-", "bg-").replace("-600", "-100")}`}>
-                  <Icon className={`w-4 h-4 ${Meta.cls}`} />
+      {/* Event Timeline */}
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Clock className="w-4 h-4" /> 事件时间线</CardTitle></CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {eventTimeline.map((t, idx) => (
+              <div key={idx} className="flex gap-3 items-start">
+                <div className="flex flex-col items-center">
+                  <div className={`w-2.5 h-2.5 rounded-full ${idx === 0 ? "bg-primary" : "bg-muted-foreground/40"}`} />
+                  {idx < eventTimeline.length - 1 && <div className="w-px h-8 bg-border" />}
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-foreground">{s.label}</div>
-                  {s.extra && <div className="text-[11px] text-muted-foreground mt-0.5">{s.extra}</div>}
+                <div>
+                  <div className="text-xs font-medium text-foreground">{t.time}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">{t.desc}</div>
                 </div>
-                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
               </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* Raw clues / 原始线索 */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-            <FileText className="w-4 h-4 text-primary" /> 原始线索（{clues.length}）
-          </h3>
-          <span className="text-[11px] text-muted-foreground">来自三类数据源的原始抓取记录</span>
-        </div>
-        <div className="space-y-2">
-          {clues.map(c => {
-            const Meta = SOURCE_META[c.kind as SourceKind];
-            const Icon = Meta.icon;
-            return (
-              <div key={c.id} className="flex items-center gap-3 p-2.5 rounded-lg border border-border hover:bg-muted/30">
-                <Icon className={`w-3.5 h-3.5 shrink-0 ${Meta.cls}`} />
-                <Badge variant="outline" className="text-[10px] shrink-0">{c.source}</Badge>
-                <span className="text-xs text-foreground flex-1 truncate hover:text-primary cursor-pointer">{c.title}</span>
-                <span className="text-[10px] text-muted-foreground shrink-0">{c.time}</span>
-                <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
-              </div>
-            );
-          })}
-        </div>
+            ))}
+          </div>
+        </CardContent>
       </Card>
 
       {/* Sentiment distribution */}
@@ -305,15 +349,82 @@ export default function HotspotDetail() {
           <span className="text-rose-600">负面 {event.sentiment.neg}%</span>
         </div>
       </Card>
-    </div>
-  );
-}
 
-function Metric({ label, value, className }: { label: string; value: React.ReactNode; className?: string }) {
-  return (
-    <div className="text-center">
-      <div className={`text-sm font-bold ${className ?? "text-foreground"}`}>{value}</div>
-      <div className="text-[10px] text-muted-foreground mt-0.5">{label}</div>
+      {/* Clue / Source list — Tabbed */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <ListChecks className="w-4 h-4" /> 事件关联线索 ({clues.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="all">
+            <TabsList>
+              <TabsTrigger value="all" className="text-xs">全部线索 ({clues.length})</TabsTrigger>
+              <TabsTrigger value="damai" className="text-xs">大麦演出 ({clues.filter(c => c.kind === "damai").length})</TabsTrigger>
+              <TabsTrigger value="bendibao" className="text-xs">本地宝活动 ({clues.filter(c => c.kind === "bendibao").length})</TabsTrigger>
+              <TabsTrigger value="ranking" className="text-xs">社媒热榜 ({clues.filter(c => c.kind === "ranking").length})</TabsTrigger>
+            </TabsList>
+
+            {(["all", "damai", "bendibao", "ranking"] as const).map(tab => {
+              const list = tab === "all" ? clues : clues.filter(c => c.kind === tab);
+              return (
+                <TabsContent key={tab} value={tab} className="mt-3">
+                  {list.length === 0 ? (
+                    <div className="text-center py-8 text-xs text-muted-foreground">暂无该类线索</div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">标题</TableHead>
+                          <TableHead className="text-xs">来源</TableHead>
+                          <TableHead className="text-xs">发布者</TableHead>
+                          <TableHead className="text-xs">发布时间</TableHead>
+                          <TableHead className="text-xs">地区</TableHead>
+                          <TableHead className="text-xs">热度</TableHead>
+                          <TableHead className="text-xs">评论</TableHead>
+                          <TableHead className="text-xs">点赞</TableHead>
+                          <TableHead className="text-xs">操作</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {list.map(c => {
+                          const Meta = SOURCE_META[c.kind];
+                          const Icon = Meta.icon;
+                          return (
+                            <TableRow key={c.id}>
+                              <TableCell className="text-xs font-medium max-w-[280px]">
+                                <span className="flex items-center gap-1.5">
+                                  <Icon className={`w-3.5 h-3.5 shrink-0 ${Meta.cls}`} />
+                                  <span className="truncate hover:text-primary cursor-pointer">{c.title}</span>
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-xs">
+                                <Badge variant="outline" className={`text-[10px] ${Meta.cls}`}>{c.source}</Badge>
+                              </TableCell>
+                              <TableCell className="text-xs">{c.author}</TableCell>
+                              <TableCell className="text-xs">{c.publishTime}</TableCell>
+                              <TableCell className="text-xs">{c.region}</TableCell>
+                              <TableCell className="text-xs text-rose-600 font-medium">{formatHeat(c.heat)}</TableCell>
+                              <TableCell className="text-xs">{c.comments}</TableCell>
+                              <TableCell className="text-xs">{c.likes}</TableCell>
+                              <TableCell>
+                                <Button size="sm" variant="ghost" className="h-5 text-[10px] gap-0.5 px-1.5">
+                                  <ExternalLink className="w-3 h-3" /> 查看
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </TabsContent>
+              );
+            })}
+          </Tabs>
+        </CardContent>
+      </Card>
     </div>
   );
 }
