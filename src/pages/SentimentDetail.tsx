@@ -1040,7 +1040,36 @@ export default function SentimentDetail() {
             </DropdownMenuContent>
           </DropdownMenu>
           <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/sentiment/event-alert")}><Bell className="w-3 h-3" />预警设置</button>
-          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/analysis/report-manage")}><FileText className="w-3 h-3" />报告设置</button>
+          <button
+            className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1"
+            onClick={() => {
+              const themeName = "舆情主题";
+              const hasSel = sentimentView === "events" ? selectedEventIds.length > 0 : selectedIds.length > 0;
+              if (hasSel) {
+                if (sentimentView === "events") {
+                  const titles = mergedEvents.filter(e => selectedEventIds.includes(e.id)).map(e => e.title);
+                  navigate("/analysis/report-manage", {
+                    state: { reportPrefill: { theme: themeName, scope: "events", ids: selectedEventIds, titles, source: "舆情列表 · 事件" } }
+                  });
+                } else {
+                  const titles = items.filter(i => selectedIds.includes(i.id)).map(i => i.title);
+                  navigate("/analysis/report-manage", {
+                    state: { reportPrefill: { theme: themeName, scope: "articles", ids: selectedIds.map(String), titles, source: "舆情列表 · 文章" } }
+                  });
+                }
+              } else {
+                navigate("/analysis/report-manage", { state: { reportPrefill: { theme: themeName, scope: "articles", ids: [], source: "舆情列表" } } });
+              }
+            }}
+          >
+            <FileText className="w-3 h-3" />
+            报告设置
+            {((sentimentView === "events" && selectedEventIds.length > 0) || (sentimentView === "articles" && selectedIds.length > 0)) && (
+              <span className="ml-1 px-1.5 rounded bg-primary/15 text-primary text-[10px]">
+                已选 {sentimentView === "events" ? selectedEventIds.length : selectedIds.length}
+              </span>
+            )}
+          </button>
           <button className="px-3 py-1.5 border border-border rounded-md bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1" onClick={() => { const t = currentSentimentTheme ?? sentimentTheme; if (t) navigate("/datacenter/themes/detail", { state: { theme: t, from: "/sentiment/detail", fromLabel: "舆情列表" } }); }}><Settings className="w-3 h-3" />主题配置</button>
         </div>
       </div>
