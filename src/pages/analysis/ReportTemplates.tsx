@@ -207,9 +207,9 @@ export default function ReportTemplates() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-4">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">模板总数</p><p className="text-2xl font-bold text-foreground mt-1">{templates.length}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">启用中</p><p className="text-2xl font-bold text-primary mt-1">{templates.filter(t => t.status).length}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">全局模板</p><p className="text-2xl font-bold text-primary mt-1">{templates.filter(t => t.type === "global").length}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">自定义模板</p><p className="text-2xl font-bold text-foreground mt-1">{templates.filter(t => t.type === "custom").length}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">累计使用</p><p className="text-2xl font-bold text-foreground mt-1">{templates.reduce((s, t) => s + t.usageCount, 0)}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">分类数</p><p className="text-2xl font-bold text-foreground mt-1">{new Set(templates.map(t => t.category)).size}</p></CardContent></Card>
       </div>
 
       {/* Filter */}
@@ -222,6 +222,14 @@ export default function ReportTemplates() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input className="pl-9 w-52 h-8 text-sm" placeholder="搜索模板..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
               </div>
+              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as "all" | "global" | "custom")}>
+                <SelectTrigger className="w-28 h-8 text-sm"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部类型</SelectItem>
+                  <SelectItem value="global">全局模板</SelectItem>
+                  <SelectItem value="custom">自定义模板</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-24 h-8 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>{categoryOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
@@ -234,6 +242,7 @@ export default function ReportTemplates() {
             <TableHeader>
               <TableRow>
                 <TableHead>模板名称</TableHead>
+                <TableHead>类型</TableHead>
                 <TableHead>分类</TableHead>
                 <TableHead>内容模块</TableHead>
                 <TableHead>图表数</TableHead>
@@ -245,7 +254,7 @@ export default function ReportTemplates() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">暂无模板</TableCell></TableRow>
+                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">暂无模板</TableCell></TableRow>
               )}
               {filtered.map(t => (
                 <TableRow key={t.id}>
@@ -253,7 +262,19 @@ export default function ReportTemplates() {
                     <div>
                       <p className="font-medium text-sm">{t.name}</p>
                       <p className="text-xs text-muted-foreground">{t.description}</p>
+                      {t.uploadedFileName && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5 inline-flex items-center gap-1">
+                          <Upload className="w-3 h-3" /> {t.uploadedFileName}
+                        </p>
+                      )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    {t.type === "global" ? (
+                      <Badge className="text-xs gap-1"><Globe className="w-3 h-3" />全局</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs gap-1"><User className="w-3 h-3" />自定义</Badge>
+                    )}
                   </TableCell>
                   <TableCell><Badge variant="outline" className="text-xs">{t.category}</Badge></TableCell>
                   <TableCell className="max-w-[180px]">
