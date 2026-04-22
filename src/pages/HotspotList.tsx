@@ -53,7 +53,7 @@ const importanceBadgeMap: Record<Importance, JSX.Element> = {
 // ────────────────────────────────────────────────────────────
 export default function HotspotList() {
   const navigate = useNavigate();
-  const [hotspotView, setHotspotView] = useState<"events" | "city" | "category" | "raw">("events");
+  const [hotspotView, setHotspotView] = useState<"events" | "clues">("events");
   // 跳转到详情页时保留当前筛选条件
   const goDetail = (e: HotspotEvent) => {
     const qs = new URLSearchParams();
