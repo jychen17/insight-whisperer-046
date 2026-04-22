@@ -81,6 +81,7 @@ export default function ReportTemplates() {
   const [templates, setTemplates] = useState(mockTemplates);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("全部");
+  const [typeFilter, setTypeFilter] = useState<"all" | "global" | "custom">("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ReportTemplateItem | null>(null);
 
@@ -89,18 +90,22 @@ export default function ReportTemplates() {
   const [formDesc, setFormDesc] = useState("");
   const [formCategory, setFormCategory] = useState("");
   const [formFormat, setFormFormat] = useState("");
+  const [formType, setFormType] = useState<"global" | "custom">("custom");
   const [formSections, setFormSections] = useState<string[]>([]);
   const [formCharts, setFormCharts] = useState<{ name: string; type: string }[]>([]);
+  const [formUploadedFile, setFormUploadedFile] = useState<string>("");
 
   const filtered = templates.filter(t => {
     const matchSearch = !searchTerm || t.name.includes(searchTerm) || t.description.includes(searchTerm);
     const matchCat = categoryFilter === "全部" || t.category === categoryFilter;
-    return matchSearch && matchCat;
+    const matchType = typeFilter === "all" || t.type === typeFilter;
+    return matchSearch && matchCat && matchType;
   });
 
   const openCreate = () => {
     setEditingTemplate(null);
     setFormName(""); setFormDesc(""); setFormCategory("舆情"); setFormFormat("PDF");
+    setFormType("custom"); setFormUploadedFile("");
     setFormSections([]); setFormCharts([]);
     setDialogOpen(true);
   };
@@ -108,16 +113,29 @@ export default function ReportTemplates() {
   const openEdit = (t: ReportTemplateItem) => {
     setEditingTemplate(t);
     setFormName(t.name); setFormDesc(t.description); setFormCategory(t.category); setFormFormat(t.format);
+    setFormType(t.type); setFormUploadedFile(t.uploadedFileName ?? "");
     setFormSections([...t.sections]); setFormCharts([...t.charts]);
     setDialogOpen(true);
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFormUploadedFile(file.name);
+    toast.success(`已上传：${file.name}`);
+  };
+
   const handleSave = () => {
     if (!formName.trim()) { toast.error("请输入模板名称"); return; }
+    if (formType === "custom" && !formUploadedFile && !editingTemplate) {
+      toast.error("自定义模板请先上传模板文件");
+      return;
+    }
     if (editingTemplate) {
       setTemplates(prev => prev.map(t => t.id === editingTemplate.id ? {
         ...t, name: formName, description: formDesc, category: formCategory,
-        format: formFormat, sections: formSections, charts: formCharts,
+        type: formType, format: formFormat, sections: formSections, charts: formCharts,
+        uploadedFileName: formType === "custom" ? formUploadedFile : undefined,
         updatedAt: new Date().toISOString().slice(0, 10),
       } : t));
       toast.success("模板已更新");
@@ -125,8 +143,10 @@ export default function ReportTemplates() {
       const newT: ReportTemplateItem = {
         id: `TPL${String(templates.length + 1).padStart(2, "0")}`,
         name: formName, description: formDesc, category: formCategory,
+        type: formType,
         sections: formSections, charts: formCharts, format: formFormat,
         status: true, usageCount: 0,
+        uploadedFileName: formType === "custom" ? formUploadedFile : undefined,
         createdAt: new Date().toISOString().slice(0, 10),
         updatedAt: new Date().toISOString().slice(0, 10),
       };
