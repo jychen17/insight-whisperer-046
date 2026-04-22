@@ -22,7 +22,9 @@ type ScheduleType = "once" | "recurring";
 type RecurringFrequency = "daily" | "weekly" | "monthly";
 type ConditionLogic = "any" | "all" | "none";
 
-type PushTarget = { id: string; type: "person" | "group"; name: string };
+type PushTarget =
+  | { id: string; type: "person"; name: string; empId: string }
+  | { id: string; type: "group"; name: string; webhook: string };
 type PushTiming =
   | { mode: "realtime" }
   | { mode: "scheduled"; time: string }; // HH:mm for daily/weekly/monthly
@@ -164,8 +166,8 @@ const buildSentimentConfig = (): ReportConfigDetail => ({
     enabled: true,
     channel: "wecom",
     targets: [
-      { id: "t1", type: "group", name: "舆情应急群" },
-      { id: "t2", type: "person", name: "张敏（产品）" },
+      { id: "t1", type: "group", name: "舆情应急群", webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=e16d2b41-e0d0-4b9d-ba5d-7d63ca6a5f01" },
+      { id: "t2", type: "person", name: "张敏", empId: "P10231" },
     ],
     timing: { mode: "scheduled", time: "09:00" },
   },
@@ -263,9 +265,18 @@ const weeklyRangeHint = (startDay: number) => {
   return `每期统计：${start} 至 下${end}`;
 };
 
-// 推送目标候选
-const personOptions = ["张敏（产品）", "李伟（运营）", "王芳（市场）", "陈强（客服）", "刘涛（技术）"];
-const groupOptions = ["舆情应急群", "市场分析周报群", "客服日报群", "产品体验反馈群"];
+// 推送目标候选 — 个人花名册（姓名 + 工号）
+type Employee = { name: string; empId: string; dept: string };
+const employeeDirectory: Employee[] = [
+  { name: "张敏", empId: "P10231", dept: "产品" },
+  { name: "李伟", empId: "P10458", dept: "运营" },
+  { name: "王芳", empId: "P10672", dept: "市场" },
+  { name: "陈强", empId: "P10889", dept: "客服" },
+  { name: "刘涛", empId: "P11023", dept: "技术" },
+  { name: "赵磊", empId: "P11156", dept: "公关" },
+  { name: "孙丽", empId: "P11287", dept: "数据" },
+  { name: "周杰", empId: "P11342", dept: "产品" },
+];
 
 const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
 const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题"];
@@ -307,9 +318,25 @@ export default function ReportManagement() {
   const [wizName, setWizName] = useState<string>("");
   // Push config
   const [wizPushEnabled, setWizPushEnabled] = useState<boolean>(true);
-  const [wizPushTargets, setWizPushTargets] = useState<PushTarget[]>([]);
+  const [wizPushChannels, setWizPushChannels] = useState<{ person: boolean; group: boolean }>({ person: false, group: true });
+  const [wizPushPersons, setWizPushPersons] = useState<Employee[]>([]);
+  const [wizPersonSearch, setWizPersonSearch] = useState<string>("");
+  const [wizPersonOpen, setWizPersonOpen] = useState<boolean>(false);
+  const [wizPushWebhooks, setWizPushWebhooks] = useState<string[]>([""]);
   const [wizPushTimingMode, setWizPushTimingMode] = useState<"realtime" | "scheduled">("scheduled");
   const [wizPushTime, setWizPushTime] = useState<string>("09:00");
+
+  // 派生：组装 PushTarget[]
+  const wizPushTargets: PushTarget[] = useMemo(() => {
+    const arr: PushTarget[] = [];
+    if (wizPushChannels.person) {
+      wizPushPersons.forEach(p => arr.push({ id: `p-${p.empId}`, type: "person", name: p.name, empId: p.empId }));
+    }
+    if (wizPushChannels.group) {
+      wizPushWebhooks.filter(w => w.trim()).forEach((w, i) => arr.push({ id: `g-${i}`, type: "group", name: `群机器人 ${i + 1}`, webhook: w.trim() }));
+    }
+    return arr;
+  }, [wizPushChannels, wizPushPersons, wizPushWebhooks]);
 
   const filtered = useMemo(() => {
     return allReports.filter((r) => {
@@ -348,7 +375,10 @@ export default function ReportManagement() {
     setWizTemplateId("");
     setWizName("");
     setWizPushEnabled(true);
-    setWizPushTargets([]);
+    setWizPushChannels({ person: false, group: true });
+    setWizPushPersons([]);
+    setWizPersonSearch("");
+    setWizPushWebhooks([""]);
     setWizPushTimingMode("scheduled");
     setWizPushTime("09:00");
   };
@@ -398,13 +428,23 @@ export default function ReportManagement() {
   };
   const removeCondition = (id: string) => setWizConditions(prev => prev.filter(c => c.id !== id));
 
-  const togglePushTarget = (type: "person" | "group", name: string) => {
-    setWizPushTargets(prev => {
-      const exists = prev.find(t => t.type === type && t.name === name);
-      if (exists) return prev.filter(t => !(t.type === type && t.name === name));
-      return [...prev, { id: Math.random().toString(36).slice(2, 9), type, name }];
-    });
+  const togglePerson = (emp: Employee) => {
+    setWizPushPersons(prev => prev.find(p => p.empId === emp.empId)
+      ? prev.filter(p => p.empId !== emp.empId)
+      : [...prev, emp]);
   };
+  const removePerson = (empId: string) => setWizPushPersons(prev => prev.filter(p => p.empId !== empId));
+  const updateWebhook = (idx: number, val: string) => setWizPushWebhooks(prev => prev.map((w, i) => i === idx ? val : w));
+  const addWebhook = () => setWizPushWebhooks(prev => [...prev, ""]);
+  const removeWebhook = (idx: number) => setWizPushWebhooks(prev => prev.length === 1 ? [""] : prev.filter((_, i) => i !== idx));
+
+  const personMatches = useMemo(() => {
+    const q = wizPersonSearch.trim().toLowerCase();
+    if (!q) return employeeDirectory;
+    return employeeDirectory.filter(e =>
+      e.name.toLowerCase().includes(q) || e.empId.toLowerCase().includes(q) || e.dept.toLowerCase().includes(q)
+    );
+  }, [wizPersonSearch]);
 
   return (
     <div className="space-y-6">
@@ -718,9 +758,11 @@ export default function ReportManagement() {
                       <p className="text-xs text-muted-foreground mb-1.5">推送对象（{configDetailReport.config.push.targets.length}）</p>
                       <div className="flex flex-wrap gap-1.5">
                         {configDetailReport.config.push.targets.map(t => (
-                          <Badge key={t.id} variant="secondary" className="gap-1 text-[11px]">
-                            {t.type === "group" ? <Users className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
-                            {t.name}
+                          <Badge key={t.id} variant="secondary" className="gap-1 text-[11px] max-w-full">
+                            {t.type === "group" ? <Users className="w-3 h-3 shrink-0" /> : <UserIcon className="w-3 h-3 shrink-0" />}
+                            <span className="truncate">
+                              {t.type === "person" ? `${t.name} · ${t.empId}` : t.name}
+                            </span>
                           </Badge>
                         ))}
                       </div>
@@ -995,51 +1037,126 @@ export default function ReportManagement() {
                       </div>
                     </div>
 
-                    <div>
-                      <Label className="text-sm font-medium mb-2 block flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5" /> 推送对象
-                        {wizPushTargets.length > 0 && (
-                          <span className="text-[11px] text-muted-foreground font-normal">已选 {wizPushTargets.length}</span>
-                        )}
-                      </Label>
-                      <div className="space-y-3">
-                        <div>
-                          <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1"><Users className="w-3 h-3" /> 群组</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {groupOptions.map(g => {
-                              const active = !!wizPushTargets.find(t => t.type === "group" && t.name === g);
-                              return (
-                                <button
-                                  key={g}
-                                  type="button"
-                                  onClick={() => togglePushTarget("group", g)}
-                                  className={`px-2.5 py-1 rounded-md border text-xs transition ${active ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
-                                >
-                                  {active && <Check className="w-3 h-3 inline mr-1" />}{g}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                        <div>
-                          <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1"><UserIcon className="w-3 h-3" /> 个人</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {personOptions.map(p => {
-                              const active = !!wizPushTargets.find(t => t.type === "person" && t.name === p);
-                              return (
-                                <button
-                                  key={p}
-                                  type="button"
-                                  onClick={() => togglePushTarget("person", p)}
-                                  className={`px-2.5 py-1 rounded-md border text-xs transition ${active ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
-                                >
-                                  {active && <Check className="w-3 h-3 inline mr-1" />}{p}
-                                </button>
-                              );
-                            })}
-                          </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-4">
+                        <Label className="text-sm font-medium w-20 shrink-0">通知方式</Label>
+                        <div className="flex items-center gap-5">
+                          <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={wizPushChannels.person}
+                              onChange={(e) => setWizPushChannels(c => ({ ...c, person: e.target.checked }))}
+                              className="w-4 h-4 accent-primary"
+                            />
+                            <UserIcon className="w-3.5 h-3.5 text-muted-foreground" /> 个人
+                          </label>
+                          <label className="flex items-center gap-1.5 cursor-pointer text-sm">
+                            <input
+                              type="checkbox"
+                              checked={wizPushChannels.group}
+                              onChange={(e) => setWizPushChannels(c => ({ ...c, group: e.target.checked }))}
+                              className="w-4 h-4 accent-primary"
+                            />
+                            <Users className="w-3.5 h-3.5 text-muted-foreground" /> 群
+                          </label>
                         </div>
                       </div>
+
+                      {wizPushChannels.person && (
+                        <div className="flex items-start gap-4">
+                          <Label className="text-sm w-20 shrink-0 pt-2 text-muted-foreground">个人</Label>
+                          <div className="flex-1 space-y-1.5">
+                            <div className="relative">
+                              <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              <Input
+                                value={wizPersonSearch}
+                                onChange={(e) => { setWizPersonSearch(e.target.value); setWizPersonOpen(true); }}
+                                onFocus={() => setWizPersonOpen(true)}
+                                onBlur={() => setTimeout(() => setWizPersonOpen(false), 150)}
+                                placeholder="请输入姓名或工号进行搜索（可多选）"
+                                className="h-9 pl-8 text-sm"
+                              />
+                              {wizPersonOpen && (
+                                <div className="absolute z-20 mt-1 left-0 right-0 bg-popover border border-border rounded-md shadow-md max-h-56 overflow-y-auto">
+                                  {personMatches.length === 0 ? (
+                                    <p className="px-3 py-2 text-xs text-muted-foreground">无匹配人员</p>
+                                  ) : personMatches.map(emp => {
+                                    const selected = !!wizPushPersons.find(p => p.empId === emp.empId);
+                                    return (
+                                      <button
+                                        key={emp.empId}
+                                        type="button"
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => togglePerson(emp)}
+                                        className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-xs hover:bg-muted transition ${selected ? "bg-primary/5" : ""}`}
+                                      >
+                                        <span className="flex items-center gap-2">
+                                          <UserIcon className="w-3 h-3 text-muted-foreground" />
+                                          <span className="font-medium text-foreground">{emp.name}</span>
+                                          <span className="text-muted-foreground">{emp.empId}</span>
+                                          <span className="text-muted-foreground">· {emp.dept}</span>
+                                        </span>
+                                        {selected && <Check className="w-3.5 h-3.5 text-primary" />}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                            {wizPushPersons.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5">
+                                {wizPushPersons.map(p => (
+                                  <Badge key={p.empId} variant="secondary" className="gap-1 text-[11px] pl-2 pr-1">
+                                    <UserIcon className="w-3 h-3" /> {p.name} · {p.empId}
+                                    <button
+                                      type="button"
+                                      onClick={() => removePerson(p.empId)}
+                                      className="ml-0.5 rounded hover:bg-muted-foreground/20 p-0.5"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {wizPushChannels.group && (
+                        <div className="flex items-start gap-4">
+                          <Label className="text-sm w-20 shrink-0 pt-2 text-muted-foreground">群机器人地址</Label>
+                          <div className="flex-1 space-y-2">
+                            {wizPushWebhooks.map((w, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <Input
+                                  value={w}
+                                  onChange={(e) => updateWebhook(idx, e.target.value)}
+                                  placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx"
+                                  className="h-9 text-sm font-mono"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                                  onClick={() => removeWebhook(idx)}
+                                  disabled={wizPushWebhooks.length === 1 && !w}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={addWebhook}>
+                              <Plus className="w-3.5 h-3.5" /> 添加群机器人
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      {!wizPushChannels.person && !wizPushChannels.group && (
+                        <p className="text-[11px] text-muted-foreground pl-24">请至少选择一种通知方式</p>
+                      )}
                     </div>
 
                     <div>
