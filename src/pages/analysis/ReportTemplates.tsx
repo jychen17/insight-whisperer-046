@@ -65,7 +65,7 @@ const mockTemplates: ReportTemplateItem[] = [
   },
 ];
 
-const categoryOptions = ["全部", "舆情", "行业", "热点", "体验", "综合"];
+const categoryOptions = ["全部", "舆情", "行业", "热点", "体验", "事件", "综合"];
 
 const allModules = [
   "舆情概览", "负面舆情TOP10", "情感趋势", "风险预警汇总",
