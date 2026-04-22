@@ -1541,6 +1541,19 @@ export default function SentimentDetail() {
                   <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => openBatchHandle("article")}>
                     <ClipboardList className="w-3 h-3" /> 批量处置
                   </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs gap-1"
+                    onClick={() => {
+                      const titles = items.filter(i => selectedIds.includes(i.id)).map(i => i.title);
+                      navigate("/analysis/report-manage", {
+                        state: { reportPrefill: { theme: "舆情主题", scope: "articles", ids: selectedIds.map(String), titles, source: "舆情列表 · 文章" } }
+                      });
+                    }}
+                  >
+                    <FileText className="w-3 h-3" /> 生成报告
+                  </Button>
                 </>
               )}
             </div>
