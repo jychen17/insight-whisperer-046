@@ -243,10 +243,6 @@ export default function ReportTemplates() {
                   <SelectItem value="custom">自定义模板</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-24 h-8 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>{categoryOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
             </div>
           </div>
         </CardHeader>
@@ -256,10 +252,7 @@ export default function ReportTemplates() {
               <TableRow>
                 <TableHead>模板名称</TableHead>
                 <TableHead>类型</TableHead>
-                <TableHead>分类</TableHead>
                 <TableHead>内容模块</TableHead>
-                <TableHead>图表数</TableHead>
-                <TableHead>格式</TableHead>
                 <TableHead className="text-right">使用次数</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead className="text-right">操作</TableHead>
@@ -267,7 +260,7 @@ export default function ReportTemplates() {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 && (
-                <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">暂无模板</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">暂无模板</TableCell></TableRow>
               )}
               {filtered.map(t => (
                 <TableRow key={t.id}>
@@ -289,15 +282,12 @@ export default function ReportTemplates() {
                       <Badge variant="secondary" className="text-xs gap-1"><User className="w-3 h-3" />自定义</Badge>
                     )}
                   </TableCell>
-                  <TableCell><Badge variant="outline" className="text-xs">{t.category}</Badge></TableCell>
-                  <TableCell className="max-w-[180px]">
+                  <TableCell className="max-w-[260px]">
                     <div className="flex flex-wrap gap-1">
-                      {t.sections.slice(0, 2).map(s => <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>)}
-                      {t.sections.length > 2 && <Badge variant="outline" className="text-[10px]">+{t.sections.length - 2}</Badge>}
+                      {t.sections.slice(0, 3).map(s => <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>)}
+                      {t.sections.length > 3 && <Badge variant="outline" className="text-[10px]">+{t.sections.length - 3}</Badge>}
                     </div>
                   </TableCell>
-                  <TableCell><span className="text-sm">{t.charts.length}</span></TableCell>
-                  <TableCell><Badge variant="outline" className="text-xs">{t.format}</Badge></TableCell>
                   <TableCell className="text-right text-sm">{t.usageCount}</TableCell>
                   <TableCell><Switch checked={t.status} onCheckedChange={() => toggleStatus(t.id)} /></TableCell>
                   <TableCell className="text-right">
