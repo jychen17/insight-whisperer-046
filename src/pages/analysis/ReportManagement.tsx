@@ -480,7 +480,11 @@ export default function ReportManagement() {
   const updateCondition = (id: string, patch: Partial<RuleCondition>) => {
     setWizConditions(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   };
-  const removeCondition = (id: string) => setWizConditions(prev => prev.filter(c => c.id !== id));
+  const removeCondition = (id: string) => setWizConditions(prev => {
+    const target = prev.find(c => c.id === id);
+    if (target && LOCKSET_FIELD_KEYS.includes(target.field)) setWizPrefill(null);
+    return prev.filter(c => c.id !== id);
+  });
 
   const togglePerson = (emp: Employee) => {
     setWizPushPersons(prev => prev.find(p => p.empId === emp.empId)
