@@ -411,6 +411,25 @@ export default function ReportManagement() {
     setWizPrefill(pf);
     if (pf.theme) setWizTheme(pf.theme);
     setWizSchedule("once"); // 选定数据范围 → 默认一次性
+    // 把锁定的数据集回填为一条「集合」条件 + 一条默认时间条件
+    const lockField = pf.scope === "events" ? "eventSet" : "articleSet";
+    const lockedCondition: RuleCondition = {
+      id: "lockset",
+      field: lockField,
+      operator: "in_set",
+      values: (pf.titles && pf.titles.length === pf.ids.length)
+        ? pf.titles.map((t, i) => `${t}（#${pf.ids[i]}）`)
+        : pf.ids.map(id => `#${id}`),
+    };
+    const timeCondition: RuleCondition = {
+      id: "lockset-time",
+      field: "publishTime",
+      operator: "lastNDays",
+      values: [],
+      numValue: 7,
+    };
+    setWizLogic("all");
+    setWizConditions([lockedCondition, timeCondition]);
     setWizStep(2);
     setConfigOpen(true);
     // 清掉 state，避免再次切回时重复触发
