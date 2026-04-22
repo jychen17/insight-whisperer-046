@@ -446,7 +446,7 @@ export default function ReportManagement() {
     if (mode === "chips") return c.values.length > 0;
     return !!c.value;
   });
-  const step2Valid = wizTheme && wizConditions.length > 0 && conditionsValid(wizConditions) && hasTimeCondition && (wizSchedule === "once" || !!wizTimeField);
+  const step2Valid = wizTheme && (wizPrefill ? true : (wizConditions.length > 0 && conditionsValid(wizConditions) && hasTimeCondition && (wizSchedule === "once" || !!wizTimeField)));
   const step1Valid = wizSchedule === "once" || !!wizFrequency;
   const step4Valid = !wizPushEnabled || (wizPushTargets.length > 0 && (effectivePushTiming.mode === "realtime" || /^\d{2}:\d{2}$/.test(wizPushTime)));
 
