@@ -243,10 +243,6 @@ export default function ReportTemplates() {
                   <SelectItem value="custom">自定义模板</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-24 h-8 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>{categoryOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
             </div>
           </div>
         </CardHeader>
