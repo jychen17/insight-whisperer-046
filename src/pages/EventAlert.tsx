@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   ArrowLeft, Bell, Plus, Trash2, MessageCircle,
   ChevronDown, ChevronUp, Settings2, Zap, Clock, ExternalLink,
-  Flame, BarChart3, ThumbsUp, Layers, FileText
+  Flame, BarChart3, ThumbsUp, Layers, FileText, Hash
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import ThemeAlertRuleDialog from "@/components/ThemeAlertRuleDialog";
