@@ -305,7 +305,10 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
                 onValueChange={(v) => {
                   const t = defaultThemes.find((x) => x.id === v);
                   if (!t) return;
-                  setDraft({ ...draft, themeId: v, themeName: t.name, triggerNodeId: undefined, triggerNodeName: undefined, triggerDimension: "single", conditions: [{ field: "importance", operator: "=", value: "重大" }] });
+                  const initCond = v === "hotspot"
+                    ? { field: "heat_score", operator: ">=", value: "10000" }
+                    : { field: "importance", operator: "=", value: "重大" };
+                  setDraft({ ...draft, themeId: v, themeName: t.name, triggerNodeId: undefined, triggerNodeName: undefined, triggerDimension: "single", conditions: [initCond] });
                   setPickedThemeId(v);
                 }}
                 disabled={isEdit}
