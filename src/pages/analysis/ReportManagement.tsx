@@ -1396,18 +1396,52 @@ function ConditionRow({ condition, onChange, onRemove }: {
   if (!f) return null;
   const operators = OPERATORS_BY_TYPE[f.type];
   const mode = operatorMode(condition.field, condition.operator);
+  const isLockset = mode === "lockset";
 
   const handleFieldChange = (newField: string) => {
     const newOp = defaultOperator(newField);
     onChange({ field: newField, operator: newOp, values: [], value: "", numValue: undefined });
   };
 
+  // 锁定数据集 — 只读展示，不允许更改字段/算子，由外部预填驱动
+  if (isLockset) {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-2">
+        <Badge variant="secondary" className="h-7 text-[11px] gap-1 shrink-0">
+          {f.key === "eventSet" ? <Layers className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+          {f.label}
+        </Badge>
+        <Badge variant="outline" className="h-7 text-[11px] shrink-0">{operatorLabel(condition.field, condition.operator)}</Badge>
+        <div className="flex-1 min-w-0 flex flex-wrap gap-1">
+          {condition.values.length === 0 && (
+            <span className="text-xs text-muted-foreground">（未选定项）</span>
+          )}
+          {condition.values.slice(0, 8).map((v, i) => (
+            <Badge key={i} variant="outline" className="text-[10px] max-w-[260px] bg-background">
+              <span className="truncate">{v}</span>
+            </Badge>
+          ))}
+          {condition.values.length > 8 && (
+            <Badge variant="outline" className="text-[10px] bg-background">+{condition.values.length - 8}</Badge>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-destructive shrink-0" onClick={onRemove} title="移除锁定数据集">
+          <X className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       {/* Field */}
       <Select value={condition.field} onValueChange={handleFieldChange}>
         <SelectTrigger className="w-32 h-9 text-xs"><SelectValue /></SelectTrigger>
-        <SelectContent>{FIELD_CATALOG.map(opt => <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>)}</SelectContent>
+        <SelectContent>
+          {FIELD_CATALOG.filter(o => !LOCKSET_FIELD_KEYS.includes(o.key)).map(opt => (
+            <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>
+          ))}
+        </SelectContent>
       </Select>
       {/* Operator */}
       <Select value={condition.operator} onValueChange={(v) => onChange({ operator: v, values: [], value: "", numValue: undefined })}>
