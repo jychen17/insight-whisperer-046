@@ -737,7 +737,7 @@ export default function ReportManagement() {
           <div className="mt-5 space-y-5">
             {/* Stepper */}
             <div className="flex items-center gap-1">
-              {[{ n: 1, l: "类型" }, { n: 2, l: "数据" }, { n: 3, l: "模板" }, { n: 4, l: "确认" }].map((s, i, arr) => (
+              {[{ n: 1, l: "类型" }, { n: 2, l: "数据" }, { n: 3, l: "模板" }, { n: 4, l: "推送" }, { n: 5, l: "确认" }].map((s, i, arr) => (
                 <div key={s.n} className="flex items-center flex-1">
                   <div className={`flex items-center gap-2 ${wizStep >= s.n ? "text-primary" : "text-muted-foreground"}`}>
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2 ${wizStep > s.n ? "bg-primary text-primary-foreground border-primary" : wizStep === s.n ? "border-primary text-primary" : "border-border"}`}>
