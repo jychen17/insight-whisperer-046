@@ -966,13 +966,20 @@ export default function ReportManagement() {
                 {wizPrefill && (
                   <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-sm flex-wrap">
                         {wizPrefill.scope === "events"
                           ? <Layers className="w-4 h-4 text-primary" />
                           : <FileText className="w-4 h-4 text-primary" />}
-                        <span className="font-medium text-foreground">
-                          已锁定数据范围：{wizPrefill.scope === "events" ? "事件" : "文章"} · {wizPrefill.ids.length} 条
-                        </span>
+                        <span className="font-medium text-foreground">已锁定数据范围</span>
+                        {wizTheme && (
+                          <Badge variant="secondary" className="text-[10px] gap-1">
+                            <Sparkles className="w-3 h-3" /> 主题：{wizTheme}
+                          </Badge>
+                        )}
+                        <Badge variant="secondary" className="text-[10px] gap-1">
+                          {wizPrefill.scope === "events" ? <Layers className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+                          {wizPrefill.scope === "events" ? "事件" : "文章"} · {wizPrefill.ids.length} 条
+                        </Badge>
                         {wizPrefill.source && (
                           <Badge variant="secondary" className="text-[10px] gap-1">
                             <Link2 className="w-3 h-3" /> 来源：{wizPrefill.source}
@@ -981,27 +988,18 @@ export default function ReportManagement() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setWizPrefill(null)}
+                        onClick={() => {
+                          setWizPrefill(null);
+                          setWizConditions(prev => prev.filter(c => !LOCKSET_FIELD_KEYS.includes(c.field)));
+                        }}
                         className="text-muted-foreground hover:text-destructive shrink-0"
                         title="清除锁定范围"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    {wizPrefill.titles && wizPrefill.titles.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {wizPrefill.titles.slice(0, 6).map((t, i) => (
-                          <Badge key={i} variant="outline" className="text-[10px] max-w-[260px]">
-                            <span className="truncate">{t}</span>
-                          </Badge>
-                        ))}
-                        {wizPrefill.titles.length > 6 && (
-                          <Badge variant="outline" className="text-[10px]">+{wizPrefill.titles.length - 6}</Badge>
-                        )}
-                      </div>
-                    )}
                     <p className="text-[11px] text-muted-foreground">
-                      报告将基于以上{wizPrefill.scope === "events" ? "事件" : "文章"}的数据生成；下方查询条件作为补充筛选（可选），仍需包含时间字段。
+                      已自动回填到下方"查询条件"中（{wizPrefill.scope === "events" ? "事件集合" : "文章集合"} · 属于已选集合）。可在条件区追加其他筛选与时间范围；移除该锁定条件等同于清除范围。
                     </p>
                   </div>
                 )}
