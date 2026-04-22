@@ -8,8 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   FileText, Eye, Download, Trash2, Search, Calendar, Share2,
-  Copy, ExternalLink, AlertTriangle,
+  Copy, ExternalLink, AlertTriangle, Settings2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 interface Report {
@@ -48,6 +49,7 @@ const typeOptions = ["全部", "日报", "周报", "月报", "季度报告", "�
 const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
 
 export default function ReportManagement() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("全部");
   const [themeFilter, setThemeFilter] = useState("全部");
@@ -88,9 +90,14 @@ export default function ReportManagement() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">报告管理</h1>
-        <p className="text-sm text-muted-foreground mt-1">查看、搜索、导出和管理所有已生成的分析报告</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">报告管理</h1>
+          <p className="text-sm text-muted-foreground mt-1">查看、搜索、导出和管理所有已生成的分析报告</p>
+        </div>
+        <Button className="gap-2" onClick={() => navigate("/analysis/report-templates")}>
+          <Settings2 className="w-4 h-4" /> 报告配置
+        </Button>
       </div>
 
       {/* Stats */}
