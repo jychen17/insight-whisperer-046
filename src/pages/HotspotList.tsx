@@ -1,15 +1,18 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { hotspotEvents as mockEvents, type HotspotEvent, type SourceKind, type Category, type Importance } from "@/lib/hotspotData";
+import { hotspotEvents as mockEvents, allClues, type HotspotEvent, type SourceKind, type Category, type Importance } from "@/lib/hotspotData";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Search, MapPin, Calendar, Flame, TrendingUp, Music2, Palette,
   Sparkles, ExternalLink, Bell, FileText, ArrowUpRight, Ticket, BookOpen, Hash,
   ChevronDown, ChevronUp, Download, Settings, CheckCircle2, Globe, Eye, Tag, Layers,
+  ListChecks,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 
