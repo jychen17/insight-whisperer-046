@@ -505,3 +505,133 @@ export default function HotspotList() {
     </div>
   );
 }
+
+// ────────────────────────────────────────────────────────────
+// Clue (article) list view — aggregates all clues across events
+// ────────────────────────────────────────────────────────────
+function ClueListView({ onEventClick }: { onEventClick: (eventId: string) => void }) {
+  const all = useMemo(() => allClues(), []);
+  const [kindFilter, setKindFilter] = useState<"all" | SourceKind>("all");
+  const [keyword, setKeyword] = useState("");
+
+  const filtered = useMemo(() => {
+    let list = all;
+    if (kindFilter !== "all") list = list.filter(c => c.kind === kindFilter);
+    if (keyword) list = list.filter(c => c.title.includes(keyword) || c.eventTitle.includes(keyword) || c.author.includes(keyword));
+    return list.sort((a, b) => b.heat - a.heat);
+  }, [all, kindFilter, keyword]);
+
+  const counts = useMemo(() => ({
+    all: all.length,
+    damai: all.filter(c => c.kind === "damai").length,
+    bendibao: all.filter(c => c.kind === "bendibao").length,
+    ranking: all.filter(c => c.kind === "ranking").length,
+  }), [all]);
+
+  const KIND_TABS: { v: "all" | SourceKind; label: string }[] = [
+    { v: "all", label: "全部" },
+    { v: "damai", label: "大麦演出" },
+    { v: "bendibao", label: "本地宝活动" },
+    { v: "ranking", label: "社媒热榜" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="bg-card rounded-lg border border-border p-4 flex flex-wrap items-center gap-3">
+        <div className="flex rounded-md border border-border overflow-hidden text-xs">
+          {KIND_TABS.map((t, i) => {
+            const active = kindFilter === t.v;
+            const cnt = counts[t.v];
+            return (
+              <button
+                key={t.v}
+                onClick={() => setKindFilter(t.v)}
+                className={`px-3 py-1.5 inline-flex items-center gap-1.5 ${i > 0 ? "border-l border-border" : ""} ${active ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted/50"}`}
+              >
+                {t.label}
+                <span className={`text-[10px] ${active ? "opacity-90" : "opacity-60"}`}>({cnt})</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="relative ml-auto">
+          <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            placeholder="搜索文章 / 关联事件..."
+            value={keyword}
+            onChange={e => setKeyword(e.target.value)}
+            className="pl-7 pr-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground w-64"
+          />
+        </div>
+        <span className="text-[11px] text-muted-foreground">共 {filtered.length} 条线索</span>
+      </div>
+
+      {/* Table */}
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[36%]">标题</TableHead>
+              <TableHead>来源</TableHead>
+              <TableHead>关联热点事件</TableHead>
+              <TableHead>作者</TableHead>
+              <TableHead>地区</TableHead>
+              <TableHead>发布时间</TableHead>
+              <TableHead className="text-right">热度</TableHead>
+              <TableHead className="text-right">互动</TableHead>
+              <TableHead className="w-[60px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
+                  <Layers className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  暂无匹配的文章线索
+                </TableCell>
+              </TableRow>
+            ) : filtered.map(c => {
+              const Meta = SOURCE_META[c.kind];
+              const Icon = Meta.icon;
+              return (
+                <TableRow key={c.id} className="hover:bg-muted/30">
+                  <TableCell className="text-xs text-foreground">{c.title}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] gap-1 ${Meta.cls}`}>
+                      <Icon className="w-3 h-3" />{c.source}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      className="text-xs text-primary hover:underline text-left"
+                      onClick={() => onEventClick(c.eventId)}
+                    >
+                      {c.eventTitle}
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-xs text-foreground">{c.author}</TableCell>
+                  <TableCell className="text-[11px] text-muted-foreground">{c.region}</TableCell>
+                  <TableCell className="text-[11px] text-muted-foreground whitespace-nowrap">{c.publishTime}</TableCell>
+                  <TableCell className="text-right text-xs font-medium text-rose-600">
+                    <span className="inline-flex items-center gap-0.5"><Flame className="w-3 h-3" />{formatHeat(c.heat)}</span>
+                  </TableCell>
+                  <TableCell className="text-right text-[11px] text-muted-foreground">
+                    👍 {c.likes.toLocaleString()} · 💬 {c.comments.toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    <a href={c.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}
+
+const formatHeat = (n: number) => n >= 10000 ? `${(n / 10000).toFixed(1)}w` : `${n}`;
