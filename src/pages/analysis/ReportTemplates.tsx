@@ -282,15 +282,12 @@ export default function ReportTemplates() {
                       <Badge variant="secondary" className="text-xs gap-1"><User className="w-3 h-3" />自定义</Badge>
                     )}
                   </TableCell>
-                  <TableCell><Badge variant="outline" className="text-xs">{t.category}</Badge></TableCell>
-                  <TableCell className="max-w-[180px]">
+                  <TableCell className="max-w-[260px]">
                     <div className="flex flex-wrap gap-1">
-                      {t.sections.slice(0, 2).map(s => <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>)}
-                      {t.sections.length > 2 && <Badge variant="outline" className="text-[10px]">+{t.sections.length - 2}</Badge>}
+                      {t.sections.slice(0, 3).map(s => <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>)}
+                      {t.sections.length > 3 && <Badge variant="outline" className="text-[10px]">+{t.sections.length - 3}</Badge>}
                     </div>
                   </TableCell>
-                  <TableCell><span className="text-sm">{t.charts.length}</span></TableCell>
-                  <TableCell><Badge variant="outline" className="text-xs">{t.format}</Badge></TableCell>
                   <TableCell className="text-right text-sm">{t.usageCount}</TableCell>
                   <TableCell><Switch checked={t.status} onCheckedChange={() => toggleStatus(t.id)} /></TableCell>
                   <TableCell className="text-right">
