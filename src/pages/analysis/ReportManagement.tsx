@@ -304,6 +304,11 @@ export default function ReportManagement() {
   const [wizConditions, setWizConditions] = useState<RuleCondition[]>([newCondition("business")]);
   const [wizTemplateId, setWizTemplateId] = useState<string>("");
   const [wizName, setWizName] = useState<string>("");
+  // Push config
+  const [wizPushEnabled, setWizPushEnabled] = useState<boolean>(true);
+  const [wizPushTargets, setWizPushTargets] = useState<PushTarget[]>([]);
+  const [wizPushTimingMode, setWizPushTimingMode] = useState<"realtime" | "scheduled">("scheduled");
+  const [wizPushTime, setWizPushTime] = useState<string>("09:00");
 
   const filtered = useMemo(() => {
     return allReports.filter((r) => {
@@ -322,6 +327,14 @@ export default function ReportManagement() {
   const wizTemplate = reportTemplates.find(t => t.id === wizTemplateId);
   const hasTimeCondition = wizConditions.some(c => TIME_FIELD_KEYS.includes(c.field));
 
+  // 一次性报告默认实时推送；周期报告默认定时
+  const effectivePushTiming: PushTiming = wizSchedule === "once" && wizPushTimingMode === "realtime"
+    ? { mode: "realtime" }
+    : { mode: "scheduled", time: wizPushTime };
+
+  const pushTimingLabel = (timing: PushTiming) =>
+    timing.mode === "realtime" ? "实时推送" : `定时推送 · ${timing.time}`;
+
   const resetWizard = () => {
     setWizStep(1);
     setWizSchedule("recurring");
@@ -333,6 +346,10 @@ export default function ReportManagement() {
     setWizConditions([newCondition("business")]);
     setWizTemplateId("");
     setWizName("");
+    setWizPushEnabled(true);
+    setWizPushTargets([]);
+    setWizPushTimingMode("scheduled");
+    setWizPushTime("09:00");
   };
 
   const autoName = () => {
