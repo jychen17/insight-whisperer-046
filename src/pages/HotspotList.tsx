@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { hotspotEvents as mockEvents, type HotspotEvent, type SourceKind, type Category, type Importance } from "@/lib/hotspotData";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,42 +13,7 @@ import {
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 
-// ────────────────────────────────────────────────────────────
-// Types
-// ────────────────────────────────────────────────────────────
-type SourceKind = "damai" | "bendibao" | "ranking";
-type Category = "演唱会" | "音乐节" | "展览" | "市集" | "节庆" | "亲子" | "线上热议";
-type Importance = "high" | "medium" | "low";
-
-interface RawSource {
-  kind: SourceKind;
-  label: string;
-  url?: string;
-  extra?: string;
-}
-
-interface HotspotEvent {
-  id: string;
-  title: string;
-  category: Category;
-  city: string;
-  venue?: string;
-  date: string;
-  dateRange?: string;
-  heatScore: number;
-  heatTrend: number;
-  relatedVolume: { weibo: number; xhs: number; douyin: number };
-  sentiment: { pos: number; neu: number; neg: number };
-  businessRelevance: 1 | 2 | 3 | 4 | 5;
-  sources: RawSource[];
-  description: string;
-  isNew?: boolean;
-  crossSource: number;
-  importance: Importance;
-  firstTime: string;
-  latestTime: string;
-  itemCount: number; // 关联文章/线索数
-}
+// Types & mock data are imported from @/lib/hotspotData
 
 // ────────────────────────────────────────────────────────────
 // Mock data

@@ -11,6 +11,7 @@ import SentimentDetail from "@/pages/SentimentDetail";
 import IndustryOverview from "@/pages/IndustryOverview";
 import HotspotDiscover from "@/pages/HotspotDiscover";
 import HotspotList from "@/pages/HotspotList";
+import HotspotDetail from "@/pages/HotspotDetail";
 import ExperienceOverview from "@/pages/ExperienceOverview";
 import PlaceholderPage from "@/components/PlaceholderPage";
 import ThemeList from "@/pages/ThemeList";
@@ -59,6 +60,7 @@ const App = () => (
             {/* 洞察主题 - 热点洞察 */}
             <Route path="/hotspot/discover" element={<HotspotDiscover />} />
             <Route path="/hotspot/detail" element={<HotspotList />} />
+            <Route path="/hotspot/event-detail" element={<HotspotDetail />} />
             {/* 洞察主题 - 产品体验 */}
             <Route path="/experience/overview" element={<ExperienceOverview />} />
             <Route path="/experience/detail" element={<PlaceholderPage title="产品体验列表" />} />
