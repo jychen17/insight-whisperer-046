@@ -325,6 +325,7 @@ export default function ReportManagement() {
   const [wizConditions, setWizConditions] = useState<RuleCondition[]>([newCondition("business")]);
   const [wizTemplateId, setWizTemplateId] = useState<string>("");
   const [wizName, setWizName] = useState<string>("");
+  const [wizPrefill, setWizPrefill] = useState<ReportPrefill | null>(null);
   // Push config
   const [wizPushEnabled, setWizPushEnabled] = useState<boolean>(true);
   const [wizPushChannels, setWizPushChannels] = useState<{ person: boolean; group: boolean }>({ person: false, group: true });
