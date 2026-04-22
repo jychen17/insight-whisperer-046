@@ -758,9 +758,11 @@ export default function ReportManagement() {
                       <p className="text-xs text-muted-foreground mb-1.5">推送对象（{configDetailReport.config.push.targets.length}）</p>
                       <div className="flex flex-wrap gap-1.5">
                         {configDetailReport.config.push.targets.map(t => (
-                          <Badge key={t.id} variant="secondary" className="gap-1 text-[11px]">
-                            {t.type === "group" ? <Users className="w-3 h-3" /> : <UserIcon className="w-3 h-3" />}
-                            {t.name}
+                          <Badge key={t.id} variant="secondary" className="gap-1 text-[11px] max-w-full">
+                            {t.type === "group" ? <Users className="w-3 h-3 shrink-0" /> : <UserIcon className="w-3 h-3 shrink-0" />}
+                            <span className="truncate">
+                              {t.type === "person" ? `${t.name} · ${t.empId}` : t.name}
+                            </span>
                           </Badge>
                         ))}
                       </div>
