@@ -75,6 +75,7 @@ const mockTemplates: ReportTemplateItem[] = [
     format: "PPT", status: false, usageCount: 6, createdAt: "2026-03-01", updatedAt: "2026-03-15",
     uploadedFileName: "管理层摘要-v2.pptx",
   },
+];
 
 const categoryOptions = ["全部", "舆情", "行业", "热点", "体验", "事件", "综合"];
 
