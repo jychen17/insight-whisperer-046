@@ -143,6 +143,7 @@ const formatCondition = (c: RuleCondition): string => {
   if (!f) return "";
   const op = operatorLabel(c.field, c.operator);
   const mode = operatorMode(c.field, c.operator);
+  if (mode === "lockset") return `${f.label} ${op} {${c.values.length} 项}`;
   if (mode === "days") return `${f.label} ${op} ${c.numValue ?? 0}`;
   if (mode === "chips") return `${f.label} ${op} [${c.values.join(", ")}]`;
   return `${f.label} ${op} ${c.value ?? ""}`;
