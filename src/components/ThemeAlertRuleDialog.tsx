@@ -413,7 +413,7 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
                       </div>
                       {isSetField(cond.field) && (
                         <div className="flex gap-1.5 flex-wrap">
-                          {CATEGORY_OPTIONS.map((tag) => {
+                          {getSetOptions(cond.field).map((tag) => {
                             const sel = cond.value.split(",").includes(tag);
                             return (
                               <button key={tag} onClick={() => toggleCategoryTag(idx, tag)} className={`px-2 py-1 text-[11px] rounded border ${sel ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground hover:border-muted-foreground/40"}`}>
