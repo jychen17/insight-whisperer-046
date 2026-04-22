@@ -129,24 +129,6 @@ export default function AlertList() {
                 {defaultThemes.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as AlertStatus | "all")}>
-              <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue placeholder="状态" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部状态</SelectItem>
-                <SelectItem value="pushed">已推送</SelectItem>
-                <SelectItem value="read">已查看</SelectItem>
-                <SelectItem value="failed">推送失败</SelectItem>
-                <SelectItem value="pending">待推送</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={levelFilter} onValueChange={(v) => setLevelFilter(v as "all" | AlertMessage["level"])}>
-              <SelectTrigger className="h-9 w-[120px] text-xs"><SelectValue placeholder="级别" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部级别</SelectItem>
-                <SelectItem value="critical">严重</SelectItem>
-                <SelectItem value="warning">一般</SelectItem>
-              </SelectContent>
-            </Select>
             <Select value={rangeFilter} onValueChange={(v) => setRangeFilter(v as "all" | "yesterday" | "week")}>
               <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue placeholder="时间范围" /></SelectTrigger>
               <SelectContent>
