@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  Plus, Search, FileText, Copy, Trash2, Settings2, Eye,
-  BarChart3, Clock, Calendar, GripVertical, X,
+  Plus, Search, FileText, Copy, Trash2, Settings2,
+  GripVertical, X, Upload, Globe, User,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -20,6 +20,7 @@ interface ReportTemplateItem {
   name: string;
   description: string;
   category: string;
+  type: "global" | "custom";
   sections: string[];
   charts: { name: string; type: string }[];
   format: string;
@@ -27,38 +28,40 @@ interface ReportTemplateItem {
   usageCount: number;
   createdAt: string;
   updatedAt: string;
+  uploadedFileName?: string;
 }
 
 const mockTemplates: ReportTemplateItem[] = [
   {
     id: "TPL01", name: "舆情日报模板", description: "自动汇总每日舆情数据与风险预警",
-    category: "舆情", sections: ["舆情概览", "负面舆情TOP10", "情感趋势", "风险预警汇总"],
+    category: "舆情", type: "global", sections: ["舆情概览", "负面舆情TOP10", "情感趋势", "风险预警汇总"],
     charts: [{ name: "舆情概览", type: "柱状图" }, { name: "情感趋势", type: "折线图" }],
     format: "PDF", status: true, usageCount: 89, createdAt: "2026-01-15", updatedAt: "2026-03-28",
   },
   {
     id: "TPL02", name: "竞品对比模板", description: "横向对比多品牌各维度表现",
-    category: "行业", sections: ["SOV份额变化", "竞品动态汇总", "品牌声量对比", "关键事件分析"],
+    category: "行业", type: "global", sections: ["SOV份额变化", "竞品动态汇总", "品牌声量对比", "关键事件分析"],
     charts: [{ name: "SOV份额", type: "饼图" }, { name: "声量对比", type: "柱状图" }],
     format: "PDF+Excel", status: true, usageCount: 45, createdAt: "2026-02-01", updatedAt: "2026-03-25",
   },
   {
     id: "TPL03", name: "热点追踪模板", description: "追踪热点事件的传播路径与影响",
-    category: "热点", sections: ["事件概述", "传播路径", "舆论走势", "建议措施"],
+    category: "热点", type: "global", sections: ["事件概述", "传播路径", "舆论走势", "建议措施"],
     charts: [{ name: "传播路径", type: "网络图" }, { name: "舆论走势", type: "折线图" }],
     format: "PDF", status: true, usageCount: 32, createdAt: "2026-02-10", updatedAt: "2026-03-20",
   },
   {
     id: "TPL04", name: "体验洞察模板", description: "用户反馈NPS分析与问题归因",
-    category: "体验", sections: ["NPS趋势", "问题分类统计", "TOP问题详情", "优化建议"],
+    category: "体验", type: "global", sections: ["NPS趋势", "问题分类统计", "TOP问题详情", "优化建议"],
     charts: [{ name: "NPS趋势", type: "折线图" }, { name: "问题分类", type: "饼图" }],
     format: "PDF+PPT", status: true, usageCount: 18, createdAt: "2026-01-20", updatedAt: "2026-03-15",
   },
   {
     id: "TPL05", name: "管理层摘要模板", description: "面向管理层的精简汇报模板",
-    category: "综合", sections: ["平台概览", "各主题摘要", "风险预警回顾", "下期展望"],
+    category: "综合", type: "custom", sections: ["平台概览", "各主题摘要", "风险预警回顾", "下期展望"],
     charts: [{ name: "平台概览", type: "仪表盘" }],
     format: "PPT", status: false, usageCount: 6, createdAt: "2026-03-01", updatedAt: "2026-03-15",
+    uploadedFileName: "管理层摘要-v2.pptx",
   },
 ];
 
