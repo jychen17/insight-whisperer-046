@@ -4,7 +4,7 @@ import { hotspotEvents as mockEvents, type HotspotEvent, type SourceKind, type C
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Search, MapPin, Calendar, Flame, TrendingUp, Music2, Palette,
@@ -51,7 +51,21 @@ const importanceBadgeMap: Record<Importance, JSX.Element> = {
 export default function HotspotList() {
   const navigate = useNavigate();
   const [hotspotView, setHotspotView] = useState<"events" | "city" | "category" | "raw">("events");
-  const [detailEvent, setDetailEvent] = useState<HotspotEvent | null>(null);
+  // 跳转到详情页时保留当前筛选条件
+  const goDetail = (e: HotspotEvent) => {
+    const qs = new URLSearchParams();
+    if (searchQuery) qs.set("q", searchQuery);
+    if (filterImportance !== "all") qs.set("importance", filterImportance);
+    if (filterCity !== "全部") qs.set("city", filterCity);
+    if (filterCategory !== "all") qs.set("category", filterCategory);
+    if (filterSource !== "all") qs.set("source", filterSource);
+    if (filterDateStart) qs.set("ds", filterDateStart);
+    if (filterDateEnd) qs.set("de", filterDateEnd);
+    if (sortBy) qs.set("sort", sortBy);
+    if (hotspotView) qs.set("view", hotspotView);
+    const returnFilters = qs.toString();
+    navigate(`/hotspot/event-detail?id=${e.id}${returnFilters ? `&returnFilters=${encodeURIComponent(returnFilters)}` : ""}`);
+  };
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
@@ -357,7 +371,7 @@ export default function HotspotList() {
                             size="sm"
                             variant="ghost"
                             className="h-6 text-[11px] gap-1"
-                            onClick={(e) => { e.stopPropagation(); setDetailEvent(event); }}
+                            onClick={(e) => { e.stopPropagation(); goDetail(event); }}
                           >
                             <ExternalLink className="w-3 h-3" /> 详情
                           </Button>
@@ -491,20 +505,13 @@ export default function HotspotList() {
       )}
 
       {/* ========== CITY VIEW ========== */}
-      {hotspotView === "city" && <CityView events={filtered} onSelect={setDetailEvent} />}
+      {hotspotView === "city" && <CityView events={filtered} onSelect={goDetail} />}
 
       {/* ========== CATEGORY VIEW ========== */}
-      {hotspotView === "category" && <CategoryView events={filtered} onSelect={setDetailEvent} />}
+      {hotspotView === "category" && <CategoryView events={filtered} onSelect={goDetail} />}
 
       {/* ========== RAW RANKINGS ========== */}
       {hotspotView === "raw" && <RawRankings />}
-
-      {/* Detail sheet */}
-      <Sheet open={!!detailEvent} onOpenChange={(o) => !o && setDetailEvent(null)}>
-        <SheetContent className="w-[600px] sm:max-w-[600px] overflow-y-auto">
-          {detailEvent && <EventDetailPanel event={detailEvent} onReport={() => goReport([detailEvent.id])} />}
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }
@@ -711,101 +718,3 @@ function RawRankings() {
   );
 }
 
-// ────────────────────────────────────────────────────────────
-// Detail Panel
-// ────────────────────────────────────────────────────────────
-function EventDetailPanel({ event, onReport }: { event: HotspotEvent; onReport: () => void }) {
-  const Cat = CATEGORY_META[event.category];
-  const CatIcon = Cat.icon;
-  const totalVol = event.relatedVolume.weibo + event.relatedVolume.xhs + event.relatedVolume.douyin;
-
-  return (
-    <>
-      <SheetHeader>
-        <div className="flex items-center gap-2 mb-2">
-          <Badge variant="outline" className={`text-[11px] gap-1 ${Cat.cls}`}>
-            <CatIcon className="w-3 h-3" /> {event.category}
-          </Badge>
-          <Badge variant="outline" className="text-[11px] gap-1">
-            <MapPin className="w-3 h-3" /> {event.city}
-          </Badge>
-          {importanceBadgeMap[event.importance]}
-        </div>
-        <SheetTitle className="text-lg">{event.title}</SheetTitle>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1"><Calendar className="w-3 h-3" />{event.dateRange ?? event.date}</span>
-          {event.venue && <span>📍 {event.venue}</span>}
-        </div>
-      </SheetHeader>
-
-      <div className="space-y-5 mt-5">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="p-3 rounded-lg bg-rose-50 border border-rose-100">
-            <div className="text-[11px] text-muted-foreground mb-1">综合热度</div>
-            <div className="text-lg font-bold text-rose-600 flex items-center gap-1"><Flame className="w-4 h-4" />{formatHeat(event.heatScore)}</div>
-            <div className="text-[10px] text-emerald-600">↑ {event.heatTrend}%</div>
-          </div>
-          <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
-            <div className="text-[11px] text-muted-foreground mb-1">关联讨论</div>
-            <div className="text-lg font-bold text-blue-600">{formatHeat(totalVol)}</div>
-            <div className="text-[10px] text-muted-foreground">3 个平台</div>
-          </div>
-          <div className="p-3 rounded-lg bg-amber-50 border border-amber-100">
-            <div className="text-[11px] text-muted-foreground mb-1">业务相关</div>
-            <div className="text-lg text-amber-600">{"⭐".repeat(event.businessRelevance)}</div>
-          </div>
-        </div>
-
-        <div className="p-3 rounded-lg bg-gradient-to-br from-primary/5 to-purple-500/5 border border-primary/10">
-          <div className="text-xs font-semibold text-primary mb-1.5 flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" /> AI 洞察摘要
-          </div>
-          <p className="text-xs text-foreground leading-relaxed">{event.description}</p>
-        </div>
-
-        <div>
-          <div className="text-xs font-semibold text-foreground mb-2">数据来源（{event.sources.length}）</div>
-          <div className="space-y-2">
-            {event.sources.map((s, i) => {
-              const Meta = SOURCE_META[s.kind];
-              const Icon = Meta.icon;
-              return (
-                <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg border border-border hover:bg-muted/30">
-                  <Icon className={`w-4 h-4 ${Meta.cls}`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-foreground">{s.label}</div>
-                    {s.extra && <div className="text-[11px] text-muted-foreground">{s.extra}</div>}
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div>
-          <div className="text-xs font-semibold text-foreground mb-2">情感分布</div>
-          <div className="flex h-2 rounded-full overflow-hidden">
-            <div className="bg-emerald-500" style={{ width: `${event.sentiment.pos}%` }} />
-            <div className="bg-slate-300" style={{ width: `${event.sentiment.neu}%` }} />
-            <div className="bg-rose-500" style={{ width: `${event.sentiment.neg}%` }} />
-          </div>
-          <div className="flex justify-between text-[11px] text-muted-foreground mt-1.5">
-            <span className="text-emerald-600">正面 {event.sentiment.pos}%</span>
-            <span>中性 {event.sentiment.neu}%</span>
-            <span className="text-rose-600">负面 {event.sentiment.neg}%</span>
-          </div>
-        </div>
-
-        <div className="flex gap-2 pt-2">
-          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs gap-1">
-            <Bell className="w-3.5 h-3.5" /> 加入预警
-          </Button>
-          <Button size="sm" className="flex-1 h-8 text-xs gap-1" onClick={onReport}>
-            <FileText className="w-3.5 h-3.5" /> 生成报告
-          </Button>
-        </div>
-      </div>
-    </>
-  );
-}
