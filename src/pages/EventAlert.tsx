@@ -101,6 +101,7 @@ export default function EventAlert() {
                       </Badge>
                       <Badge variant="outline" className={`text-[10px] ${rule.pushTiming === "realtime" ? "border-primary/40 text-primary" : ""}`}>
                         {timingIcons[rule.pushTiming]} {timingLabels[rule.pushTiming]}
+                        {rule.pushTiming === "threshold" && <span className="ml-1">≥{rule.articleThreshold ?? 10}篇</span>}
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1 flex-wrap">
@@ -148,12 +149,18 @@ export default function EventAlert() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">推送时机</span>
-                        <p className="text-foreground mt-0.5 flex items-center gap-1">
+                        <p className="text-foreground mt-0.5 flex items-center gap-1 flex-wrap">
                           {timingIcons[rule.pushTiming]} {timingLabels[rule.pushTiming]}
                           {rule.pushTiming === "scheduled" && rule.scheduledInterval && (
                             <span className="text-muted-foreground ml-1">
                               ({rule.scheduledInterval === "hour" ? "每小时" : rule.scheduledInterval === "day" ? "每天" : "每周"} {rule.scheduledTimeStart}-{rule.scheduledTimeEnd})
                             </span>
+                          )}
+                          {rule.pushTiming === "threshold" && (
+                            <span className="text-muted-foreground ml-1">(节点下文章数 ≥ {rule.articleThreshold ?? 10} 篇)</span>
+                          )}
+                          {rule.triggerDimension === "node" && rule.pushOnce && (
+                            <Badge variant="outline" className="text-[10px] ml-1">同事件只推一次</Badge>
                           )}
                         </p>
                       </div>
