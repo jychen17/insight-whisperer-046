@@ -185,15 +185,26 @@ export default function ReportManagement() {
     });
   }, [search, typeFilter, themeFilter, statusFilter, scheduleFilter]);
 
-  const configList = useMemo(() => {
-    return allReports.filter(r => {
-      if (configScheduleFilter !== "all" && r.scheduleType !== configScheduleFilter) return false;
-      if (configFreqFilter !== "all" && r.frequency !== configFreqFilter) return false;
-      if (configThemeFilter !== "全部" && r.theme !== configThemeFilter) return false;
-      if (configSearch && !r.title.includes(configSearch)) return false;
-      return true;
-    });
-  }, [configScheduleFilter, configFreqFilter, configThemeFilter, configSearch]);
+  const wizFreqLabel = wizSchedule === "recurring" ? frequencyLabel[wizFrequency] : "一次性";
+  const wizQuery = savedQueries.find(q => q.id === wizQueryId);
+  const wizTemplate = reportTemplates.find(t => t.id === wizTemplateId);
+  const filteredQueries = wizTheme ? savedQueries.filter(q => q.theme === wizTheme) : [];
+
+  const resetWizard = () => {
+    setWizStep(1);
+    setWizSchedule("recurring");
+    setWizFrequency("daily");
+    setWizTheme("");
+    setWizQueryId("");
+    setWizTemplateId("");
+    setWizName("");
+  };
+
+  const autoName = () => {
+    if (!wizQuery || !wizTemplate) return "";
+    const freq = wizSchedule === "recurring" ? frequencyLabel[wizFrequency].replace("每", "") + "报" : "专项报告";
+    return `${wizQuery.name} ${freq}`;
+  };
 
   const handleDelete = () => {
     if (deleteReport) {
