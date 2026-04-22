@@ -180,35 +180,23 @@ export default function HotspotList() {
         <StatCard title="跨源大热点" value={stats.cross} change={32.1} />
       </div>
 
-      {/* ───── Sub-view toggle ───── */}
-      <div className="flex items-center gap-3">
-        <div className="flex rounded-md border border-border overflow-hidden text-xs">
-          {[
-            { v: "events", label: "事件列表", icon: Flame },
-            { v: "city", label: "城市视图", icon: MapPin },
-            { v: "category", label: "品类视图", icon: Tag },
-            { v: "raw", label: "原始榜单", icon: TrendingUp },
-          ].map((t, i) => {
-            const Icon = t.icon;
-            const active = hotspotView === t.v;
-            return (
-              <button
-                key={t.v}
-                onClick={() => setHotspotView(t.v as typeof hotspotView)}
-                className={`px-4 py-1.5 font-medium inline-flex items-center gap-1.5 ${i > 0 ? "border-l border-border" : ""} ${active ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted/50"}`}
-              >
-                <Icon className="w-3 h-3" />
-                {t.label}
-                {t.v === "events" && <span className="ml-1">({mockEvents.length})</span>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Tabs: events list / all articles list */}
+      <Tabs value={hotspotView} onValueChange={(v) => setHotspotView(v as "events" | "clues")}>
+        <TabsList>
+          <TabsTrigger value="events" className="gap-1.5">
+            <Flame className="w-3.5 h-3.5" />
+            事件列表
+            <span className="ml-1 text-[11px] opacity-70">({mockEvents.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="clues" className="gap-1.5">
+            <ListChecks className="w-3.5 h-3.5" />
+            全部文章列表
+            <span className="ml-1 text-[11px] opacity-70">({allClues().length})</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* ========== EVENTS LIST VIEW ========== */}
-      {hotspotView === "events" && (
-        <div className="space-y-4">
+        {/* ========== EVENTS LIST VIEW ========== */}
+        <TabsContent value="events" className="space-y-4 mt-4">
           {/* Filters card */}
           <div className="bg-card rounded-lg border border-border p-4">
             <div className="grid grid-cols-6 gap-3">
