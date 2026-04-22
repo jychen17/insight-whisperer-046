@@ -436,7 +436,7 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
                 </div>
               )}
               {draft.triggerDimension === "node" && (
-                <label className="flex items-start gap-2 mt-3 cursor-pointer p-2 rounded-md bg-amber-500/5 border border-amber-500/20">
+                <label className="flex items-start gap-2 mt-3 cursor-pointer p-2 rounded-md bg-muted/40 border border-border">
                   <input
                     type="checkbox"
                     checked={draft.pushOnce ?? true}
