@@ -26,6 +26,7 @@ import KeywordManage from "@/pages/datacenter/KeywordManage";
 import TagSystem from "@/pages/datacenter/TagSystem";
 import ModelManage from "@/pages/datacenter/ModelManage";
 import ThemeRules from "@/pages/datacenter/ThemeRules";
+import AlertList from "@/pages/datacenter/AlertList";
 import DashboardConfig from "@/pages/datacenter/DashboardConfig";
 // 分析工具
 import SmartReports from "@/pages/analysis/SmartReports";
@@ -72,7 +73,7 @@ const App = () => (
             <Route path="/datacenter/themes/dashboard" element={<DashboardConfig />} />
             {/* 预警管理 */}
             <Route path="/datacenter/themes/rules" element={<ThemeRules />} />
-            <Route path="/datacenter/alerts/list" element={<PlaceholderPage title="预警列表" />} />
+            <Route path="/datacenter/alerts/list" element={<AlertList />} />
             {/* 专项监控 */}
             <Route path="/monitor/content" element={<PlaceholderPage title="内容监控" />} />
             <Route path="/monitor/account" element={<PlaceholderPage title="账户监控" />} />
