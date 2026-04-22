@@ -480,7 +480,7 @@ export default function ReportManagement() {
           <h1 className="text-2xl font-bold text-foreground">报告管理</h1>
           <p className="text-sm text-muted-foreground mt-1">查看、搜索、下载和管理所有已生成的分析报告</p>
         </div>
-        <Button className="gap-2" onClick={() => setConfigOpen(true)}>
+        <Button className="gap-2" onClick={() => { setWizPrefill(null); setConfigOpen(true); }}>
           <Settings2 className="w-4 h-4" /> 报告配置
         </Button>
       </div>
