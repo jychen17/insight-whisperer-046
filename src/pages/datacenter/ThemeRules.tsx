@@ -84,11 +84,10 @@ export default function ThemeRules() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">预警规则总数</p><p className="text-2xl font-bold text-foreground mt-1">{allRules.length}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">当前启用规则</p><p className="text-2xl font-bold text-emerald-500 mt-1">{activeCount}</p><p className="text-[11px] text-muted-foreground mt-0.5">含 {criticalCount} 条严重级</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">当前启用规则</p><p className="text-2xl font-bold text-emerald-500 mt-1">{activeCount}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">近 7 天触发预警</p><p className="text-2xl font-bold text-amber-500 mt-1">{weekCount}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">昨天触发预警</p><p className="text-2xl font-bold text-primary mt-1">{yesterdayCount}</p></CardContent></Card>
       </div>
 
       <Card>

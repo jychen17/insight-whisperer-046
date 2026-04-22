@@ -104,11 +104,10 @@ export default function AlertList() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">累计预警</p><p className="text-2xl font-bold text-foreground mt-1">{stats.total}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">昨天预警</p><p className="text-2xl font-bold text-primary mt-1">{stats.yesterday}</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">近 7 天预警</p><p className="text-2xl font-bold text-amber-500 mt-1">{stats.week}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">严重预警</p><p className="text-2xl font-bold text-destructive mt-1">{stats.critical}</p></CardContent></Card>
       </div>
 
       {/* Filter bar */}
