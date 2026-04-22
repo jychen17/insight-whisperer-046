@@ -1,194 +1,213 @@
 import { useState } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, FileText, Download, Clock, Eye, Sparkles, Calendar, X, ArrowLeft, Settings2 } from "lucide-react";
+import {
+  Bot, Sparkles, FileText, FolderOpen, ArrowRight,
+  Clock, Calendar, BarChart3, Layout, Settings2,
+  AlertTriangle, TrendingUp,
+} from "lucide-react";
 
-interface Report {
-  id: string;
-  title: string;
-  type: string;
-  theme: string;
-  status: "completed" | "generating" | "scheduled";
-  createdAt: string;
-  pages: number;
-  author: string;
-  sourceTemplateId?: string;
-  sourceTemplateName?: string;
-}
-
-const reports: Report[] = [
-  { id: "RPT001", title: "2026年Q1舆情态势分析报告", type: "季度报告", theme: "舆情主题", status: "completed", createdAt: "2026-03-28", pages: 24, author: "系统自动生成", sourceTemplateId: "RT01", sourceTemplateName: "舆情日报" },
-  { id: "RPT002", title: "3月第4周行业竞品监测周报", type: "周报", theme: "行业咨询主题", status: "completed", createdAt: "2026-03-29", pages: 12, author: "系统自动生成", sourceTemplateId: "RT02", sourceTemplateName: "竞品周报" },
-  { id: "RPT003", title: "热点事件专项分析", type: "专项报告", theme: "热点洞察主题", status: "generating", createdAt: "2026-03-30", pages: 0, author: "AI生成中", sourceTemplateId: "RT03", sourceTemplateName: "热点事件专报" },
-  { id: "RPT004", title: "3月产品体验月度报告", type: "月报", theme: "产品体验主题", status: "completed", createdAt: "2026-03-25", pages: 18, author: "系统自动生成", sourceTemplateId: "RT04", sourceTemplateName: "产品体验月报" },
-  { id: "RPT005", title: "品牌口碑年度总结", type: "年报", theme: "综合", status: "completed", createdAt: "2026-03-20", pages: 42, author: "李总监" },
-  { id: "RPT006", title: "下周竞品动态预测", type: "预测报告", theme: "行业咨询主题", status: "scheduled", createdAt: "2026-03-31", pages: 0, author: "定时生成", sourceTemplateId: "RT02", sourceTemplateName: "竞品周报" },
-  { id: "RPT007", title: "3月第3周行业竞品监测周报", type: "周报", theme: "行业咨询主题", status: "completed", createdAt: "2026-03-22", pages: 11, author: "系统自动生成", sourceTemplateId: "RT02", sourceTemplateName: "竞品周报" },
-  { id: "RPT008", title: "3月第2周行业竞品监测周报", type: "周报", theme: "行业咨询主题", status: "completed", createdAt: "2026-03-15", pages: 10, author: "系统自动生成", sourceTemplateId: "RT02", sourceTemplateName: "竞品周报" },
-  { id: "RPT009", title: "2026-03-31 舆情日报", type: "日报", theme: "舆情主题", status: "completed", createdAt: "2026-03-31", pages: 6, author: "系统自动生成", sourceTemplateId: "RT01", sourceTemplateName: "舆情日报" },
-  { id: "RPT010", title: "2026-03-30 舆情日报", type: "日报", theme: "舆情主题", status: "completed", createdAt: "2026-03-30", pages: 5, author: "系统自动生成", sourceTemplateId: "RT01", sourceTemplateName: "舆情日报" },
+const hotTags = [
+  "#近7天全局舆情简报",
+  "#315专项报告",
+  "#一级事件XX深度分析",
+  "#竞品对比报告",
+  "#本月NPS趋势分析",
+  "#热点事件传播路径",
 ];
 
-const statusConfig: Record<Report["status"], { label: string; variant: "default" | "secondary" | "outline" }> = {
-  completed: { label: "已完成", variant: "default" },
-  generating: { label: "生成中", variant: "secondary" },
-  scheduled: { label: "已排期", variant: "outline" },
-};
-
-const templates = [
-  { name: "舆情日报模板", desc: "自动汇总每日舆情数据与风险预警", icon: FileText },
-  { name: "竞品对比模板", desc: "横向对比多品牌各维度表现", icon: Sparkles },
-  { name: "热点追踪模板", desc: "追踪热点事件的传播路径与影响", icon: Clock },
-  { name: "体验洞察模板", desc: "用户反馈NPS分析与问题归因", icon: Calendar },
+const recommendedTemplates = [
+  { id: "TPL01", icon: FileText, title: "舆情日报模板", desc: "自动汇总每日舆情数据与风险预警", tags: ["日报", "舆情"] },
+  { id: "TPL02", icon: BarChart3, title: "竞品对比模板", desc: "横向对比多品牌各维度表现", tags: ["周报", "行业"] },
+  { id: "TPL03", icon: Clock, title: "热点追踪模板", desc: "追踪热点事件的传播路径与影响", tags: ["专项", "热点"] },
+  { id: "TPL04", icon: Calendar, title: "体验洞察模板", desc: "用户反馈NPS分析与问题归因", tags: ["月报", "体验"] },
 ];
 
 export default function SmartReports() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [query, setQuery] = useState("");
   const navigate = useNavigate();
-  const [filter, setFilter] = useState("all");
 
-  const sourceFilter = searchParams.get("source");
-  const sourceName = searchParams.get("name");
-
-  const filteredReports = reports
-    .filter(r => filter === "all" || r.status === filter)
-    .filter(r => !sourceFilter || r.sourceTemplateId === sourceFilter);
-
-  const clearSourceFilter = () => {
-    searchParams.delete("source");
-    searchParams.delete("name");
-    setSearchParams(searchParams);
+  const handleGenerate = () => {
+    if (!query.trim()) return;
+    console.log("Generate report for:", query);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">智能报告</h1>
-          <p className="text-sm text-muted-foreground mt-1">AI驱动的智能报告生成，支持自动化与自定义模板</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2" onClick={() => navigate("/analysis/report-config")}>
-            <Settings2 className="w-4 h-4" /> 报告配置
-          </Button>
-          <Button className="gap-2"><Plus className="w-4 h-4" /> 生成报告</Button>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">智能报告</h1>
+        <p className="text-sm text-muted-foreground mt-1">AI 智能分析助手，快速生成报告</p>
       </div>
 
-      {/* Source filter banner */}
-      {sourceFilter && sourceName && (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={clearSourceFilter}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-foreground">
-              来源模板：<span className="text-primary">{decodeURIComponent(sourceName)}</span>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              当前展示由「{decodeURIComponent(sourceName)}」配置生成的 {filteredReports.length} 份报告
-            </p>
+      {/* AI Smart Analysis Input */}
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Bot className="w-4 h-4 text-primary" />
+            </div>
+            <h2 className="text-lg font-semibold text-foreground">AI 智能分析小助手</h2>
           </div>
-          <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={clearSourceFilter}>
-            <X className="w-3 h-3" /> 清除筛选
-          </Button>
-        </div>
-      )}
 
-      <div className="grid grid-cols-4 gap-4">
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">报告总数</p><p className="text-2xl font-bold text-foreground mt-1">{filteredReports.length}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">已完成</p><p className="text-2xl font-bold text-primary mt-1">{filteredReports.filter(r => r.status === "completed").length}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">生成中</p><p className="text-2xl font-bold text-foreground mt-1">{filteredReports.filter(r => r.status === "generating").length}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><p className="text-sm text-muted-foreground">已排期</p><p className="text-2xl font-bold text-amber-500 mt-1">{filteredReports.filter(r => r.status === "scheduled").length}</p></CardContent></Card>
-      </div>
-
-      {/* Only show templates section when not filtering by source */}
-      {!sourceFilter && (
-        <div>
-          <h2 className="text-base font-semibold text-foreground mb-3">报告模板</h2>
-          <div className="grid grid-cols-4 gap-3">
-            {templates.map((t) => {
-              const Icon = t.icon;
-              return (
-                <Card key={t.name} className="cursor-pointer hover:border-primary/30 transition-colors">
-                  <CardContent className="p-4">
-                    <Icon className="w-5 h-5 text-primary mb-2" />
-                    <p className="text-sm font-medium text-foreground">{t.name}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{t.desc}</p>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1">
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
+                placeholder='请输入报告生成需求，如"生成同程旅行近3天舆情报告"'
+                className="h-12 text-sm pl-4 pr-4 rounded-lg border-border"
+              />
+            </div>
+            <Button className="h-12 px-6 gap-2 text-sm font-medium" onClick={handleGenerate}>
+              <Sparkles className="w-4 h-4" />
+              生成报告
+            </Button>
           </div>
-        </div>
-      )}
 
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">报告列表</CardTitle>
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">全部</SelectItem>
-                <SelectItem value="completed">已完成</SelectItem>
-                <SelectItem value="generating">生成中</SelectItem>
-                <SelectItem value="scheduled">已排期</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {filteredReports.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
-                <p className="text-sm">暂无报告记录</p>
-              </div>
-            )}
-            {filteredReports.map((r) => (
-              <div key={r.id} className="flex items-center justify-between p-4 rounded-lg border border-border hover:bg-muted/30 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FileText className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">{r.title}</p>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span>{r.type}</span>
-                      <span>·</span>
-                      <span>{r.theme}</span>
-                      <span>·</span>
-                      <span>{r.createdAt}</span>
-                      {r.pages > 0 && <><span>·</span><span>{r.pages}页</span></>}
-                      {r.sourceTemplateName && !sourceFilter && (
-                        <>
-                          <span>·</span>
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                            来源: {r.sourceTemplateName}
-                          </Badge>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={statusConfig[r.status].variant}>{statusConfig[r.status].label}</Badge>
-                  {r.status === "completed" && (
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="w-4 h-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8"><Download className="w-4 h-4" /></Button>
-                    </div>
-                  )}
-                </div>
-              </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground shrink-0">热门需求：</span>
+            {hotTags.map((tag) => (
+              <Badge
+                key={tag}
+                variant="outline"
+                className="cursor-pointer hover:bg-primary/10 hover:border-primary/30 transition-colors text-xs"
+                onClick={() => setQuery(tag)}
+              >
+                {tag}
+              </Badge>
             ))}
           </div>
         </CardContent>
       </Card>
+
+      {/* Recommended Templates */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">常用报告模板</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">挑选模板快速生成，或前往模板管理调整</p>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-xs text-muted-foreground"
+            onClick={() => navigate("/analysis/report-templates")}
+          >
+            <Layout className="w-3.5 h-3.5" /> 前往模板管理
+            <ArrowRight className="w-3 h-3" />
+          </Button>
+        </div>
+        <div className="grid grid-cols-4 gap-3">
+          {recommendedTemplates.map((t) => {
+            const Icon = t.icon;
+            return (
+              <Card
+                key={t.id}
+                className="cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all group"
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Icon className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex gap-1">
+                      {t.tags.map(tag => (
+                        <Badge key={tag} variant="secondary" className="text-[10px] px-1.5 py-0">{tag}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-sm font-medium text-foreground">{t.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1 mb-3 line-clamp-2 min-h-[32px]">{t.desc}</p>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 gap-1 text-xs h-7"
+                      onClick={() => setQuery(`使用「${t.title}」生成报告`)}
+                    >
+                      <Sparkles className="w-3 h-3" /> 快速使用
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="gap-1 text-xs h-7 px-2"
+                      onClick={() => navigate("/analysis/report-templates")}
+                      title="去模板管理调整"
+                    >
+                      <Settings2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Quick Entry to Report Management */}
+      <Card
+        className="cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all group"
+        onClick={() => navigate("/analysis/report-manage")}
+      >
+        <CardContent className="p-5 flex items-center gap-4">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+            <FolderOpen className="w-5 h-5 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-foreground">报告配置与管理</p>
+            <p className="text-xs text-muted-foreground mt-0.5">查看、搜索、导出已生成的报告，或配置自动化生成规则</p>
+          </div>
+          <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+        </CardContent>
+      </Card>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground">本周报告</span>
+            </div>
+            <p className="text-2xl font-bold text-foreground">12</p>
+            <p className="text-[11px] text-muted-foreground mt-1">较上周 +3</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+              <span className="text-xs text-muted-foreground">一级事件</span>
+            </div>
+            <p className="text-2xl font-bold text-destructive">2</p>
+            <p className="text-[11px] text-muted-foreground mt-1">需要关注</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground">舆情趋势</span>
+            </div>
+            <p className="text-2xl font-bold text-foreground">↑15%</p>
+            <p className="text-[11px] text-muted-foreground mt-1">声量同比上升</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-xs text-muted-foreground">AI分析次数</span>
+            </div>
+            <p className="text-2xl font-bold text-foreground">86</p>
+            <p className="text-[11px] text-muted-foreground mt-1">本月累计</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

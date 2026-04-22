@@ -149,10 +149,9 @@ const navGroups: NavGroup[] = [
         label: "分析总结",
         icon: <BarChart3 className="w-4 h-4" />,
         children: [
-          { label: "分析首页", path: "/analysis/home" },
-          { label: "报告配置", path: "/analysis/report-config" },
-          { label: "报告模板管理", path: "/analysis/report-templates" },
+          { label: "智能报告", path: "/analysis/reports" },
           { label: "报告管理", path: "/analysis/report-manage" },
+          { label: "报告模板", path: "/analysis/report-templates" },
         ],
       },
     ],

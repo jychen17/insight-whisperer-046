@@ -29,8 +29,6 @@ import ThemeRules from "@/pages/datacenter/ThemeRules";
 import DashboardConfig from "@/pages/datacenter/DashboardConfig";
 // 分析工具
 import SmartReports from "@/pages/analysis/SmartReports";
-import ReportConfig from "@/pages/analysis/ReportConfig";
-import AnalysisHome from "@/pages/analysis/AnalysisHome";
 import ReportManagement from "@/pages/analysis/ReportManagement";
 import ReportTemplates from "@/pages/analysis/ReportTemplates";
 
@@ -79,9 +77,7 @@ const App = () => (
             <Route path="/monitor/account" element={<PlaceholderPage title="账户监控" />} />
             <Route path="/monitor/topic" element={<PlaceholderPage title="话题监控" />} />
             {/* 分析工具 */}
-            <Route path="/analysis/home" element={<AnalysisHome />} />
             <Route path="/analysis/reports" element={<SmartReports />} />
-            <Route path="/analysis/report-config" element={<ReportConfig />} />
             <Route path="/analysis/report-manage" element={<ReportManagement />} />
             <Route path="/analysis/report-templates" element={<ReportTemplates />} />
             {/* 系统设置 */}
