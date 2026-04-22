@@ -294,27 +294,96 @@ export const defaultThemes: ThemeConfig[] = [
     createdAt: "2026-01-15", updatedAt: "2026-03-28",
   },
   {
-    id: "hotspot", name: "热点洞察主题", description: "社媒热点发现、话题趋势追踪", owner: "王五",
+    id: "hotspot", name: "热点洞察主题", description: "融合演出日历、本地活动攻略、社媒热榜，发现跨源热点事件", owner: "王五",
     type: "builtin", status: "active", icon: "⚡",
-    dataSources: [defaultDS({ taskId: "t5", taskName: "全平台热点", platforms: ["微博", "抖音", "小红书", "百度", "快手"],
-      conditionTree: { id: "root", type: "group", logic: "AND", children: [{ id: "c1", type: "condition", field: "topic", operator: "contains", value: "旅游" }] },
-    })],
+    dataSources: [
+      defaultDS({ taskId: "t5_damai", taskName: "大麦网演出日历", taskType: "定向爬取", platforms: ["大麦网"],
+        intervalHours: 24, timeRange: "未来90天",
+        conditionTree: { id: "root_damai", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "topic", operator: "contains", value: "演唱会" },
+        ]},
+        includeWords: ["演唱会", "音乐节", "巡演", "话剧", "演出"],
+      }),
+      defaultDS({ taskId: "t5_bendibao", taskName: "城市本地宝活动攻略", taskType: "定向爬取", platforms: ["北京本地宝", "上海本地宝", "广州本地宝", "深圳本地宝", "成都本地宝"],
+        intervalHours: 12, timeRange: "未来30天",
+        conditionTree: { id: "root_bdb", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "topic", operator: "contains", value: "活动" },
+        ]},
+        includeWords: ["展览", "市集", "亲子", "节庆", "活动", "演出"],
+        excludeWords: ["招商", "广告", "转让"],
+      }),
+      defaultDS({ taskId: "t5_ranking", taskName: "社媒实时热榜", taskType: "榜单", platforms: ["微博", "抖音", "小红书"],
+        intervalHours: 1, timeRange: "实时",
+        conditionTree: { id: "root_rank", type: "group", logic: "OR", children: [
+          { id: "c1", type: "condition", field: "topic", operator: "contains", value: "旅游" },
+          { id: "c2", type: "condition", field: "topic", operator: "contains", value: "出行" },
+          { id: "c3", type: "condition", field: "topic", operator: "contains", value: "演唱会" },
+          { id: "c4", type: "condition", field: "topic", operator: "contains", value: "节日" },
+        ]},
+      }),
+    ],
     conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
     fieldConfigs: [
-      { key: "platform", fieldType: "raw", displayPosition: "list", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["微博", "抖音", "小红书", "百度", "快手"] },
-      { key: "likes", fieldType: "raw", displayPosition: "list", isFilter: false, filterType: "text", hasSystemEnum: false, enumValues: [] },
-      { key: "heat_score", fieldType: "calc", displayPosition: "both", isFilter: false, filterType: "text", hasSystemEnum: false, enumValues: [] },
+      { key: "platform", fieldType: "raw", displayPosition: "list", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["大麦网", "本地宝", "微博", "抖音", "小红书"] },
+      { key: "publish_time", fieldType: "raw", displayPosition: "list", isFilter: false, filterType: "text", hasSystemEnum: false, enumValues: [] },
+      { key: "topic", fieldType: "ai", displayPosition: "both", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["演唱会", "音乐节", "展览", "市集", "节庆", "亲子", "线上热议"] },
+      { key: "heat_score", fieldType: "calc", displayPosition: "both", isFilter: true, filterType: "text", hasSystemEnum: false, enumValues: [] },
+      { key: "growth_rate", fieldType: "calc", displayPosition: "list", isFilter: false, filterType: "text", hasSystemEnum: false, enumValues: [] },
+      { key: "sentiment", fieldType: "ai", displayPosition: "detail", isFilter: false, filterType: "enum", hasSystemEnum: true, enumValues: ["正面", "负面", "中性"] },
     ],
-    mergeNodes: [{ id: "mn3", name: "热点事件聚合", enabled: true, mergeConditions: [
-      { id: "mc4", field: "sentiment", operator: "similarity_gte", value: "85" },
-      { id: "mc5", field: "publish_time", operator: "time_within", value: "12" },
-    ], mergeConditionTree: {
-      id: "mct_mn3", type: "group", logic: "AND", children: [
-        { id: "mc4t", type: "condition", field: "sentiment", operator: "similarity_gte", value: "85" },
-        { id: "mc5t", type: "condition", field: "publish_time", operator: "time_within", value: "12" },
-      ],
-    }, order: 1, displayFields: [] }],
-    dashboardWidgets: [{ id: "w7", type: "table", title: "实时热点榜", metric: "热度", position: 1, tagField: "heat_score" }],
+    mergeNodes: [
+      { id: "mn_h1", name: "同名事件跨源聚合", enabled: true,
+        mergeConditions: [
+          { id: "mc1", field: "content", operator: "similarity_gte", value: "80" },
+          { id: "mc2", field: "publish_time", operator: "time_within", value: "72" },
+        ],
+        mergeConditionTree: { id: "mct_h1", type: "group", logic: "AND", children: [
+          { id: "mc1t", type: "condition", field: "content", operator: "similarity_gte", value: "80" },
+          { id: "mc2t", type: "condition", field: "publish_time", operator: "time_within", value: "72" },
+        ]},
+        order: 1,
+        displayFields: [
+          { key: "topic", fieldType: "ai", position: "list" },
+          { key: "platform", fieldType: "raw", position: "list" },
+          { key: "heat_score", fieldType: "calc", position: "both" },
+          { key: "sentiment", fieldType: "ai", position: "detail" },
+        ],
+      },
+      { id: "mn_h2", name: "城市维度聚合", enabled: true,
+        mergeConditions: [
+          { id: "mc3", field: "topic", operator: "equals", value: "" },
+          { id: "mc4", field: "publish_time", operator: "time_within", value: "24" },
+        ],
+        mergeConditionTree: { id: "mct_h2", type: "group", logic: "AND", children: [
+          { id: "mc3t", type: "condition", field: "topic", operator: "equals", value: "" },
+          { id: "mc4t", type: "condition", field: "publish_time", operator: "time_within", value: "24" },
+        ]},
+        order: 2,
+        displayFields: [
+          { key: "topic", fieldType: "ai", position: "list" },
+          { key: "heat_score", fieldType: "calc", position: "list" },
+        ],
+      },
+      { id: "mn_h3", name: "品类×时段聚合", enabled: true,
+        mergeConditions: [
+          { id: "mc5", field: "topic", operator: "equals", value: "" },
+          { id: "mc6", field: "publish_time", operator: "time_within", value: "168" },
+        ],
+        mergeConditionTree: { id: "mct_h3", type: "group", logic: "AND", children: [
+          { id: "mc5t", type: "condition", field: "topic", operator: "equals", value: "" },
+          { id: "mc6t", type: "condition", field: "publish_time", operator: "time_within", value: "168" },
+        ]},
+        order: 3,
+        displayFields: [
+          { key: "heat_score", fieldType: "calc", position: "list" },
+          { key: "growth_rate", fieldType: "calc", position: "list" },
+        ],
+      },
+    ],
+    dashboardWidgets: [
+      { id: "w7", type: "statCard", title: "未来7天热点活动", metric: "活动数", position: 1, tagField: "topic" },
+      { id: "w8", type: "table", title: "跨源热点榜", metric: "热度", position: 2, tagField: "heat_score" },
+    ],
     createdAt: "2026-02-01", updatedAt: "2026-03-27",
   },
   {
