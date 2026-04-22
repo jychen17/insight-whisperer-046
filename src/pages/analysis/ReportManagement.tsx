@@ -166,8 +166,8 @@ const buildSentimentConfig = (): ReportConfigDetail => ({
     enabled: true,
     channel: "wecom",
     targets: [
-      { id: "t1", type: "group", name: "舆情应急群" },
-      { id: "t2", type: "person", name: "张敏（产品）" },
+      { id: "t1", type: "group", name: "舆情应急群", webhook: "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=e16d2b41-e0d0-4b9d-ba5d-7d63ca6a5f01" },
+      { id: "t2", type: "person", name: "张敏", empId: "P10231" },
     ],
     timing: { mode: "scheduled", time: "09:00" },
   },
