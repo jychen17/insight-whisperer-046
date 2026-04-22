@@ -72,6 +72,20 @@ export default function HotspotDetail() {
     navigate(target);
   };
 
+  // hooks must run unconditionally — provide safe fallback
+  const timeline = useMemo(() => event ? buildTimeline(event) : [], [event]);
+  const clues = useMemo(() => event ? buildClues(event) : [], [event]);
+  const sourceDistribution = useMemo(() => {
+    if (!event) return [];
+    return [
+      { name: "大麦/票务", value: event.sources.filter(s => s.kind === "damai").length * 1000 || 100, kind: "damai" as SourceKind },
+      { name: "本地宝", value: event.sources.filter(s => s.kind === "bendibao").length * 1500 || 100, kind: "bendibao" as SourceKind },
+      { name: "微博讨论", value: event.relatedVolume.weibo, kind: "ranking" as SourceKind },
+      { name: "小红书笔记", value: event.relatedVolume.xhs, kind: "ranking" as SourceKind },
+      { name: "抖音播放", value: event.relatedVolume.douyin, kind: "ranking" as SourceKind },
+    ].filter(d => d.value > 0);
+  }, [event]);
+
   if (!event) {
     return (
       <div className="text-center py-20">
@@ -87,24 +101,7 @@ export default function HotspotDetail() {
   const Cat = CATEGORY_META[event.category];
   const CatIcon = Cat.icon;
   const totalVol = event.relatedVolume.weibo + event.relatedVolume.xhs + event.relatedVolume.douyin;
-  const timeline = useMemo(() => buildTimeline(event), [event]);
-  const clues = useMemo(() => buildClues(event), [event]);
-
-  // 来源分布 - 按 SourceKind 聚合
-  const sourceDistribution = useMemo(() => {
-    const map = new Map<SourceKind, number>();
-    event.sources.forEach(s => map.set(s.kind, (map.get(s.kind) ?? 0) + 1));
-    // 把讨论量按平台分配，做更直观的 pie
-    return [
-      { name: "大麦/票务", value: event.sources.filter(s => s.kind === "damai").length * 1000 || 100, kind: "damai" as SourceKind },
-      { name: "本地宝", value: event.sources.filter(s => s.kind === "bendibao").length * 1500 || 100, kind: "bendibao" as SourceKind },
-      { name: "微博讨论", value: event.relatedVolume.weibo, kind: "ranking" as SourceKind },
-      { name: "小红书笔记", value: event.relatedVolume.xhs, kind: "ranking" as SourceKind },
-      { name: "抖音播放", value: event.relatedVolume.douyin, kind: "ranking" as SourceKind },
-    ].filter(d => d.value > 0);
-  }, [event]);
   const PIE_COLORS = ["#e11d48", "#2563eb", "#f97316", "#ec4899", "#10b981"];
-
   const importance = importanceMap[event.importance];
 
   return (
