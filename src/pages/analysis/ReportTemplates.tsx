@@ -252,10 +252,7 @@ export default function ReportTemplates() {
               <TableRow>
                 <TableHead>模板名称</TableHead>
                 <TableHead>类型</TableHead>
-                <TableHead>分类</TableHead>
                 <TableHead>内容模块</TableHead>
-                <TableHead>图表数</TableHead>
-                <TableHead>格式</TableHead>
                 <TableHead className="text-right">使用次数</TableHead>
                 <TableHead>状态</TableHead>
                 <TableHead className="text-right">操作</TableHead>
