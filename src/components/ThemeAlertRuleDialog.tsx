@@ -286,7 +286,7 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
                   </div>
                   <p className="text-[11px] text-muted-foreground mt-1 mb-2">基于该主题下任一合并节点触发</p>
                   {mergeNodes.length === 0 ? (
-                    <p className="text-[11px] text-amber-600">该主题暂未配置合并节点</p>
+                    <p className="text-[11px] text-muted-foreground">该主题暂未配置合并节点</p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5">
                       {mergeNodes.map((n, i) => {
