@@ -12,6 +12,7 @@ import {
   FileText, Eye, Download, Trash2, Search, Calendar,
   AlertTriangle, Settings2, ChevronRight,
   Repeat, Zap, ArrowLeft, Pencil, Check, Plus, LayoutTemplate, Sparkles, X, Clock,
+  Bell, Users, User as UserIcon,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from "react-router-dom";
