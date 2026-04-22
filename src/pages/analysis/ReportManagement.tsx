@@ -126,6 +126,26 @@ const frequencyLabel: Record<RecurringFrequency, string> = {
 const typeOptions = ["全部", "日报", "周报", "月报", "季度报告", "年报", "专项报告"];
 const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
 
+// Wizard data
+const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题"];
+type SavedQuery = { id: string; name: string; theme: string; conditions: string };
+const savedQueries: SavedQuery[] = [
+  { id: "Q01", name: "国内机票业务-负面舆情", theme: "舆情主题", conditions: "业务=机票 AND 范围=国内 AND 情感=负面" },
+  { id: "Q02", name: "国内机票业务-全量", theme: "舆情主题", conditions: "业务=机票 AND 范围=国内" },
+  { id: "Q03", name: "国际机票业务-负面舆情", theme: "舆情主题", conditions: "业务=机票 AND 范围=国际 AND 情感=负面" },
+  { id: "Q04", name: "酒店业务-投诉聚焦", theme: "舆情主题", conditions: "业务=酒店 AND 类型=投诉" },
+  { id: "Q05", name: "OTA竞品对比", theme: "行业咨询主题", conditions: "类型=OTA AND 来源IN(携程,飞猪,去哪儿,同程,美团)" },
+  { id: "Q06", name: "新品上线热度追踪", theme: "热点洞察主题", conditions: "标签=新品 AND 时间=近7天" },
+  { id: "Q07", name: "App功能体验反馈", theme: "产品体验主题", conditions: "渠道=App AND 类型=体验反馈" },
+];
+type ReportTplChoice = { id: string; name: string; desc: string; tags: string[] };
+const reportTemplates: ReportTplChoice[] = [
+  { id: "TPL01", name: "舆情通用模板", desc: "总览·核心事件·风险预警·应对建议", tags: ["通用", "舆情"] },
+  { id: "TPL02", name: "竞品对比模板", desc: "声量·情感·渠道·话题对比", tags: ["竞品"] },
+  { id: "TPL03", name: "热点追踪模板", desc: "事件脉络·传播路径·关键观点", tags: ["热点"] },
+  { id: "TPL04", name: "体验洞察模板", desc: "功能·体验维度·NPS·用户声音", tags: ["体验"] },
+];
+
 export default function ReportManagement() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
