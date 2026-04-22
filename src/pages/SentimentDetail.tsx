@@ -1039,7 +1039,7 @@ export default function SentimentDetail() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/sentiment/event-alert")}><Bell className="w-3 h-3" />预警设置</button>
+          <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1" onClick={() => navigate("/sentiment/event-alert?themeId=sentiment")}><Bell className="w-3 h-3" />预警设置</button>
           <button
             className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1"
             onClick={() => {
