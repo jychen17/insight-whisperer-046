@@ -390,11 +390,20 @@ export default function ReportManagement() {
   });
   const step2Valid = wizTheme && wizConditions.length > 0 && conditionsValid(wizConditions) && hasTimeCondition && (wizSchedule === "once" || !!wizTimeField);
   const step1Valid = wizSchedule === "once" || !!wizFrequency;
+  const step4Valid = !wizPushEnabled || (wizPushTargets.length > 0 && (effectivePushTiming.mode === "realtime" || /^\d{2}:\d{2}$/.test(wizPushTime)));
 
   const updateCondition = (id: string, patch: Partial<RuleCondition>) => {
     setWizConditions(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   };
   const removeCondition = (id: string) => setWizConditions(prev => prev.filter(c => c.id !== id));
+
+  const togglePushTarget = (type: "person" | "group", name: string) => {
+    setWizPushTargets(prev => {
+      const exists = prev.find(t => t.type === type && t.name === name);
+      if (exists) return prev.filter(t => !(t.type === type && t.name === name));
+      return [...prev, { id: Math.random().toString(36).slice(2, 9), type, name }];
+    });
+  };
 
   return (
     <div className="space-y-6">
