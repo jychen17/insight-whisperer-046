@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import ReportHtmlPreview from "@/components/ReportHtmlPreview";
 
 type ScheduleType = "once" | "recurring";
 type RecurringFrequency = "daily" | "weekly" | "monthly";
