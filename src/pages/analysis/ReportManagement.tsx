@@ -375,7 +375,10 @@ export default function ReportManagement() {
     setWizTemplateId("");
     setWizName("");
     setWizPushEnabled(true);
-    setWizPushTargets([]);
+    setWizPushChannels({ person: false, group: true });
+    setWizPushPersons([]);
+    setWizPersonSearch("");
+    setWizPushWebhooks([""]);
     setWizPushTimingMode("scheduled");
     setWizPushTime("09:00");
   };
