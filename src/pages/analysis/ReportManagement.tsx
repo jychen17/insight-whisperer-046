@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +12,10 @@ import {
   FileText, Eye, Download, Trash2, Search, Calendar,
   AlertTriangle, Settings2, ChevronRight,
   Repeat, Zap, ArrowLeft, Pencil, Check, Plus, LayoutTemplate, Sparkles, X, Clock,
-  Bell, Users, User as UserIcon,
+  Bell, Users, User as UserIcon, Layers, Link2,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 
 type ScheduleType = "once" | "recurring";
@@ -294,8 +294,17 @@ const newCondition = (field = "business"): RuleCondition => {
   return { id: Math.random().toString(36).slice(2, 9), field, operator: op, values: [], value: "", numValue: undefined };
 };
 
+interface ReportPrefill {
+  theme?: string;
+  scope: "articles" | "events";
+  ids: string[];
+  titles?: string[];
+  source?: string; // 来源页（用于提示）
+}
+
 export default function ReportManagement() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [search, setSearch] = useState("");
   const [themeFilter, setThemeFilter] = useState("全部");
   const [statusFilter, setStatusFilter] = useState("全部");
@@ -316,6 +325,7 @@ export default function ReportManagement() {
   const [wizConditions, setWizConditions] = useState<RuleCondition[]>([newCondition("business")]);
   const [wizTemplateId, setWizTemplateId] = useState<string>("");
   const [wizName, setWizName] = useState<string>("");
+  const [wizPrefill, setWizPrefill] = useState<ReportPrefill | null>(null);
   // Push config
   const [wizPushEnabled, setWizPushEnabled] = useState<boolean>(true);
   const [wizPushChannels, setWizPushChannels] = useState<{ person: boolean; group: boolean }>({ person: false, group: true });
@@ -374,6 +384,7 @@ export default function ReportManagement() {
     setWizConditions([newCondition("business")]);
     setWizTemplateId("");
     setWizName("");
+    setWizPrefill(null);
     setWizPushEnabled(true);
     setWizPushChannels({ person: false, group: true });
     setWizPushPersons([]);
@@ -382,6 +393,22 @@ export default function ReportManagement() {
     setWizPushTimingMode("scheduled");
     setWizPushTime("09:00");
   };
+
+  // 从外部页面（如舆情列表/事件详情）携带 prefill 跳转过来时，自动打开向导并预填
+  useEffect(() => {
+    const state = location.state as { reportPrefill?: ReportPrefill } | null;
+    const pf = state?.reportPrefill;
+    if (!pf || pf.ids.length === 0) return;
+    resetWizard();
+    setWizPrefill(pf);
+    if (pf.theme) setWizTheme(pf.theme);
+    setWizSchedule("once"); // 选定数据范围 → 默认一次性
+    setWizStep(2);
+    setConfigOpen(true);
+    // 清掉 state，避免再次切回时重复触发
+    navigate(location.pathname, { replace: true, state: {} });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const autoName = () => {
     if (!wizTemplate || !wizTheme) return "";
@@ -419,7 +446,7 @@ export default function ReportManagement() {
     if (mode === "chips") return c.values.length > 0;
     return !!c.value;
   });
-  const step2Valid = wizTheme && wizConditions.length > 0 && conditionsValid(wizConditions) && hasTimeCondition && (wizSchedule === "once" || !!wizTimeField);
+  const step2Valid = wizTheme && (wizPrefill ? true : (wizConditions.length > 0 && conditionsValid(wizConditions) && hasTimeCondition && (wizSchedule === "once" || !!wizTimeField)));
   const step1Valid = wizSchedule === "once" || !!wizFrequency;
   const step4Valid = !wizPushEnabled || (wizPushTargets.length > 0 && (effectivePushTiming.mode === "realtime" || /^\d{2}:\d{2}$/.test(wizPushTime)));
 
@@ -453,7 +480,7 @@ export default function ReportManagement() {
           <h1 className="text-2xl font-bold text-foreground">报告管理</h1>
           <p className="text-sm text-muted-foreground mt-1">查看、搜索、下载和管理所有已生成的分析报告</p>
         </div>
-        <Button className="gap-2" onClick={() => setConfigOpen(true)}>
+        <Button className="gap-2" onClick={() => { setWizPrefill(null); setConfigOpen(true); }}>
           <Settings2 className="w-4 h-4" /> 报告配置
         </Button>
       </div>
@@ -905,6 +932,48 @@ export default function ReportManagement() {
             {/* Step 2 */}
             {wizStep === 2 && (
               <div className="space-y-4">
+                {wizPrefill && (
+                  <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        {wizPrefill.scope === "events"
+                          ? <Layers className="w-4 h-4 text-primary" />
+                          : <FileText className="w-4 h-4 text-primary" />}
+                        <span className="font-medium text-foreground">
+                          已锁定数据范围：{wizPrefill.scope === "events" ? "事件" : "文章"} · {wizPrefill.ids.length} 条
+                        </span>
+                        {wizPrefill.source && (
+                          <Badge variant="secondary" className="text-[10px] gap-1">
+                            <Link2 className="w-3 h-3" /> 来源：{wizPrefill.source}
+                          </Badge>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setWizPrefill(null)}
+                        className="text-muted-foreground hover:text-destructive shrink-0"
+                        title="清除锁定范围"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {wizPrefill.titles && wizPrefill.titles.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {wizPrefill.titles.slice(0, 6).map((t, i) => (
+                          <Badge key={i} variant="outline" className="text-[10px] max-w-[260px]">
+                            <span className="truncate">{t}</span>
+                          </Badge>
+                        ))}
+                        {wizPrefill.titles.length > 6 && (
+                          <Badge variant="outline" className="text-[10px]">+{wizPrefill.titles.length - 6}</Badge>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-[11px] text-muted-foreground">
+                      报告将基于以上{wizPrefill.scope === "events" ? "事件" : "文章"}的数据生成；下方查询条件作为补充筛选（可选），仍需包含时间字段。
+                    </p>
+                  </div>
+                )}
                 <div>
                   <Label className="text-sm font-medium mb-2 block">所属主题</Label>
                   <Select value={wizTheme} onValueChange={setWizTheme}>
