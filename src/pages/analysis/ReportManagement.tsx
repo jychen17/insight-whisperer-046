@@ -139,12 +139,17 @@ export default function ReportManagement() {
   const [shareMode, setShareMode] = useState<"internal" | "public">("internal");
   const [drillReport, setDrillReport] = useState<Report | null>(null);
 
-  // Config sheet
+  // Config wizard
   const [configOpen, setConfigOpen] = useState(false);
-  const [configScheduleFilter, setConfigScheduleFilter] = useState<"all" | ScheduleType>("all");
-  const [configFreqFilter, setConfigFreqFilter] = useState<"all" | RecurringFrequency>("all");
-  const [configThemeFilter, setConfigThemeFilter] = useState("全部");
-  const [configSearch, setConfigSearch] = useState("");
+  const [wizStep, setWizStep] = useState(1);
+  const [wizSchedule, setWizSchedule] = useState<ScheduleType>("recurring");
+  const [wizFrequency, setWizFrequency] = useState<RecurringFrequency>("daily");
+  const [wizTheme, setWizTheme] = useState<string>("");
+  const [wizQueryId, setWizQueryId] = useState<string>("");
+  const [wizTemplateId, setWizTemplateId] = useState<string>("");
+  const [wizName, setWizName] = useState<string>("");
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewTitle, setPreviewTitle] = useState("");
 
   const filtered = useMemo(() => {
     return allReports.filter((r) => {
