@@ -87,7 +87,7 @@ interface Report {
 }
 
 // ------- Field catalog for condition builder -------
-type FieldDef = { key: string; label: string; type: "text" | "enum" | "time"; options?: string[] };
+type FieldDef = { key: string; label: string; type: "text" | "enum" | "time" | "lockset"; options?: string[] };
 const FIELD_CATALOG: FieldDef[] = [
   { key: "business", label: "业务类型", type: "enum", options: ["机票", "酒店", "金服", "度假", "火车票", "用车"] },
   { key: "scope", label: "业务范围", type: "enum", options: ["国内", "国际", "港澳台"] },
@@ -97,10 +97,14 @@ const FIELD_CATALOG: FieldDef[] = [
   { key: "platform", label: "平台", type: "enum", options: ["微博", "小红书", "抖音", "新闻", "App Store"] },
   { key: "publishTime", label: "发布时间", type: "time" },
   { key: "collectTime", label: "收录时间", type: "time" },
+  // 数据集锁定（来自外部预填）
+  { key: "eventSet", label: "事件集合", type: "lockset" },
+  { key: "articleSet", label: "文章集合", type: "lockset" },
 ];
 const TIME_FIELD_KEYS = ["publishTime", "collectTime"];
+const LOCKSET_FIELD_KEYS = ["eventSet", "articleSet"];
 
-const OPERATORS_BY_TYPE: Record<FieldDef["type"], { value: string; label: string; mode: "single" | "chips" | "days" }[]> = {
+const OPERATORS_BY_TYPE: Record<FieldDef["type"], { value: string; label: string; mode: "single" | "chips" | "days" | "lockset" }[]> = {
   enum: [
     { value: "eq", label: "等于", mode: "single" },
     { value: "neq", label: "不等于", mode: "single" },
@@ -114,6 +118,9 @@ const OPERATORS_BY_TYPE: Record<FieldDef["type"], { value: string; label: string
   time: [
     { value: "lastNDays", label: "过去几天内", mode: "days" },
     { value: "lastNHours", label: "过去几小时内", mode: "days" },
+  ],
+  lockset: [
+    { value: "in_set", label: "属于已选集合", mode: "lockset" },
   ],
 };
 
@@ -136,6 +143,7 @@ const formatCondition = (c: RuleCondition): string => {
   if (!f) return "";
   const op = operatorLabel(c.field, c.operator);
   const mode = operatorMode(c.field, c.operator);
+  if (mode === "lockset") return `${f.label} ${op} {${c.values.length} 项}`;
   if (mode === "days") return `${f.label} ${op} ${c.numValue ?? 0}`;
   if (mode === "chips") return `${f.label} ${op} [${c.values.join(", ")}]`;
   return `${f.label} ${op} ${c.value ?? ""}`;
@@ -403,6 +411,25 @@ export default function ReportManagement() {
     setWizPrefill(pf);
     if (pf.theme) setWizTheme(pf.theme);
     setWizSchedule("once"); // 选定数据范围 → 默认一次性
+    // 把锁定的数据集回填为一条「集合」条件 + 一条默认时间条件
+    const lockField = pf.scope === "events" ? "eventSet" : "articleSet";
+    const lockedCondition: RuleCondition = {
+      id: "lockset",
+      field: lockField,
+      operator: "in_set",
+      values: (pf.titles && pf.titles.length === pf.ids.length)
+        ? pf.titles.map((t, i) => `${t}（#${pf.ids[i]}）`)
+        : pf.ids.map(id => `#${id}`),
+    };
+    const timeCondition: RuleCondition = {
+      id: "lockset-time",
+      field: "publishTime",
+      operator: "lastNDays",
+      values: [],
+      numValue: 7,
+    };
+    setWizLogic("all");
+    setWizConditions([lockedCondition, timeCondition]);
     setWizStep(2);
     setConfigOpen(true);
     // 清掉 state，避免再次切回时重复触发
@@ -442,6 +469,7 @@ export default function ReportManagement() {
   // ------- Wizard validators -------
   const conditionsValid = (conds: RuleCondition[]) => conds.every(c => {
     const mode = operatorMode(c.field, c.operator);
+    if (mode === "lockset") return c.values.length > 0;
     if (mode === "days") return typeof c.numValue === "number" && c.numValue > 0;
     if (mode === "chips") return c.values.length > 0;
     return !!c.value;
@@ -453,7 +481,11 @@ export default function ReportManagement() {
   const updateCondition = (id: string, patch: Partial<RuleCondition>) => {
     setWizConditions(prev => prev.map(c => c.id === id ? { ...c, ...patch } : c));
   };
-  const removeCondition = (id: string) => setWizConditions(prev => prev.filter(c => c.id !== id));
+  const removeCondition = (id: string) => setWizConditions(prev => {
+    const target = prev.find(c => c.id === id);
+    if (target && LOCKSET_FIELD_KEYS.includes(target.field)) setWizPrefill(null);
+    return prev.filter(c => c.id !== id);
+  });
 
   const togglePerson = (emp: Employee) => {
     setWizPushPersons(prev => prev.find(p => p.empId === emp.empId)
@@ -935,13 +967,20 @@ export default function ReportManagement() {
                 {wizPrefill && (
                   <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 text-sm">
+                      <div className="flex items-center gap-2 text-sm flex-wrap">
                         {wizPrefill.scope === "events"
                           ? <Layers className="w-4 h-4 text-primary" />
                           : <FileText className="w-4 h-4 text-primary" />}
-                        <span className="font-medium text-foreground">
-                          已锁定数据范围：{wizPrefill.scope === "events" ? "事件" : "文章"} · {wizPrefill.ids.length} 条
-                        </span>
+                        <span className="font-medium text-foreground">已锁定数据范围</span>
+                        {wizTheme && (
+                          <Badge variant="secondary" className="text-[10px] gap-1">
+                            <Sparkles className="w-3 h-3" /> 主题：{wizTheme}
+                          </Badge>
+                        )}
+                        <Badge variant="secondary" className="text-[10px] gap-1">
+                          {wizPrefill.scope === "events" ? <Layers className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+                          {wizPrefill.scope === "events" ? "事件" : "文章"} · {wizPrefill.ids.length} 条
+                        </Badge>
                         {wizPrefill.source && (
                           <Badge variant="secondary" className="text-[10px] gap-1">
                             <Link2 className="w-3 h-3" /> 来源：{wizPrefill.source}
@@ -950,27 +989,18 @@ export default function ReportManagement() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => setWizPrefill(null)}
+                        onClick={() => {
+                          setWizPrefill(null);
+                          setWizConditions(prev => prev.filter(c => !LOCKSET_FIELD_KEYS.includes(c.field)));
+                        }}
                         className="text-muted-foreground hover:text-destructive shrink-0"
                         title="清除锁定范围"
                       >
                         <X className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    {wizPrefill.titles && wizPrefill.titles.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {wizPrefill.titles.slice(0, 6).map((t, i) => (
-                          <Badge key={i} variant="outline" className="text-[10px] max-w-[260px]">
-                            <span className="truncate">{t}</span>
-                          </Badge>
-                        ))}
-                        {wizPrefill.titles.length > 6 && (
-                          <Badge variant="outline" className="text-[10px]">+{wizPrefill.titles.length - 6}</Badge>
-                        )}
-                      </div>
-                    )}
                     <p className="text-[11px] text-muted-foreground">
-                      报告将基于以上{wizPrefill.scope === "events" ? "事件" : "文章"}的数据生成；下方查询条件作为补充筛选（可选），仍需包含时间字段。
+                      已自动回填到下方"查询条件"中（{wizPrefill.scope === "events" ? "事件集合" : "文章集合"} · 属于已选集合）。可在条件区追加其他筛选与时间范围；移除该锁定条件等同于清除范围。
                     </p>
                   </div>
                 )}
@@ -1369,18 +1399,52 @@ function ConditionRow({ condition, onChange, onRemove }: {
   if (!f) return null;
   const operators = OPERATORS_BY_TYPE[f.type];
   const mode = operatorMode(condition.field, condition.operator);
+  const isLockset = mode === "lockset";
 
   const handleFieldChange = (newField: string) => {
     const newOp = defaultOperator(newField);
     onChange({ field: newField, operator: newOp, values: [], value: "", numValue: undefined });
   };
 
+  // 锁定数据集 — 只读展示，不允许更改字段/算子，由外部预填驱动
+  if (isLockset) {
+    return (
+      <div className="flex items-start gap-2 rounded-md border border-primary/30 bg-primary/5 p-2">
+        <Badge variant="secondary" className="h-7 text-[11px] gap-1 shrink-0">
+          {f.key === "eventSet" ? <Layers className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+          {f.label}
+        </Badge>
+        <Badge variant="outline" className="h-7 text-[11px] shrink-0">{operatorLabel(condition.field, condition.operator)}</Badge>
+        <div className="flex-1 min-w-0 flex flex-wrap gap-1">
+          {condition.values.length === 0 && (
+            <span className="text-xs text-muted-foreground">（未选定项）</span>
+          )}
+          {condition.values.slice(0, 8).map((v, i) => (
+            <Badge key={i} variant="outline" className="text-[10px] max-w-[260px] bg-background">
+              <span className="truncate">{v}</span>
+            </Badge>
+          ))}
+          {condition.values.length > 8 && (
+            <Badge variant="outline" className="text-[10px] bg-background">+{condition.values.length - 8}</Badge>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-destructive shrink-0" onClick={onRemove} title="移除锁定数据集">
+          <X className="w-3.5 h-3.5" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       {/* Field */}
       <Select value={condition.field} onValueChange={handleFieldChange}>
         <SelectTrigger className="w-32 h-9 text-xs"><SelectValue /></SelectTrigger>
-        <SelectContent>{FIELD_CATALOG.map(opt => <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>)}</SelectContent>
+        <SelectContent>
+          {FIELD_CATALOG.filter(o => !LOCKSET_FIELD_KEYS.includes(o.key)).map(opt => (
+            <SelectItem key={opt.key} value={opt.key}>{opt.label}</SelectItem>
+          ))}
+        </SelectContent>
       </Select>
       {/* Operator */}
       <Select value={condition.operator} onValueChange={(v) => onChange({ operator: v, values: [], value: "", numValue: undefined })}>
