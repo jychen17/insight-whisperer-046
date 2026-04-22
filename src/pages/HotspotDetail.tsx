@@ -18,7 +18,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { hotspotEvents, type HotspotEvent, type Category, type SourceKind } from "@/lib/hotspotData";
+import { hotspotEvents, buildClues, type HotspotEvent, type Category, type SourceKind, type ClueItem } from "@/lib/hotspotData";
 
 const CATEGORY_META: Record<Category, { icon: typeof Music2; cls: string }> = {
   "演唱会": { icon: Music2, cls: "bg-purple-100 text-purple-700 border-purple-200" },
