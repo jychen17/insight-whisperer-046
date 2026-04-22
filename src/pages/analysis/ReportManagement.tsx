@@ -920,8 +920,141 @@ export default function ReportManagement() {
               </div>
             )}
 
-            {/* Step 4 */}
+            {/* Step 4 — Push */}
             {wizStep === 4 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border border-border p-3 bg-muted/20">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium">报告推送</p>
+                      <p className="text-[11px] text-muted-foreground">报告生成后自动通过企业微信推送</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={wizPushEnabled}
+                    onClick={() => setWizPushEnabled(v => !v)}
+                    className={`relative w-10 h-5 rounded-full transition-colors ${wizPushEnabled ? "bg-primary" : "bg-muted-foreground/30"}`}
+                  >
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-background shadow transition-all ${wizPushEnabled ? "left-[22px]" : "left-0.5"}`} />
+                  </button>
+                </div>
+
+                {wizPushEnabled && (
+                  <>
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block">推送渠道</Label>
+                      <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 flex items-center gap-2">
+                        <div className="w-7 h-7 rounded bg-[#07C160] flex items-center justify-center text-white text-[10px] font-bold shrink-0">微</div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">企业微信</p>
+                          <p className="text-[11px] text-muted-foreground">当前仅支持企业微信推送</p>
+                        </div>
+                        <Check className="w-4 h-4 text-primary" />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5" /> 推送对象
+                        {wizPushTargets.length > 0 && (
+                          <span className="text-[11px] text-muted-foreground font-normal">已选 {wizPushTargets.length}</span>
+                        )}
+                      </Label>
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1"><Users className="w-3 h-3" /> 群组</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {groupOptions.map(g => {
+                              const active = !!wizPushTargets.find(t => t.type === "group" && t.name === g);
+                              return (
+                                <button
+                                  key={g}
+                                  type="button"
+                                  onClick={() => togglePushTarget("group", g)}
+                                  className={`px-2.5 py-1 rounded-md border text-xs transition ${active ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
+                                >
+                                  {active && <Check className="w-3 h-3 inline mr-1" />}{g}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1"><UserIcon className="w-3 h-3" /> 个人</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {personOptions.map(p => {
+                              const active = !!wizPushTargets.find(t => t.type === "person" && t.name === p);
+                              return (
+                                <button
+                                  key={p}
+                                  type="button"
+                                  onClick={() => togglePushTarget("person", p)}
+                                  className={`px-2.5 py-1 rounded-md border text-xs transition ${active ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
+                                >
+                                  {active && <Check className="w-3 h-3 inline mr-1" />}{p}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-sm font-medium mb-2 block flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5" /> 推送时机
+                      </Label>
+                      {wizSchedule === "once" ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setWizPushTimingMode("realtime")}
+                            className={`text-left rounded-lg border p-3 transition ${wizPushTimingMode === "realtime" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                          >
+                            <p className="font-medium text-sm flex items-center gap-1.5"><Zap className="w-3.5 h-3.5 text-primary" /> 实时推送</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">报告生成完成后立即推送</p>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setWizPushTimingMode("scheduled")}
+                            className={`text-left rounded-lg border p-3 transition ${wizPushTimingMode === "scheduled" ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"}`}
+                          >
+                            <p className="font-medium text-sm flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-primary" /> 定时推送</p>
+                            <p className="text-[11px] text-muted-foreground mt-1">指定时间点推送</p>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-border p-3 bg-muted/20">
+                          <p className="text-[11px] text-muted-foreground mb-2">
+                            {wizFrequency === "daily" ? "每日推送时间" : wizFrequency === "weekly" ? `每周${weekDayLabels[wizWeeklyStartDay - 1]}推送时间` : "每月首日推送时间"}
+                          </p>
+                          <Input
+                            type="time"
+                            value={wizPushTime}
+                            onChange={(e) => setWizPushTime(e.target.value)}
+                            className="h-9 w-32 text-sm"
+                          />
+                        </div>
+                      )}
+                      {wizSchedule === "once" && wizPushTimingMode === "scheduled" && (
+                        <Input
+                          type="time"
+                          value={wizPushTime}
+                          onChange={(e) => setWizPushTime(e.target.value)}
+                          className="h-9 w-32 text-sm mt-2"
+                        />
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Step 5 — Confirm */}
+            {wizStep === 5 && (
               <div className="space-y-4">
                 <div>
                   <Label className="text-sm font-medium mb-2 block">报告名称</Label>
@@ -930,20 +1063,31 @@ export default function ReportManagement() {
                 <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
                   <ConfirmRow label="报告类型" value={wizFreqLabel} />
                   {wizSchedule === "recurring" && wizFrequency === "weekly" && (
-                    <ConfirmRow label="周报起始" value={weekDayLabels[wizWeeklyStartDay - 1]} />
+                    <>
+                      <ConfirmRow label="周报起始" value={weekDayLabels[wizWeeklyStartDay - 1]} />
+                      <ConfirmRow label="统计周期" value={weeklyRangeHint(wizWeeklyStartDay).replace("每期统计：", "")} />
+                    </>
                   )}
                   {wizSchedule === "recurring" && (
                     <ConfirmRow label="时间字段" value={fieldDef(wizTimeField)?.label ?? "-"} />
                   )}
                   <ConfirmRow label="所属主题" value={wizTheme} />
-                  <ConfirmRow label="规则关系" value={wizLogic === "all" ? "满足所有条件" : wizLogic === "any" ? "满足任一条件" : "不配置"} />
+                  <ConfirmRow label="规则关系" value={wizLogic === "all" ? "满足所有条件" : "满足任一条件"} />
                   <ConfirmRow label="查询表达式" value={formatExpression(wizLogic, wizConditions)} mono />
                   <ConfirmRow label="报告模板" value={wizTemplate?.name ?? "-"} />
+                  <ConfirmRow
+                    label="推送配置"
+                    value={
+                      wizPushEnabled
+                        ? `企业微信 · ${wizPushTargets.length} 个对象 · ${pushTimingLabel(effectivePushTiming)}`
+                        : "未开启"
+                    }
+                  />
                   <ConfirmRow label="导出格式" value="HTML（当前仅支持）" />
                 </div>
                 <div className="flex items-start gap-2 p-3 rounded-lg bg-info/5 border border-info/20 text-xs text-foreground">
                   <Sparkles className="w-4 h-4 text-info shrink-0 mt-0.5" />
-                  <p>确认后将立即生成首期报告，{wizSchedule === "recurring" ? `并按${frequencyLabel[wizFrequency]}自动生成后续期次` : "本次为一次性生成"}。</p>
+                  <p>确认后将立即生成首期报告，{wizSchedule === "recurring" ? `并按${frequencyLabel[wizFrequency]}自动生成后续期次` : "本次为一次性生成"}。{wizPushEnabled && wizPushTargets.length > 0 ? `生成后将通过企业微信推送给 ${wizPushTargets.length} 个对象。` : ""}</p>
                 </div>
               </div>
             )}
@@ -953,15 +1097,16 @@ export default function ReportManagement() {
               <Button variant="outline" size="sm" disabled={wizStep === 1} onClick={() => setWizStep(s => Math.max(1, s - 1))}>上一步</Button>
               <div className="flex gap-2">
                 <Button variant="ghost" size="sm" onClick={() => { setConfigOpen(false); resetWizard(); }}>取消</Button>
-                {wizStep < 4 ? (
+                {wizStep < 5 ? (
                   <Button
                     size="sm"
                     disabled={
                       (wizStep === 1 && !step1Valid) ||
                       (wizStep === 2 && !step2Valid) ||
-                      (wizStep === 3 && !wizTemplateId)
+                      (wizStep === 3 && !wizTemplateId) ||
+                      (wizStep === 4 && !step4Valid)
                     }
-                    onClick={() => setWizStep(s => Math.min(4, s + 1))}
+                    onClick={() => setWizStep(s => Math.min(5, s + 1))}
                   >下一步</Button>
                 ) : (
                   <Button
