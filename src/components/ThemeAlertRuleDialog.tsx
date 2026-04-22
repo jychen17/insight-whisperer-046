@@ -388,17 +388,31 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
             {/* Push timing (推送事件) */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-2 block">推送事件 / 推送时机</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(["realtime", "scheduled"] as const).map((opt) => (
+              <div className="grid grid-cols-3 gap-2">
+                {(["realtime", "threshold", "scheduled"] as const).map((opt) => (
                   <button key={opt} onClick={() => setDraftField("pushTiming", opt)} className={`p-2.5 rounded-lg border text-left transition ${draft.pushTiming === opt ? "border-primary bg-primary/5" : "border-border hover:border-muted-foreground/30"}`}>
                     <div className="flex items-center gap-1.5">
                       {timingIcons[opt]}
                       <span className="text-xs font-medium text-foreground">{timingLabels[opt]}</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{opt === "realtime" ? "满足条件立即推送" : "按时间段汇总后推送"}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{timingDesc[opt]}</p>
                   </button>
                 ))}
               </div>
+              {draft.pushTiming === "threshold" && (
+                <div className="flex items-center gap-2 mt-3 p-3 rounded-md bg-muted/40 border border-border">
+                  <Hash className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs text-muted-foreground">该节点下文章数达到</span>
+                  <input
+                    type="number"
+                    min={1}
+                    className="w-20 px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={draft.articleThreshold ?? 10}
+                    onChange={(e) => setDraftField("articleThreshold", Number(e.target.value) || 1)}
+                  />
+                  <span className="text-xs text-muted-foreground">篇时推送</span>
+                </div>
+              )}
               {draft.pushTiming === "scheduled" && (
                 <div className="space-y-2 mt-3">
                   <div className="flex items-center gap-2">
@@ -417,11 +431,21 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
                   </div>
                 </div>
               )}
+              {draft.triggerDimension === "node" && (
+                <label className="flex items-start gap-2 mt-3 cursor-pointer p-2 rounded-md bg-amber-500/5 border border-amber-500/20">
+                  <input
+                    type="checkbox"
+                    checked={draft.pushOnce ?? true}
+                    onChange={(e) => setDraftField("pushOnce", e.target.checked)}
+                    className="accent-primary mt-0.5"
+                  />
+                  <div>
+                    <span className="text-xs font-medium text-foreground">同一事件只推送一次</span>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">事件首次命中后推送通知；后续该事件再有新文章进入，将不再重复推送</p>
+                  </div>
+                </label>
+              )}
             </div>
-
-            <Separator />
-
-            {/* Notification */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-2 block">通知方式（企业微信）</label>
               {draft.channels.map((ch) => (
