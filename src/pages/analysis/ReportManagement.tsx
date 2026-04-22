@@ -318,9 +318,25 @@ export default function ReportManagement() {
   const [wizName, setWizName] = useState<string>("");
   // Push config
   const [wizPushEnabled, setWizPushEnabled] = useState<boolean>(true);
-  const [wizPushTargets, setWizPushTargets] = useState<PushTarget[]>([]);
+  const [wizPushChannels, setWizPushChannels] = useState<{ person: boolean; group: boolean }>({ person: false, group: true });
+  const [wizPushPersons, setWizPushPersons] = useState<Employee[]>([]);
+  const [wizPersonSearch, setWizPersonSearch] = useState<string>("");
+  const [wizPersonOpen, setWizPersonOpen] = useState<boolean>(false);
+  const [wizPushWebhooks, setWizPushWebhooks] = useState<string[]>([""]);
   const [wizPushTimingMode, setWizPushTimingMode] = useState<"realtime" | "scheduled">("scheduled");
   const [wizPushTime, setWizPushTime] = useState<string>("09:00");
+
+  // 派生：组装 PushTarget[]
+  const wizPushTargets: PushTarget[] = useMemo(() => {
+    const arr: PushTarget[] = [];
+    if (wizPushChannels.person) {
+      wizPushPersons.forEach(p => arr.push({ id: `p-${p.empId}`, type: "person", name: p.name, empId: p.empId }));
+    }
+    if (wizPushChannels.group) {
+      wizPushWebhooks.filter(w => w.trim()).forEach((w, i) => arr.push({ id: `g-${i}`, type: "group", name: `群机器人 ${i + 1}`, webhook: w.trim() }));
+    }
+    return arr;
+  }, [wizPushChannels, wizPushPersons, wizPushWebhooks]);
 
   const filtered = useMemo(() => {
     return allReports.filter((r) => {
