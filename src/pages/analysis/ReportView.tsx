@@ -41,7 +41,7 @@ export default function ReportView() {
         </div>
       </div>
       <div className="rounded-lg border border-border bg-background">
-        <ReportHtmlPreview title={title} />
+        <ReportHtmlPreview title={title} variant={variant} />
       </div>
     </div>
   );
