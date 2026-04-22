@@ -225,42 +225,57 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
         </DialogHeader>
 
         {showThemePicker ? (
-          <div className="py-6 space-y-4">
+          <div className="py-6 space-y-3">
             <p className="text-sm text-muted-foreground">请选择该预警规则要绑定的洞察主题：</p>
-            <div className="grid grid-cols-2 gap-3">
-              {defaultThemes.map((t) => (
-                <button
-                  key={t.id}
-                  onClick={() => setPickedThemeId(t.id)}
-                  className="p-3 rounded-lg border border-border text-left hover:border-primary hover:bg-primary/5 transition"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">{t.icon}</span>
-                    <span className="text-sm font-medium text-foreground">{t.name}</span>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">{t.description}</p>
-                  <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
-                    <Layers className="w-3 h-3" /> {(t.mergeNodes || []).length} 个节点
-                  </div>
-                </button>
-              ))}
-            </div>
+            <Select value={pickedThemeId} onValueChange={setPickedThemeId}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="请选择主题..." />
+              </SelectTrigger>
+              <SelectContent>
+                {defaultThemes.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    <span className="flex items-center gap-2">
+                      <span>{t.icon}</span>
+                      <span>{t.name}</span>
+                      <span className="text-[10px] text-muted-foreground">· {(t.mergeNodes || []).length} 节点</span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ) : draft ? (
           <div className="space-y-5 py-2">
-            {/* Theme readonly hint */}
-            {!themeId && (
-              <div className="flex items-center gap-2 p-2 rounded-md bg-primary/5 border border-primary/20 text-xs">
-                <FileText className="w-3.5 h-3.5 text-primary" />
-                <span className="text-foreground">所属主题：</span>
-                <span className="font-medium text-primary">{draft.themeName}</span>
-                {!isEdit && (
-                  <Button variant="ghost" size="sm" className="ml-auto h-6 text-[11px]" onClick={() => { setPickedThemeId(""); setDraft(null); }}>
-                    切换主题
-                  </Button>
-                )}
-              </div>
-            )}
+            {/* Theme picker (always shown so user can switch) */}
+            <div className="flex items-center gap-2 p-2 rounded-md bg-primary/5 border border-primary/20 text-xs">
+              <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="text-foreground shrink-0">所属主题：</span>
+              <Select
+                value={draft.themeId}
+                onValueChange={(v) => {
+                  const t = defaultThemes.find((x) => x.id === v);
+                  if (!t) return;
+                  setDraft({ ...draft, themeId: v, themeName: t.name, triggerNodeId: undefined, triggerNodeName: undefined, triggerDimension: "single", conditions: [{ field: "importance", operator: "=", value: "重大" }] });
+                  setPickedThemeId(v);
+                }}
+                disabled={isEdit}
+              >
+                <SelectTrigger className="h-7 text-xs flex-1 max-w-[280px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {defaultThemes.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      <span className="flex items-center gap-2">
+                        <span>{t.icon}</span>
+                        <span>{t.name}</span>
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isEdit && <Badge variant="outline" className="text-[10px] ml-auto">编辑模式不可切换</Badge>}
+            </div>
 
             {/* Name */}
             <div>
