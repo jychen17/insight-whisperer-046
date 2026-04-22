@@ -1,14 +1,19 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Bot, Sparkles, FileText, FolderOpen, ArrowRight,
   Clock, Calendar, BarChart3, Layout, Settings2,
-  AlertTriangle, TrendingUp,
+  AlertTriangle, TrendingUp, Wand2, CheckCircle2, Loader2, XCircle,
 } from "lucide-react";
+import { toast } from "sonner";
 
 const hotTags = [
   "#近7天全局舆情简报",
@@ -26,14 +31,78 @@ const recommendedTemplates = [
   { id: "TPL04", icon: Calendar, title: "体验洞察模板", desc: "用户反馈NPS分析与问题归因", tags: ["月报", "体验"] },
 ];
 
+type GenStage = "idle" | "collecting" | "analyzing" | "rendering" | "done" | "failed";
+
+const stageMeta: Record<Exclude<GenStage, "idle">, { label: string; progress: number }> = {
+  collecting: { label: "采集数据中…", progress: 25 },
+  analyzing: { label: "AI 分析中…", progress: 60 },
+  rendering: { label: "渲染报告中…", progress: 90 },
+  done: { label: "报告生成完成", progress: 100 },
+  failed: { label: "生成失败，请重试", progress: 100 },
+};
+
+const dateRangeOptions = [
+  { value: "1d", label: "近 1 天" },
+  { value: "3d", label: "近 3 天" },
+  { value: "7d", label: "近 7 天" },
+  { value: "14d", label: "近 14 天" },
+  { value: "30d", label: "近 30 天" },
+  { value: "custom", label: "自定义范围" },
+];
+
 export default function SmartReports() {
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
 
+  // Quick-generate flow
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quickTemplate, setQuickTemplate] = useState<typeof recommendedTemplates[number] | null>(null);
+  const [dateRange, setDateRange] = useState("7d");
+  const [genStage, setGenStage] = useState<GenStage>("idle");
+
   const handleGenerate = () => {
     if (!query.trim()) return;
-    console.log("Generate report for:", query);
+    toast.success("AI 正在分析需求并生成报告…");
   };
+
+  const openQuickGen = (tpl: typeof recommendedTemplates[number]) => {
+    setQuickTemplate(tpl);
+    setDateRange("7d");
+    setGenStage("idle");
+    setQuickOpen(true);
+  };
+
+  // Simulated generation pipeline
+  useEffect(() => {
+    if (genStage === "idle" || genStage === "done" || genStage === "failed") return;
+    const next: Record<string, GenStage> = {
+      collecting: "analyzing",
+      analyzing: "rendering",
+      rendering: "done",
+    };
+    const t = setTimeout(() => setGenStage(next[genStage]), 1100);
+    return () => clearTimeout(t);
+  }, [genStage]);
+
+  const startQuickGen = () => {
+    setGenStage("collecting");
+  };
+
+  const closeQuick = () => {
+    if (genStage === "collecting" || genStage === "analyzing" || genStage === "rendering") {
+      toast.info("已在后台继续生成，可前往报告管理查看");
+    }
+    setQuickOpen(false);
+    setGenStage("idle");
+  };
+
+  const goToReport = () => {
+    setQuickOpen(false);
+    navigate("/analysis/report-manage");
+  };
+
+  const dateRangeLabel = dateRangeOptions.find(o => o.value === dateRange)?.label ?? "";
+  const isGenerating = genStage === "collecting" || genStage === "analyzing" || genStage === "rendering";
 
   return (
     <div className="space-y-6">
@@ -88,8 +157,8 @@ export default function SmartReports() {
       <div>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-base font-semibold text-foreground">常用报告模板</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">挑选模板快速生成，或前往模板管理调整</p>
+            <h2 className="text-base font-semibold text-foreground">从热门模板一键生成</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">挑选模板 → 选择数据时间范围 → AI 自动生成</p>
           </div>
           <Button
             variant="ghost"
@@ -108,6 +177,7 @@ export default function SmartReports() {
               <Card
                 key={t.id}
                 className="cursor-pointer hover:border-primary/30 hover:shadow-sm transition-all group"
+                onClick={() => openQuickGen(t)}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
@@ -125,17 +195,16 @@ export default function SmartReports() {
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant="outline"
                       className="flex-1 gap-1 text-xs h-7"
-                      onClick={() => setQuery(`使用「${t.title}」生成报告`)}
+                      onClick={(e) => { e.stopPropagation(); openQuickGen(t); }}
                     >
-                      <Sparkles className="w-3 h-3" /> 快速使用
+                      <Wand2 className="w-3 h-3" /> 一键生成
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
                       className="gap-1 text-xs h-7 px-2"
-                      onClick={() => navigate("/analysis/report-templates")}
+                      onClick={(e) => { e.stopPropagation(); navigate("/analysis/report-templates"); }}
                       title="去模板管理调整"
                     >
                       <Settings2 className="w-3 h-3" />
@@ -208,6 +277,125 @@ export default function SmartReports() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Quick generation guided dialog */}
+      <Dialog open={quickOpen} onOpenChange={(o) => { if (!o) closeQuick(); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wand2 className="w-5 h-5 text-primary" />
+              一键生成报告
+            </DialogTitle>
+            <DialogDescription>
+              使用模板「{quickTemplate?.title}」快速生成报告
+            </DialogDescription>
+          </DialogHeader>
+
+          {genStage === "idle" && quickTemplate && (
+            <div className="space-y-4 mt-1">
+              <div className="p-3 rounded-lg bg-muted/40 border border-border">
+                <div className="flex items-center gap-2 mb-1">
+                  <quickTemplate.icon className="w-4 h-4 text-primary" />
+                  <p className="text-sm font-medium text-foreground">{quickTemplate.title}</p>
+                </div>
+                <p className="text-xs text-muted-foreground">{quickTemplate.desc}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">数据时间范围</Label>
+                <Select value={dateRange} onValueChange={setDateRange}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {dateRangeOptions.map(o => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  AI 将基于「{dateRangeLabel}」内的数据生成报告
+                </p>
+              </div>
+            </div>
+          )}
+
+          {genStage !== "idle" && quickTemplate && (
+            <div className="space-y-4 mt-1">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border">
+                {genStage === "done" ? (
+                  <CheckCircle2 className="w-5 h-5 text-primary shrink-0" />
+                ) : genStage === "failed" ? (
+                  <XCircle className="w-5 h-5 text-destructive shrink-0" />
+                ) : (
+                  <Loader2 className="w-5 h-5 text-primary animate-spin shrink-0" />
+                )}
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground">{stageMeta[genStage].label}</p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    模板：{quickTemplate.title} · 范围：{dateRangeLabel}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">生成进度</span>
+                  <span className="font-medium text-foreground">{stageMeta[genStage].progress}%</span>
+                </div>
+                <Progress value={stageMeta[genStage].progress} className="h-2" />
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-[11px]">
+                {(["collecting", "analyzing", "rendering"] as const).map((s, idx) => {
+                  const order = ["collecting", "analyzing", "rendering"];
+                  const currentIdx = order.indexOf(genStage as string);
+                  const done = genStage === "done" || idx < currentIdx;
+                  const active = idx === currentIdx && isGenerating;
+                  return (
+                    <div
+                      key={s}
+                      className={`p-2 rounded-md border text-center ${
+                        done ? "border-primary/30 bg-primary/5 text-primary" :
+                        active ? "border-primary bg-primary/10 text-primary font-medium" :
+                        "border-border text-muted-foreground"
+                      }`}
+                    >
+                      {idx + 1}. {stageMeta[s].label.replace("…", "")}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {genStage === "idle" && (
+              <>
+                <Button variant="outline" onClick={closeQuick}>取消</Button>
+                <Button onClick={startQuickGen} className="gap-1.5">
+                  <Sparkles className="w-4 h-4" /> 开始生成
+                </Button>
+              </>
+            )}
+            {isGenerating && (
+              <Button variant="outline" onClick={closeQuick}>后台继续</Button>
+            )}
+            {genStage === "done" && (
+              <>
+                <Button variant="outline" onClick={closeQuick}>关闭</Button>
+                <Button onClick={goToReport} className="gap-1.5">
+                  查看报告 <ArrowRight className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+            {genStage === "failed" && (
+              <>
+                <Button variant="outline" onClick={closeQuick}>关闭</Button>
+                <Button onClick={startQuickGen}>重新生成</Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
