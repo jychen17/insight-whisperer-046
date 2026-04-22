@@ -31,6 +31,7 @@ import DashboardConfig from "@/pages/datacenter/DashboardConfig";
 import SmartReports from "@/pages/analysis/SmartReports";
 import ReportManagement from "@/pages/analysis/ReportManagement";
 import ReportTemplates from "@/pages/analysis/ReportTemplates";
+import ReportView from "@/pages/analysis/ReportView";
 
 const queryClient = new QueryClient();
 
