@@ -1,15 +1,18 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { hotspotEvents as mockEvents, type HotspotEvent, type SourceKind, type Category, type Importance } from "@/lib/hotspotData";
+import { hotspotEvents as mockEvents, allClues, type HotspotEvent, type SourceKind, type Category, type Importance } from "@/lib/hotspotData";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import {
   Search, MapPin, Calendar, Flame, TrendingUp, Music2, Palette,
   Sparkles, ExternalLink, Bell, FileText, ArrowUpRight, Ticket, BookOpen, Hash,
   ChevronDown, ChevronUp, Download, Settings, CheckCircle2, Globe, Eye, Tag, Layers,
+  ListChecks,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 
@@ -50,7 +53,7 @@ const importanceBadgeMap: Record<Importance, JSX.Element> = {
 // ────────────────────────────────────────────────────────────
 export default function HotspotList() {
   const navigate = useNavigate();
-  const [hotspotView, setHotspotView] = useState<"events" | "city" | "category" | "raw">("events");
+  const [hotspotView, setHotspotView] = useState<"events" | "clues">("events");
   // 跳转到详情页时保留当前筛选条件
   const goDetail = (e: HotspotEvent) => {
     const qs = new URLSearchParams();
@@ -177,35 +180,23 @@ export default function HotspotList() {
         <StatCard title="跨源大热点" value={stats.cross} change={32.1} />
       </div>
 
-      {/* ───── Sub-view toggle ───── */}
-      <div className="flex items-center gap-3">
-        <div className="flex rounded-md border border-border overflow-hidden text-xs">
-          {[
-            { v: "events", label: "事件列表", icon: Flame },
-            { v: "city", label: "城市视图", icon: MapPin },
-            { v: "category", label: "品类视图", icon: Tag },
-            { v: "raw", label: "原始榜单", icon: TrendingUp },
-          ].map((t, i) => {
-            const Icon = t.icon;
-            const active = hotspotView === t.v;
-            return (
-              <button
-                key={t.v}
-                onClick={() => setHotspotView(t.v as typeof hotspotView)}
-                className={`px-4 py-1.5 font-medium inline-flex items-center gap-1.5 ${i > 0 ? "border-l border-border" : ""} ${active ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted/50"}`}
-              >
-                <Icon className="w-3 h-3" />
-                {t.label}
-                {t.v === "events" && <span className="ml-1">({mockEvents.length})</span>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* Tabs: events list / all articles list */}
+      <Tabs value={hotspotView} onValueChange={(v) => setHotspotView(v as "events" | "clues")}>
+        <TabsList>
+          <TabsTrigger value="events" className="gap-1.5">
+            <Flame className="w-3.5 h-3.5" />
+            事件列表
+            <span className="ml-1 text-[11px] opacity-70">({mockEvents.length})</span>
+          </TabsTrigger>
+          <TabsTrigger value="clues" className="gap-1.5">
+            <ListChecks className="w-3.5 h-3.5" />
+            全部文章列表
+            <span className="ml-1 text-[11px] opacity-70">({allClues().length})</span>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* ========== EVENTS LIST VIEW ========== */}
-      {hotspotView === "events" && (
-        <div className="space-y-4">
+        {/* ========== EVENTS LIST VIEW ========== */}
+        <TabsContent value="events" className="space-y-4 mt-4">
           {/* Filters card */}
           <div className="bg-card rounded-lg border border-border p-4">
             <div className="grid grid-cols-6 gap-3">
@@ -501,219 +492,144 @@ export default function HotspotList() {
               })}
             </div>
           )}
-        </div>
-      )}
+        </TabsContent>
 
-      {/* ========== CITY VIEW ========== */}
-      {hotspotView === "city" && <CityView events={filtered} onSelect={goDetail} />}
-
-      {/* ========== CATEGORY VIEW ========== */}
-      {hotspotView === "category" && <CategoryView events={filtered} onSelect={goDetail} />}
-
-      {/* ========== RAW RANKINGS ========== */}
-      {hotspotView === "raw" && <RawRankings />}
+        {/* ========== ALL ARTICLES (CLUES) LIST VIEW ========== */}
+        <TabsContent value="clues" className="mt-4">
+          <ClueListView onEventClick={(eid) => {
+            const ev = mockEvents.find(e => e.id === eid);
+            if (ev) goDetail(ev);
+          }} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
 
 // ────────────────────────────────────────────────────────────
-// City View
+// Clue (article) list view — aggregates all clues across events
 // ────────────────────────────────────────────────────────────
-function CityView({ events, onSelect }: { events: HotspotEvent[]; onSelect: (e: HotspotEvent) => void }) {
-  const grouped = useMemo(() => {
-    const map = new Map<string, HotspotEvent[]>();
-    events.forEach(e => {
-      if (!map.has(e.city)) map.set(e.city, []);
-      map.get(e.city)!.push(e);
-    });
-    return Array.from(map.entries()).sort((a, b) => b[1].length - a[1].length);
-  }, [events]);
+function ClueListView({ onEventClick }: { onEventClick: (eventId: string) => void }) {
+  const all = useMemo(() => allClues(), []);
+  const [kindFilter, setKindFilter] = useState<"all" | SourceKind>("all");
+  const [keyword, setKeyword] = useState("");
 
-  const [activeCity, setActiveCity] = useState(grouped[0]?.[0] ?? "");
-  const cityEvents = grouped.find(([c]) => c === activeCity)?.[1] ?? [];
+  const filtered = useMemo(() => {
+    let list = all;
+    if (kindFilter !== "all") list = list.filter(c => c.kind === kindFilter);
+    if (keyword) list = list.filter(c => c.title.includes(keyword) || c.eventTitle.includes(keyword) || c.author.includes(keyword));
+    return list.sort((a, b) => b.heat - a.heat);
+  }, [all, kindFilter, keyword]);
 
-  return (
-    <div className="grid grid-cols-4 gap-4">
-      <Card className="col-span-1 p-3 h-fit">
-        <div className="text-xs font-medium text-foreground mb-2 px-2">城市</div>
-        <div className="space-y-0.5">
-          {grouped.map(([city, list]) => (
-            <button
-              key={city}
-              onClick={() => setActiveCity(city)}
-              className={`w-full flex items-center justify-between px-2 py-1.5 rounded-md text-xs transition-colors ${
-                activeCity === city ? "bg-primary/10 text-primary font-medium" : "hover:bg-muted text-foreground"
-              }`}
-            >
-              <span className="flex items-center gap-1.5"><MapPin className="w-3 h-3" />{city}</span>
-              <Badge variant="secondary" className="h-4 text-[10px] px-1.5">{list.length}</Badge>
-            </button>
-          ))}
-        </div>
-      </Card>
+  const counts = useMemo(() => ({
+    all: all.length,
+    damai: all.filter(c => c.kind === "damai").length,
+    bendibao: all.filter(c => c.kind === "bendibao").length,
+    ranking: all.filter(c => c.kind === "ranking").length,
+  }), [all]);
 
-      <Card className="col-span-3 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-foreground">{activeCity} · 未来热点活动时间线</h3>
-          <span className="text-xs text-muted-foreground">{cityEvents.length} 项</span>
-        </div>
-        <div className="relative pl-6 space-y-4 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-border">
-          {cityEvents.sort((a, b) => a.date.localeCompare(b.date)).map(e => {
-            const Cat = CATEGORY_META[e.category];
-            const CatIcon = Cat.icon;
-            return (
-              <div key={e.id} className="relative">
-                <div className="absolute -left-[18px] top-1.5 w-3 h-3 rounded-full bg-primary border-2 border-background" />
-                <button onClick={() => onSelect(e)} className="text-left w-full p-3 rounded-lg border border-border hover:border-primary/40 hover:bg-muted/30 transition">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium text-primary">{e.dateRange ?? e.date}</span>
-                    <Badge variant="outline" className={`text-[10px] gap-0.5 ${Cat.cls}`}>
-                      <CatIcon className="w-2.5 h-2.5" />{e.category}
-                    </Badge>
-                    <span className="ml-auto text-xs text-rose-600 font-medium flex items-center gap-0.5">
-                      <Flame className="w-3 h-3" />{formatHeat(e.heatScore)}
-                    </span>
-                  </div>
-                  <div className="text-sm font-medium text-foreground mb-1">{e.title}</div>
-                  {e.venue && <div className="text-[11px] text-muted-foreground">📍 {e.venue}</div>}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────
-// Category View
-// ────────────────────────────────────────────────────────────
-function CategoryView({ events, onSelect }: { events: HotspotEvent[]; onSelect: (e: HotspotEvent) => void }) {
-  const cats = (Object.keys(CATEGORY_META) as Category[]).filter(c => events.some(e => e.category === c));
-  const [activeCat, setActiveCat] = useState<Category>(cats[0] ?? "演唱会");
-  const catEvents = events.filter(e => e.category === activeCat).sort((a, b) => b.heatScore - a.heatScore);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {cats.map(c => {
-          const Meta = CATEGORY_META[c];
-          const Icon = Meta.icon;
-          const count = events.filter(e => e.category === c).length;
-          const active = c === activeCat;
-          return (
-            <button
-              key={c}
-              onClick={() => setActiveCat(c)}
-              className={`px-3 py-2 rounded-lg border text-xs flex items-center gap-1.5 transition ${
-                active ? "border-primary bg-primary/5 text-primary font-medium" : "border-border text-foreground hover:bg-muted"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {c}
-              <Badge variant="secondary" className="h-4 text-[10px] px-1.5">{count}</Badge>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        {catEvents.map(e => {
-          const Cat = CATEGORY_META[e.category];
-          const CatIcon = Cat.icon;
-          const totalVol = e.relatedVolume.weibo + e.relatedVolume.xhs + e.relatedVolume.douyin;
-          return (
-            <Card key={e.id} onClick={() => onSelect(e)} className="p-5 hover:shadow-lg transition-shadow cursor-pointer group">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-gradient-to-r from-orange-500/10 to-rose-500/10">
-                    <Flame className="w-3.5 h-3.5 text-rose-600" />
-                    <span className="text-sm font-bold text-rose-600">{formatHeat(e.heatScore)}</span>
-                  </div>
-                  {e.heatTrend > 0 && (
-                    <span className="text-[11px] text-emerald-600 font-medium flex items-center gap-0.5">
-                      <ArrowUpRight className="w-3 h-3" /> {e.heatTrend}%
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Calendar className="w-3 h-3" />
-                  {e.dateRange ?? e.date}
-                </div>
-              </div>
-              <div className="flex items-start gap-2 mb-2">
-                <Badge variant="outline" className={`shrink-0 text-[11px] gap-1 ${Cat.cls}`}>
-                  <CatIcon className="w-3 h-3" /> {e.category}
-                </Badge>
-                <h3 className="text-sm font-semibold text-foreground group-hover:text-primary leading-snug">{e.title}</h3>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                <MapPin className="w-3 h-3" /><span>{e.city}</span>
-                {e.venue && <span>· {e.venue}</span>}
-              </div>
-              <div className="text-[11px] text-muted-foreground">关联讨论 <span className="font-medium text-foreground">{formatHeat(totalVol)}</span></div>
-            </Card>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ────────────────────────────────────────────────────────────
-// Raw Rankings
-// ────────────────────────────────────────────────────────────
-function RawRankings() {
-  const lists = [
-    {
-      platform: "微博热搜", color: "text-orange-600",
-      items: [
-        { rank: 1, title: "清明假期出行人数创新高", heat: "125w" },
-        { rank: 3, title: "周杰伦上海演唱会开票秒空", heat: "98w" },
-        { rank: 5, title: "五一返程机票退改话题", heat: "89w" },
-        { rank: 11, title: "薛之谦鸟巢演唱会预热", heat: "76w" },
-        { rank: 18, title: "成都草莓音乐节阵容公布", heat: "54w" },
-      ],
-    },
-    {
-      platform: "抖音热点", color: "text-rose-600",
-      items: [
-        { rank: 8, title: "成都草莓音乐节预热", heat: "670w播放" },
-        { rank: 14, title: "五一返程攻略", heat: "1100w播放" },
-        { rank: 22, title: "成都国际车展", heat: "840w播放" },
-        { rank: 31, title: "周杰伦演唱会场外直击", heat: "520w播放" },
-      ],
-    },
-    {
-      platform: "小红书热搜", color: "text-pink-600",
-      items: [
-        { rank: 12, title: "teamLab 上海特展打卡", heat: "1.8w笔记" },
-        { rank: 28, title: "上海咖啡文化周", heat: "1.2w笔记" },
-        { rank: 41, title: "广州亲子游园会", heat: "4200笔记" },
-        { rank: 56, title: "成都春季展览推荐", heat: "2300笔记" },
-      ],
-    },
+  const KIND_TABS: { v: "all" | SourceKind; label: string }[] = [
+    { v: "all", label: "全部" },
+    { v: "damai", label: "大麦演出" },
+    { v: "bendibao", label: "本地宝活动" },
+    { v: "ranking", label: "社媒热榜" },
   ];
 
   return (
-    <div className="grid grid-cols-3 gap-4">
-      {lists.map(l => (
-        <Card key={l.platform} className="p-4">
-          <h3 className={`text-sm font-semibold mb-3 ${l.color}`}>{l.platform}</h3>
-          <div className="space-y-0">
-            {l.items.map(item => (
-              <div key={item.rank} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
-                <span className={`w-5 h-5 rounded text-[10px] font-bold flex items-center justify-center shrink-0 ${
-                  item.rank <= 3 ? "bg-rose-500 text-white" : item.rank <= 10 ? "bg-orange-500 text-white" : "bg-muted text-muted-foreground"
-                }`}>{item.rank}</span>
-                <span className="text-xs text-foreground flex-1 hover:text-primary cursor-pointer">{item.title}</span>
-                <span className="text-[10px] text-muted-foreground shrink-0">{item.heat}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      ))}
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="bg-card rounded-lg border border-border p-4 flex flex-wrap items-center gap-3">
+        <div className="flex rounded-md border border-border overflow-hidden text-xs">
+          {KIND_TABS.map((t, i) => {
+            const active = kindFilter === t.v;
+            const cnt = counts[t.v];
+            return (
+              <button
+                key={t.v}
+                onClick={() => setKindFilter(t.v)}
+                className={`px-3 py-1.5 inline-flex items-center gap-1.5 ${i > 0 ? "border-l border-border" : ""} ${active ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted/50"}`}
+              >
+                {t.label}
+                <span className={`text-[10px] ${active ? "opacity-90" : "opacity-60"}`}>({cnt})</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="relative ml-auto">
+          <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            placeholder="搜索文章 / 关联事件..."
+            value={keyword}
+            onChange={e => setKeyword(e.target.value)}
+            className="pl-7 pr-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground w-64"
+          />
+        </div>
+        <span className="text-[11px] text-muted-foreground">共 {filtered.length} 条线索</span>
+      </div>
+
+      {/* Table */}
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[36%]">标题</TableHead>
+              <TableHead>来源</TableHead>
+              <TableHead>关联热点事件</TableHead>
+              <TableHead>作者</TableHead>
+              <TableHead>地区</TableHead>
+              <TableHead>发布时间</TableHead>
+              <TableHead className="text-right">热度</TableHead>
+              <TableHead className="text-right">互动</TableHead>
+              <TableHead className="w-[60px]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">
+                  <Layers className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  暂无匹配的文章线索
+                </TableCell>
+              </TableRow>
+            ) : filtered.map(c => {
+              const Meta = SOURCE_META[c.kind];
+              const Icon = Meta.icon;
+              return (
+                <TableRow key={c.id} className="hover:bg-muted/30">
+                  <TableCell className="text-xs text-foreground">{c.title}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] gap-1 ${Meta.cls}`}>
+                      <Icon className="w-3 h-3" />{c.source}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      className="text-xs text-primary hover:underline text-left"
+                      onClick={() => onEventClick(c.eventId)}
+                    >
+                      {c.eventTitle}
+                    </button>
+                  </TableCell>
+                  <TableCell className="text-xs text-foreground">{c.author}</TableCell>
+                  <TableCell className="text-[11px] text-muted-foreground">{c.region}</TableCell>
+                  <TableCell className="text-[11px] text-muted-foreground whitespace-nowrap">{c.publishTime}</TableCell>
+                  <TableCell className="text-right text-xs font-medium text-rose-600">
+                    <span className="inline-flex items-center gap-0.5"><Flame className="w-3 h-3" />{formatHeat(c.heat)}</span>
+                  </TableCell>
+                  <TableCell className="text-right text-[11px] text-muted-foreground">
+                    👍 {c.likes.toLocaleString()} · 💬 {c.comments.toLocaleString()}
+                  </TableCell>
+                  <TableCell>
+                    <a href={c.url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary">
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

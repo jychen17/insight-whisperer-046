@@ -167,3 +167,36 @@ export const hotspotEvents: HotspotEvent[] = [
     firstTime: "2026-04-08 13:15", latestTime: "2026-04-15 20:30", itemCount: 124,
   },
 ];
+
+// ─── Clue (article) item shared across HotspotList & HotspotDetail ───
+export interface ClueItem {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  title: string;
+  source: string;
+  kind: SourceKind;
+  author: string;
+  publishTime: string;
+  region: string;
+  heat: number;
+  comments: number;
+  likes: number;
+  url: string;
+}
+
+export const buildClues = (event: HotspotEvent): ClueItem[] => {
+  const base: Omit<ClueItem, "eventId" | "eventTitle">[] = [
+    { id: `${event.id}-c1`, title: `${event.title} - 票务详情页`, source: "大麦网", kind: "damai", author: "大麦官方", publishTime: event.firstTime, region: event.city, heat: 5200, comments: 312, likes: 1240, url: "#" },
+    { id: `${event.id}-c2`, title: `#${event.title.split("·")[0]}# 上榜微博热搜`, source: "微博热搜", kind: "ranking", author: "微博热搜榜", publishTime: event.firstTime, region: "全国", heat: 98700, comments: 4280, likes: 32100, url: "#" },
+    { id: `${event.id}-c3`, title: `${event.city}${event.category}打卡攻略，亲测好玩`, source: "小红书", kind: "ranking", author: "城市探索家", publishTime: event.latestTime, region: event.city, heat: 18900, comments: 521, likes: 8200, url: "#" },
+    { id: `${event.id}-c4`, title: `${event.title} 现场视频热度上升`, source: "抖音", kind: "ranking", author: "现场达人", publishTime: event.latestTime, region: event.city, heat: 67200, comments: 1820, likes: 12400, url: "#" },
+    { id: `${event.id}-c5`, title: `${event.city}周边活动汇总收录`, source: `${event.city}本地宝`, kind: "bendibao", author: "本地宝小编", publishTime: event.firstTime, region: event.city, heat: 4200, comments: 56, likes: 320, url: "#" },
+    { id: `${event.id}-c6`, title: `周边交通指引 - ${event.venue ?? event.city}`, source: `${event.city}本地宝`, kind: "bendibao", author: "本地宝小编", publishTime: event.firstTime, region: event.city, heat: 3100, comments: 42, likes: 280, url: "#" },
+  ];
+  return base
+    .slice(0, Math.max(3, Math.min(base.length, Math.ceil(event.itemCount / 50))))
+    .map(c => ({ ...c, eventId: event.id, eventTitle: event.title }));
+};
+
+export const allClues = (): ClueItem[] => hotspotEvents.flatMap(buildClues);
