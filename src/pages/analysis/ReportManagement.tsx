@@ -265,9 +265,18 @@ const weeklyRangeHint = (startDay: number) => {
   return `每期统计：${start} 至 下${end}`;
 };
 
-// 推送目标候选
-const personOptions = ["张敏（产品）", "李伟（运营）", "王芳（市场）", "陈强（客服）", "刘涛（技术）"];
-const groupOptions = ["舆情应急群", "市场分析周报群", "客服日报群", "产品体验反馈群"];
+// 推送目标候选 — 个人花名册（姓名 + 工号）
+type Employee = { name: string; empId: string; dept: string };
+const employeeDirectory: Employee[] = [
+  { name: "张敏", empId: "P10231", dept: "产品" },
+  { name: "李伟", empId: "P10458", dept: "运营" },
+  { name: "王芳", empId: "P10672", dept: "市场" },
+  { name: "陈强", empId: "P10889", dept: "客服" },
+  { name: "刘涛", empId: "P11023", dept: "技术" },
+  { name: "赵磊", empId: "P11156", dept: "公关" },
+  { name: "孙丽", empId: "P11287", dept: "数据" },
+  { name: "周杰", empId: "P11342", dept: "产品" },
+];
 
 const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
 const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题"];
