@@ -182,7 +182,10 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
   const setDraftField = <K extends keyof ThemeAlertRule>(k: K, v: ThemeAlertRule[K]) =>
     setDraft((d) => (d ? { ...d, [k]: v } : d));
 
-  const conditionFields = draft?.triggerDimension === "node" ? EVENT_CONDITION_FIELDS : SINGLE_CONDITION_FIELDS;
+  const isHotspot = isHotspotTheme(draft?.themeId);
+  const conditionFields = draft?.triggerDimension === "node"
+    ? (isHotspot ? HOTSPOT_EVENT_FIELDS : EVENT_CONDITION_FIELDS)
+    : (isHotspot ? HOTSPOT_SINGLE_FIELDS : SINGLE_CONDITION_FIELDS);
 
   const updateCondition = (idx: number, patch: Partial<RuleCondition>) => {
     setDraft((d) => {
@@ -225,12 +228,18 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
   const handleDimensionChange = (kind: "single" | "node", nodeId?: string) => {
     if (!draft) return;
     const node = nodeId ? mergeNodes.find((n) => n.id === nodeId) : undefined;
+    const hotspot = isHotspotTheme(draft.themeId);
+    const initCond: RuleCondition = hotspot
+      ? (kind === "node"
+          ? { field: "heat_score", operator: ">=", value: "50000" }
+          : { field: "heat_score", operator: ">=", value: "10000" })
+      : { field: kind === "node" ? "event_risk" : "importance", operator: "=", value: "重大" };
     setDraft({
       ...draft,
       triggerDimension: kind,
       triggerNodeId: kind === "node" ? nodeId : undefined,
       triggerNodeName: kind === "node" ? node?.name : undefined,
-      conditions: [{ field: kind === "node" ? "event_risk" : "importance", operator: "=", value: "重大" }],
+      conditions: [initCond],
     });
   };
 
