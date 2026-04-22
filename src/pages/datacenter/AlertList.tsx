@@ -69,31 +69,18 @@ export default function AlertList() {
     }
   };
 
-  const filtered = useMemo(() => {
-    return messages.filter((m) => {
-      if (themeFilter !== "all" && m.themeId !== themeFilter) return false;
-      if (statusFilter !== "all" && m.status !== statusFilter) return false;
-      if (levelFilter !== "all" && m.level !== levelFilter) return false;
-      if (rangeFilter === "yesterday" && !isYesterday(m.pushedAt)) return false;
-      if (rangeFilter === "week" && !isWithin7Days(m.pushedAt)) return false;
-      if (keyword) {
-        const k = keyword.toLowerCase();
-        if (!m.triggerTitle.toLowerCase().includes(k) && !m.ruleName.toLowerCase().includes(k)) return false;
-      }
-      return true;
-    });
-  }, [messages, themeFilter, statusFilter, levelFilter, rangeFilter, keyword]);
-
   // Stats
   const stats = useMemo(() => ({
     total: messages.length,
     yesterday: messages.filter((m) => isYesterday(m.pushedAt)).length,
     week: messages.filter((m) => isWithin7Days(m.pushedAt)).length,
-    failed: messages.filter((m) => m.status === "failed").length,
-    pending: messages.filter((m) => m.status === "pending").length,
+    critical: messages.filter((m) => m.level === "critical").length,
   }), [messages]);
 
   const handleResend = (id: string) => {
+    alertMessageStore.resend(id);
+    toast.success("预警已重新推送");
+  };
     alertMessageStore.resend(id);
     toast.success("预警已重新推送");
   };
