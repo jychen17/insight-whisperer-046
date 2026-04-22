@@ -92,12 +92,16 @@ const emptyRule = (themeId: string, themeName: string): ThemeAlertRule => ({
   conditionLogic: "all",
   conditions: [{ field: "importance", operator: "=", value: "重大" }],
   pushTiming: "realtime",
+  articleThreshold: 10,
+  pushOnce: true,
   scheduledInterval: "day",
   scheduledTimeStart: "08:00",
   scheduledTimeEnd: "20:00",
   channels: [{ type: "wechat", personal: true, group: false, personalTargets: [], groupWebhook: "" }],
   level: "warning",
   triggerCount: 0,
+  yesterdayTriggerCount: 0,
+  weekTriggerCount: 0,
   createdAt: new Date().toISOString().slice(0, 10),
 });
 
@@ -446,6 +450,10 @@ export default function ThemeAlertRuleDialog({ open, onOpenChange, themeId, rule
                 </label>
               )}
             </div>
+
+            <Separator />
+
+            {/* Notification */}
             <div>
               <label className="text-xs font-medium text-muted-foreground mb-2 block">通知方式（企业微信）</label>
               {draft.channels.map((ch) => (
