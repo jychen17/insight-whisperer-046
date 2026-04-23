@@ -709,8 +709,13 @@ export default function SocialRankingList() {
                   </Card>
                 )}
 
-                {/* Realtime/Travel filtered table */}
-                {(cat.key === "realtime" || cat.key === "travel") && filterSource !== "all" && (
+                {/* Realtime/Travel: full table with all fields */}
+                {(cat.key === "realtime" || cat.key === "travel") && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-muted-foreground mb-2 inline-flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5" />
+                      话题完整列表 <span className="text-[10px] font-normal text-muted-foreground/70">共 {nodeTopics.length} 条 · hover 行查看摘要</span>
+                    </h3>
                   <Card className="overflow-hidden">
                     <Table>
                       <TableHeader>
