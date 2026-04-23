@@ -607,6 +607,8 @@ export default function SocialRankingList() {
                           <TableHead className="w-10"></TableHead>
                           <TableHead className="w-24">排名</TableHead>
                           <TableHead>热点</TableHead>
+                          <TableHead className="w-24">来源</TableHead>
+                          <TableHead className="w-20">趋势</TableHead>
                           <TableHead className="w-28 text-right">热度值</TableHead>
                           <TableHead className="w-72">相关帖子</TableHead>
                         </TableRow>
@@ -614,6 +616,8 @@ export default function SocialRankingList() {
                       <TableBody>
                         {nodeTopics.map(t => {
                           const highlight = highlightIds.has(t.id);
+                          const meta = RANK_SOURCES[t.source];
+                          const TIcon = TREND_META[t.trend].icon;
                           return (
                             <TableRow key={t.id} className={`hover:bg-primary/5 cursor-pointer transition-colors ${highlight ? "bg-amber-50/60" : ""}`} title={`${t.title}\n\n${t.summary}\n\n来源:${RANK_SOURCES[t.source].shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()} · ${TREND_META[t.trend].label}`} onClick={() => goDetail(t)}>
                               <TableCell onClick={e => e.stopPropagation()}>
@@ -625,9 +629,22 @@ export default function SocialRankingList() {
                               <TableCell>
                                 <div className="font-medium text-sm text-foreground line-clamp-1 hover:text-primary">{t.title}</div>
                                 <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.summary}</div>
+                                {t.travelRelated && (
+                                  <Badge variant="outline" className="mt-1 text-[10px] gap-0.5 bg-primary/5 text-primary border-primary/20">
+                                    <Plane className="w-2.5 h-2.5" />旅游
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell><Badge variant="outline" className={`text-[10px] ${meta.cls}`}>{meta.shortLabel}</Badge></TableCell>
+                              <TableCell>
+                                <span className={`text-xs inline-flex items-center gap-0.5 ${TREND_META[t.trend].cls}`}>
+                                  <TIcon className="w-3 h-3" />{TREND_META[t.trend].label}
+                                </span>
                               </TableCell>
                               <TableCell className="text-right">
-                                <span className="text-sm font-semibold text-rose-600">{t.heat.toLocaleString()}</span>
+                                <span className="text-sm font-semibold text-rose-600 inline-flex items-center gap-0.5 justify-end">
+                                  <Flame className="w-3 h-3" />{t.heat.toLocaleString()}
+                                </span>
                               </TableCell>
                               <TableCell>
                                 {t.relatedPosts?.[0] && (
@@ -641,7 +658,7 @@ export default function SocialRankingList() {
                           );
                         })}
                         {nodeTopics.length === 0 && (
-                          <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">该城市暂无榜单数据</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">该城市暂无榜单数据</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
