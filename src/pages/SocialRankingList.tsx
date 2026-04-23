@@ -609,7 +609,7 @@ export default function SocialRankingList() {
                           <RankingColumn
                             key={src}
                             source={src}
-                            topics={topics}
+                            topics={boardTopics}
                             highlightIds={highlightIds}
                             onSelectTopic={goDetail}
                           />
