@@ -73,6 +73,7 @@ interface Report {
   type: string;
   theme: string;
   status: "completed" | "generating" | "failed";
+  configCreatedAt: string;
   createdAt: string;
   pages: number;
   format: string;
