@@ -18,6 +18,7 @@ import {
   Search,
   Monitor,
   FolderOpen,
+  TrendingUp,
 } from "lucide-react";
 
 interface NavChild {
@@ -73,6 +74,13 @@ const navGroups: NavGroup[] = [
         children: [
           { label: "热点洞察大盘", path: "/hotspot/discover" },
           { label: "热点洞察列表", path: "/hotspot/detail" },
+        ],
+      },
+      {
+        label: "社媒榜单主题",
+        icon: <TrendingUp className="w-4 h-4" />,
+        children: [
+          { label: "社媒榜单列表", path: "/social-ranking/list" },
         ],
       },
       {
