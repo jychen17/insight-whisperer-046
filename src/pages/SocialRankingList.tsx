@@ -582,6 +582,33 @@ export default function SocialRankingList() {
                   >重置</button>
                 </div>
 
+                {/* Quick filter chips: 新上榜 / 爆点 */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] text-muted-foreground">快速筛选:</span>
+                  {([
+                    { key: "all",  label: "全部",   icon: null,                              cls: "border-border text-foreground", active: "bg-primary text-primary-foreground border-primary" },
+                    { key: "new",  label: "新上榜", icon: <Sparkles className="w-3 h-3" />, cls: "border-amber-200 text-amber-700 bg-amber-50/60 hover:bg-amber-100", active: "bg-amber-500 text-white border-amber-500" },
+                    { key: "boom", label: "爆点",   icon: <Flame className="w-3 h-3" />,    cls: "border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10", active: "bg-destructive text-destructive-foreground border-destructive" },
+                  ] as const).map(opt => {
+                    const active = quickFilter === opt.key;
+                    const count = quickCounts[opt.key];
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => setQuickFilter(opt.key)}
+                        className={`px-2.5 py-1 text-[11px] rounded-full border inline-flex items-center gap-1 transition-colors ${active ? opt.active : opt.cls}`}
+                      >
+                        {opt.icon}
+                        {opt.label}
+                        <span className={`text-[10px] ${active ? "opacity-90" : "opacity-70"}`}>· {count}</span>
+                      </button>
+                    );
+                  })}
+                  {quickFilter !== "all" && (
+                    <span className="text-[10px] text-muted-foreground">已筛选「{quickFilter === "new" ? "新上榜" : "爆点"}」话题，表头字段与排序保持不变</span>
+                  )}
+                </div>
+
                 <SelectionToolbar
                   currentList={nodeTopics}
                   selectedIds={selectedIds}
