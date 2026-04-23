@@ -80,6 +80,7 @@ const navGroups: NavGroup[] = [
         label: "社媒榜单主题",
         icon: <TrendingUp className="w-4 h-4" />,
         children: [
+          { label: "社媒榜单大盘", path: "/social-ranking/dashboard" },
           { label: "社媒榜单列表", path: "/social-ranking/list" },
         ],
       },

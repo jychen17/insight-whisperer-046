@@ -1,9 +1,9 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Flame, TrendingUp, TrendingDown, Minus, Sparkles, Search, Bell, FileText,
   Settings, ArrowUpRight, ArrowDownRight, Plane, Download, ChevronDown, CheckCircle2,
-  RefreshCw, X, ExternalLink, MapPin, Building2, Image as ImageIcon, Hash,
+  RefreshCw, MapPin, Building2, Image as ImageIcon,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,11 +19,11 @@ import {
 } from "@/lib/socialRankingData";
 
 const TREND_META: Record<TrendDir, { icon: typeof TrendingUp; cls: string; label: string }> = {
-  up:   { icon: TrendingUp,   cls: "text-rose-600",     label: "上升" },
-  down: { icon: TrendingDown, cls: "text-emerald-600",  label: "下降" },
+  up:   { icon: TrendingUp,   cls: "text-rose-600",         label: "上升" },
+  down: { icon: TrendingDown, cls: "text-emerald-600",      label: "下降" },
   flat: { icon: Minus,        cls: "text-muted-foreground", label: "持平" },
-  new:  { icon: Sparkles,     cls: "text-amber-600",    label: "新上榜" },
-  boom: { icon: Flame,        cls: "text-destructive",  label: "爆" },
+  new:  { icon: Sparkles,     cls: "text-amber-600",        label: "新上榜" },
+  boom: { icon: Flame,        cls: "text-destructive",      label: "爆" },
 };
 
 const fmtTime = (d: Date) =>
@@ -50,7 +50,7 @@ function RankDelta({ topic }: { topic: RankTopic }) {
     : <span className="text-[10px] text-emerald-600 inline-flex items-center gap-0.5"><ArrowDownRight className="w-2.5 h-2.5" />{Math.abs(delta)}</span>;
 }
 
-// ─── Per-source ranking column (used in board view for realtime/travel) ───
+// Per-source ranking column (board view)
 function RankingColumn({
   source, topics, highlightIds, onSelectTopic,
 }: {
@@ -112,11 +112,15 @@ function RankingColumn({
   );
 }
 
+type MainTab = "all" | "node";
+
 export default function SocialRankingList() {
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState<BoardCategory>("realtime");
+  const location = useLocation();
+  const [mainTab, setMainTab] = useState<MainTab>("all");
 
-  // Per-tab filter state
+  // Filters (shared across tabs but visually grouped)
+  const [filterCategory, setFilterCategory] = useState<"all" | BoardCategory>("all");
   const [filterSource, setFilterSource] = useState<"all" | RankSource>("all");
   const [filterCity, setFilterCity] = useState<string>("北京");
   const [filterRegion, setFilterRegion] = useState<string>("全国");
@@ -126,12 +130,25 @@ export default function SocialRankingList() {
   const [periodMode, setPeriodMode] = useState<"day" | "month">("day");
   const [date, setDate] = useState("2026-04-22");
 
-  // ─── Refresh state ───
+  // Node tab uses its own active category (for board layout & POI/city specialized tables)
+  const [nodeCategory, setNodeCategory] = useState<BoardCategory>("realtime");
+
+  // Refresh state
   const [topics, setTopics] = useState<RankTopic[]>(initialTopics);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date(2026, 3, 15, 22, 0, 0));
   const [refreshing, setRefreshing] = useState(false);
   const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
   const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Read ?cat= deep-link from dashboard
+  useEffect(() => {
+    const sp = new URLSearchParams(location.search);
+    const cat = sp.get("cat") as BoardCategory | null;
+    if (cat && BOARD_CATEGORIES.some(c => c.key === cat)) {
+      setMainTab("node");
+      setNodeCategory(cat);
+    }
+  }, [location.search]);
 
   const handleRefresh = () => {
     if (refreshing) return;
@@ -158,49 +175,45 @@ export default function SocialRankingList() {
 
   useEffect(() => () => { if (highlightTimer.current) clearTimeout(highlightTimer.current); }, []);
 
-  // Reset filter on category change
+  // When nodeCategory changes, reset its source filter
   useEffect(() => {
     setFilterSource("all");
     setSelectedIds([]);
-    setSearch("");
-  }, [activeCategory]);
+  }, [nodeCategory, mainTab]);
 
-  // Sources of current category
-  const sourcesOfCategory = useMemo(
-    () => (Object.keys(RANK_SOURCES) as RankSource[]).filter(k => RANK_SOURCES[k].category === activeCategory),
-    [activeCategory]
+  // Available source list under "全部" tab respects filterCategory
+  const availableSources = useMemo(() => {
+    return (Object.keys(RANK_SOURCES) as RankSource[]).filter(k =>
+      filterCategory === "all" ? true : RANK_SOURCES[k].category === filterCategory
+    );
+  }, [filterCategory]);
+
+  const sourcesOfNodeCategory = useMemo(
+    () => (Object.keys(RANK_SOURCES) as RankSource[]).filter(k => RANK_SOURCES[k].category === nodeCategory),
+    [nodeCategory]
   );
 
-  // Topics for current tab
-  const tabTopics = useMemo(() => {
-    let list = topics.filter(t => RANK_SOURCES[t.source].category === activeCategory);
+  // ────────── 全部 tab: unified filtered list ──────────
+  const allTopics = useMemo(() => {
+    let list = topics.slice();
+    if (filterCategory !== "all") list = list.filter(t => RANK_SOURCES[t.source].category === filterCategory);
+    if (filterSource !== "all")   list = list.filter(t => t.source === filterSource);
+    if (search) list = list.filter(t => t.title.includes(search) || t.keywords.some(k => k.includes(search)) || (t.poiName ?? "").includes(search));
+    if (travelOnly) list = list.filter(t => t.travelRelated);
+    return [...list].sort((a, b) => b.heat - a.heat);
+  }, [topics, filterCategory, filterSource, travelOnly, search]);
+
+  // ────────── 节点信息 tab: per-category specialized list ──────────
+  const nodeTopics = useMemo(() => {
+    let list = topics.filter(t => RANK_SOURCES[t.source].category === nodeCategory);
     if (filterSource !== "all") list = list.filter(t => t.source === filterSource);
     if (search) list = list.filter(t => t.title.includes(search) || t.keywords.some(k => k.includes(search)) || (t.poiName ?? "").includes(search));
     if (travelOnly) list = list.filter(t => t.travelRelated);
-    if (activeCategory === "city") list = list.filter(t => t.city === filterCity);
-    if ((activeCategory === "attractions" || activeCategory === "hotels") && filterRegion !== "全国")
+    if (nodeCategory === "city") list = list.filter(t => t.city === filterCity);
+    if ((nodeCategory === "attractions" || nodeCategory === "hotels") && filterRegion !== "全国")
       list = list.filter(t => t.poiRegion === filterRegion);
     return [...list].sort((a, b) => a.rank - b.rank);
-  }, [topics, activeCategory, filterSource, filterCity, filterRegion, travelOnly, search]);
-
-  // Hero topics across the current category (boom/new/快速攀升)
-  const heroTopics = useMemo(() => {
-    const cat = topics.filter(t => RANK_SOURCES[t.source].category === activeCategory);
-    return [...cat]
-      .filter(t => t.trend === "boom" || t.trend === "new" || (t.prevRank !== undefined && t.prevRank - t.rank >= 2))
-      .sort((a, b) => b.heat - a.heat)
-      .slice(0, 4);
-  }, [topics, activeCategory]);
-
-  const stats = useMemo(() => {
-    const cat = topics.filter(t => RANK_SOURCES[t.source].category === activeCategory);
-    return {
-      total: cat.length,
-      travel: cat.filter(t => t.travelRelated).length,
-      newToday: cat.filter(t => t.trend === "new").length,
-      boom: cat.filter(t => t.trend === "boom").length,
-    };
-  }, [topics, activeCategory]);
+  }, [topics, nodeCategory, filterSource, filterCity, filterRegion, travelOnly, search]);
 
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -219,22 +232,19 @@ export default function SocialRankingList() {
     });
   };
 
-  const isPOI = activeCategory === "attractions" || activeCategory === "hotels";
-  const isCity = activeCategory === "city";
-  const currentMeta = BOARD_CATEGORIES.find(c => c.key === activeCategory)!;
+  const isPOI = nodeCategory === "attractions" || nodeCategory === "hotels";
+  const isCity = nodeCategory === "city";
+
+  const currentList = mainTab === "all" ? allTopics : nodeTopics;
 
   return (
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-foreground">社媒榜单</h1>
+          <h1 className="text-xl font-semibold text-foreground">社媒榜单列表</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            实时聚合 <span className="text-slate-700 font-medium">抖音</span>、
-            <span className="text-rose-600 font-medium">微博</span>、
-            <span className="text-pink-600 font-medium">小红书</span>、
-            <span className="text-blue-600 font-medium">百度</span>、
-            <span className="text-orange-600 font-medium">快手</span> 等多平台榜单
+            实时聚合多平台榜单话题 · 支持全量浏览与各榜单节点详情
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs">
@@ -257,7 +267,7 @@ export default function SocialRankingList() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem><FileText className="w-3.5 h-3.5" />导出当前榜单</DropdownMenuItem>
+              <DropdownMenuItem><FileText className="w-3.5 h-3.5" />导出当前列表</DropdownMenuItem>
               <DropdownMenuItem disabled={selectedIds.length === 0}>
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 导出所选数据
@@ -287,452 +297,513 @@ export default function SocialRankingList() {
         </div>
       </div>
 
-      {/* Top-level category tabs */}
-      <Tabs value={activeCategory} onValueChange={v => setActiveCategory(v as BoardCategory)}>
-        <TabsList className="h-auto p-1 flex-wrap">
-          {BOARD_CATEGORIES.map(c => (
-            <TabsTrigger key={c.key} value={c.key} className="gap-1.5">
-              <span>{c.icon}</span>
-              <span>{c.label}</span>
-            </TabsTrigger>
-          ))}
+      {/* Main tabs: 全部 / 节点信息 */}
+      <Tabs value={mainTab} onValueChange={v => { setMainTab(v as MainTab); setSelectedIds([]); }}>
+        <TabsList>
+          <TabsTrigger value="all">全部 ({allTopics.length})</TabsTrigger>
+          <TabsTrigger value="node">节点信息</TabsTrigger>
         </TabsList>
 
-        {/* Render each tab */}
-        {BOARD_CATEGORIES.map(cat => (
-          <TabsContent key={cat.key} value={cat.key} className="mt-4 space-y-4">
-            {/* Tab subheader */}
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-semibold text-foreground">{cat.label}</h2>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {cat.desc} · <span className="text-amber-700">数据时效: {cat.tip}</span>
-                </p>
+        {/* ─────────── 全部 tab ─────────── */}
+        <TabsContent value="all" className="mt-4 space-y-4">
+          {/* Filter bar */}
+          <div className="bg-card rounded-lg border border-border p-3 flex flex-wrap items-end gap-3">
+            <div className="min-w-[140px]">
+              <label className="text-[11px] text-muted-foreground">榜单分类</label>
+              <select
+                className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                value={filterCategory}
+                onChange={e => { setFilterCategory(e.target.value as typeof filterCategory); setFilterSource("all"); }}
+              >
+                <option value="all">全部分类</option>
+                {BOARD_CATEGORIES.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
+              </select>
+            </div>
+            <div className="min-w-[160px]">
+              <label className="text-[11px] text-muted-foreground">榜单来源</label>
+              <select
+                className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                value={filterSource}
+                onChange={e => setFilterSource(e.target.value as typeof filterSource)}
+              >
+                <option value="all">全部来源</option>
+                {availableSources.map(s => <option key={s} value={s}>{RANK_SOURCES[s].shortLabel}</option>)}
+              </select>
+            </div>
+            <label className="flex items-center gap-1.5 text-xs px-2 py-1.5 border border-border rounded-md bg-card">
+              <input type="checkbox" checked={travelOnly} onChange={e => setTravelOnly(e.target.checked)} className="rounded" />
+              <span className="text-foreground">仅看旅游相关</span>
+            </label>
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-[11px] text-muted-foreground">搜索</label>
+              <div className="relative mt-1">
+                <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  placeholder="搜索话题 / 关键词 / 景点 / 酒店..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="w-full pl-7 pr-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                />
               </div>
             </div>
+            <button
+              className="px-3 py-1.5 text-xs border border-border rounded-md bg-card text-muted-foreground hover:text-foreground"
+              onClick={() => { setFilterCategory("all"); setFilterSource("all"); setSearch(""); setTravelOnly(false); }}
+            >重置</button>
+          </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-4 gap-3">
-              <Card className="p-4">
-                <div className="text-xs text-muted-foreground mb-1">在榜话题</div>
-                <div className="text-2xl font-bold text-foreground">{stats.total}</div>
-                <div className="text-[11px] text-muted-foreground mt-1">{sourcesOfCategory.length} 个榜单源</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-xs text-muted-foreground mb-1">旅游业务相关</div>
-                <div className="text-2xl font-bold text-primary">{stats.travel}</div>
-                <div className="text-[11px] text-muted-foreground mt-1">占比 {stats.total ? Math.round(stats.travel / stats.total * 100) : 0}%</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-xs text-muted-foreground mb-1">新上榜</div>
-                <div className="text-2xl font-bold text-amber-600">{stats.newToday}</div>
-                <div className="text-[11px] text-muted-foreground mt-1">今日新增</div>
-              </Card>
-              <Card className="p-4">
-                <div className="text-xs text-muted-foreground mb-1">爆点话题</div>
-                <div className="text-2xl font-bold text-destructive">{stats.boom}</div>
-                <div className="text-[11px] text-muted-foreground mt-1">热度激增 ≥ 200%</div>
-              </Card>
-            </div>
+          {/* Selection toolbar */}
+          <SelectionToolbar
+            currentList={currentList}
+            selectedIds={selectedIds}
+            setSelectedIds={setSelectedIds}
+            goReport={goReport}
+          />
 
-            {/* Hero glance */}
-            {heroTopics.length > 0 && (
-              <Card className="p-4 bg-gradient-to-br from-rose-50/60 via-orange-50/40 to-amber-50/40 border-rose-100">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Flame className="w-4 h-4 text-rose-600" />
-                    <h3 className="text-sm font-semibold text-foreground">当前最热话题</h3>
-                    <span className="text-[11px] text-muted-foreground">· 跨平台爆点 / 新上榜 / 快速攀升</span>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-3">
-                  {heroTopics.map((t) => {
-                    const meta = RANK_SOURCES[t.source];
-                    const TIcon = TREND_META[t.trend].icon;
-                    const highlighted = highlightIds.has(t.id);
-                    return (
-                      <button
-                        key={t.id}
-                        onClick={() => goDetail(t)}
-                        className={`text-left bg-card rounded-lg border p-3 hover:border-primary/40 hover:shadow-sm transition-all group ${
-                          highlighted ? "border-amber-400 ring-2 ring-amber-200" : "border-border"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline" className={`text-[10px] ${meta.cls}`}>{meta.shortLabel}</Badge>
-                          <Badge variant="outline" className="text-[10px]">#{t.rank}</Badge>
-                          <span className={`ml-auto text-[10px] inline-flex items-center gap-0.5 ${TREND_META[t.trend].cls}`}>
-                            <TIcon className="w-2.5 h-2.5" />{TREND_META[t.trend].label}
-                          </span>
-                        </div>
-                        <div className="text-[13px] font-semibold text-foreground line-clamp-2 group-hover:text-primary mb-1.5">
-                          {t.title}
-                        </div>
-                        <p className="text-[11px] text-muted-foreground line-clamp-2 mb-2">{t.summary}</p>
-                        <div className="flex items-center gap-2 text-[11px]">
-                          <span className="inline-flex items-center gap-0.5 text-rose-600 font-medium">
-                            <Flame className="w-3 h-3" />{formatHeat(t.heat)}
-                          </span>
-                          {t.heatTrend !== 0 && (
-                            <span className={`inline-flex items-center gap-0.5 ${t.heatTrend > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                              {t.heatTrend > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                              {Math.abs(t.heatTrend)}%
-                            </span>
-                          )}
+          {/* Unified table */}
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-10"></TableHead>
+                  <TableHead className="w-20">排名</TableHead>
+                  <TableHead>话题</TableHead>
+                  <TableHead className="w-28">来源</TableHead>
+                  <TableHead className="w-20">分类</TableHead>
+                  <TableHead className="w-28 text-right">热度</TableHead>
+                  <TableHead className="w-20 text-right">涨幅</TableHead>
+                  <TableHead className="w-20">趋势</TableHead>
+                  <TableHead className="w-24">在榜时长</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allTopics.map(t => {
+                  const meta = RANK_SOURCES[t.source];
+                  const TIcon = TREND_META[t.trend].icon;
+                  const highlight = highlightIds.has(t.id);
+                  const catLabel = BOARD_CATEGORIES.find(c => c.key === meta.category)?.label.replace("社媒", "") ?? "";
+                  return (
+                    <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5"><RankBadge rank={t.rank} /><RankDelta topic={t} /></div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium text-sm text-foreground line-clamp-1 hover:text-primary">{t.title}</div>
+                        <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.summary}</div>
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
+                          {t.keywords.slice(0, 3).map(k => (
+                            <span key={k} className="text-[10px] px-1.5 py-0 rounded bg-muted text-muted-foreground">#{k}</span>
+                          ))}
                           {t.travelRelated && (
-                            <Badge variant="outline" className="ml-auto text-[10px] gap-0.5 bg-primary/5 text-primary border-primary/20">
+                            <Badge variant="outline" className="text-[10px] gap-0.5 bg-primary/5 text-primary border-primary/20">
                               <Plane className="w-2.5 h-2.5" />旅游
                             </Badge>
                           )}
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </Card>
-            )}
-
-            {/* Filter bar */}
-            <div className="bg-card rounded-lg border border-border p-3 flex flex-wrap items-end gap-3">
-              {/* Period (POI tabs) */}
-              {isPOI && (
-                <>
-                  <div className="inline-flex rounded-md border border-border overflow-hidden">
-                    <button
-                      className={`px-3 py-1.5 text-xs ${periodMode === "day" ? "bg-primary text-primary-foreground" : "bg-card text-foreground"}`}
-                      onClick={() => setPeriodMode("day")}
-                    >日榜</button>
-                    <button
-                      className={`px-3 py-1.5 text-xs ${periodMode === "month" ? "bg-primary text-primary-foreground" : "bg-card text-foreground"}`}
-                      onClick={() => setPeriodMode("month")}
-                    >月榜</button>
-                  </div>
-                  <input
-                    type="date"
-                    value={date}
-                    onChange={e => setDate(e.target.value)}
-                    className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                  />
-                </>
-              )}
-
-              {/* Source filter */}
-              {!isCity && !isPOI && (
-                <div className="min-w-[140px]">
-                  <label className="text-[11px] text-muted-foreground">榜单来源</label>
-                  <select
-                    className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                    value={filterSource}
-                    onChange={e => setFilterSource(e.target.value as typeof filterSource)}
-                  >
-                    <option value="all">全部</option>
-                    {sourcesOfCategory.map(s => (
-                      <option key={s} value={s}>{RANK_SOURCES[s].shortLabel}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {/* City filter */}
-              {isCity && (
-                <>
-                  <div className="min-w-[140px]">
-                    <label className="text-[11px] text-muted-foreground">平台</label>
-                    <select
-                      className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                      value={filterSource}
-                      onChange={e => setFilterSource(e.target.value as typeof filterSource)}
-                    >
-                      <option value="all">全部</option>
-                      {sourcesOfCategory.map(s => (
-                        <option key={s} value={s}>{RANK_SOURCES[s].shortLabel}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="min-w-[140px]">
-                    <label className="text-[11px] text-muted-foreground inline-flex items-center gap-1"><MapPin className="w-3 h-3" />城市</label>
-                    <select
-                      className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                      value={filterCity}
-                      onChange={e => setFilterCity(e.target.value)}
-                    >
-                      {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                </>
-              )}
-
-              {/* Region filter (POI) */}
-              {isPOI && (
-                <div className="min-w-[140px]">
-                  <label className="text-[11px] text-muted-foreground inline-flex items-center gap-1"><MapPin className="w-3 h-3" />省份</label>
-                  <select
-                    className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                    value={filterRegion}
-                    onChange={e => setFilterRegion(e.target.value)}
-                  >
-                    {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
-                  </select>
-                </div>
-              )}
-
-              {/* Travel only (only for realtime/city — travel/POI are inherently travel) */}
-              {(activeCategory === "realtime" || activeCategory === "city") && (
-                <label className="flex items-center gap-1.5 text-xs px-2 py-1.5 border border-border rounded-md bg-card">
-                  <input type="checkbox" checked={travelOnly} onChange={e => setTravelOnly(e.target.checked)} className="rounded" />
-                  <span className="text-foreground">仅看旅游相关</span>
-                </label>
-              )}
-
-              {/* Search */}
-              <div className="flex-1 min-w-[200px]">
-                <label className="text-[11px] text-muted-foreground">搜索</label>
-                <div className="relative mt-1">
-                  <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    placeholder={isPOI ? "搜索景点 / 酒店名称..." : "搜索话题 / 关键词..."}
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="w-full pl-7 pr-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                  />
-                </div>
-              </div>
-
-              <button
-                className="px-3 py-1.5 text-xs border border-border rounded-md bg-card text-muted-foreground hover:text-foreground"
-                onClick={() => { setFilterSource("all"); setSearch(""); setTravelOnly(false); setFilterRegion("全国"); }}
-              >重置</button>
-            </div>
-
-            {/* Selection toolbar */}
-            <div className="flex items-center justify-between text-[11px]">
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    className="rounded"
-                    checked={selectedIds.length > 0 && selectedIds.length === tabTopics.length}
-                    onChange={e => setSelectedIds(e.target.checked ? tabTopics.map(x => x.id) : [])}
-                  />
-                  <span className="text-muted-foreground">全选</span>
-                </label>
-                {selectedIds.length > 0 && (
-                  <>
-                    <span className="text-primary font-medium">已选 {selectedIds.length} 个</span>
-                    <Button size="sm" variant="default" className="h-6 text-[11px] gap-1" onClick={() => goReport(selectedIds)}>
-                      <FileText className="w-3 h-3" /> 一键生成报告
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => setSelectedIds([])}>
-                      取消选择
-                    </Button>
-                  </>
+                      </TableCell>
+                      <TableCell><Badge variant="outline" className={`text-[10px] ${meta.cls}`}>{meta.shortLabel}</Badge></TableCell>
+                      <TableCell><span className="text-[11px] text-muted-foreground">{catLabel}</span></TableCell>
+                      <TableCell className="text-right">
+                        <span className="text-sm font-semibold text-rose-600 inline-flex items-center gap-0.5 justify-end">
+                          <Flame className="w-3 h-3" />{formatHeat(t.heat)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {t.heatTrend !== 0 ? (
+                          <span className={`text-xs font-medium ${t.heatTrend > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                            {t.heatTrend > 0 ? "+" : ""}{t.heatTrend}%
+                          </span>
+                        ) : <span className="text-xs text-muted-foreground">—</span>}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`text-xs inline-flex items-center gap-0.5 ${TREND_META[t.trend].cls}`}>
+                          <TIcon className="w-3 h-3" />{TREND_META[t.trend].label}
+                        </span>
+                      </TableCell>
+                      <TableCell><span className="text-xs text-muted-foreground">{t.duration}</span></TableCell>
+                    </TableRow>
+                  );
+                })}
+                {allTopics.length === 0 && (
+                  <TableRow><TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">未找到匹配的话题</TableCell></TableRow>
                 )}
-                <span className="ml-2 text-muted-foreground">共 {tabTopics.length} 条</span>
-              </div>
-            </div>
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
 
-            {/* === Realtime / Travel: 5列看板 + 列表 === */}
-            {(cat.key === "realtime" || cat.key === "travel") && filterSource === "all" && (
-              <div className={`grid gap-3 ${cat.key === "realtime" ? "grid-cols-4" : "grid-cols-3"}`}>
-                {sourcesOfCategory.map(src => (
-                  <RankingColumn
-                    key={src}
-                    source={src}
-                    topics={topics}
-                    highlightIds={highlightIds}
-                    onSelectTopic={goDetail}
-                  />
-                ))}
-              </div>
-            )}
+        {/* ─────────── 节点信息 tab ─────────── */}
+        <TabsContent value="node" className="mt-4 space-y-4">
+          {/* Category sub-tabs */}
+          <Tabs value={nodeCategory} onValueChange={v => setNodeCategory(v as BoardCategory)}>
+            <TabsList className="h-auto p-1 flex-wrap">
+              {BOARD_CATEGORIES.map(c => (
+                <TabsTrigger key={c.key} value={c.key} className="gap-1.5">
+                  <span>{c.icon}</span><span>{c.label}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-            {/* === City list (Weibo-同城样式) === */}
-            {isCity && (
-              <Card className="overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10"></TableHead>
-                      <TableHead className="w-24">排名</TableHead>
-                      <TableHead>热点</TableHead>
-                      <TableHead className="w-28 text-right">热度值</TableHead>
-                      <TableHead className="w-72">相关帖子</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tabTopics.map(t => {
-                      const highlight = highlightIds.has(t.id);
-                      return (
-                        <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
-                          <TableCell onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              <RankBadge rank={t.rank} />
-                              <RankDelta topic={t} />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium text-sm text-foreground line-clamp-1 hover:text-primary">{t.title}</div>
-                            <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.summary}</div>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <span className="text-sm font-semibold text-rose-600">{t.heat.toLocaleString()}</span>
-                          </TableCell>
-                          <TableCell>
-                            {t.relatedPosts?.[0] && (
-                              <div className="text-xs">
-                                <div className="text-primary line-clamp-1 hover:underline">{t.relatedPosts[0].title}</div>
-                                <div className="text-[10px] text-muted-foreground">发布者: {t.relatedPosts[0].author || "—"}</div>
-                              </div>
-                            )}
-                          </TableCell>
+            {BOARD_CATEGORIES.map(cat => (
+              <TabsContent key={cat.key} value={cat.key} className="mt-4 space-y-4">
+                <div>
+                  <h2 className="text-sm font-semibold text-foreground">{cat.label}</h2>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    {cat.desc} · <span className="text-amber-700">数据时效: {cat.tip}</span>
+                  </p>
+                </div>
+
+                {/* Filter bar (specialized per category) */}
+                <div className="bg-card rounded-lg border border-border p-3 flex flex-wrap items-end gap-3">
+                  {isPOI && (
+                    <>
+                      <div className="inline-flex rounded-md border border-border overflow-hidden">
+                        <button
+                          className={`px-3 py-1.5 text-xs ${periodMode === "day" ? "bg-primary text-primary-foreground" : "bg-card text-foreground"}`}
+                          onClick={() => setPeriodMode("day")}
+                        >日榜</button>
+                        <button
+                          className={`px-3 py-1.5 text-xs ${periodMode === "month" ? "bg-primary text-primary-foreground" : "bg-card text-foreground"}`}
+                          onClick={() => setPeriodMode("month")}
+                        >月榜</button>
+                      </div>
+                      <input
+                        type="date"
+                        value={date}
+                        onChange={e => setDate(e.target.value)}
+                        className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                      />
+                    </>
+                  )}
+
+                  {!isCity && !isPOI && (
+                    <div className="min-w-[140px]">
+                      <label className="text-[11px] text-muted-foreground">榜单来源</label>
+                      <select
+                        className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                        value={filterSource}
+                        onChange={e => setFilterSource(e.target.value as typeof filterSource)}
+                      >
+                        <option value="all">全部</option>
+                        {sourcesOfNodeCategory.map(s => (
+                          <option key={s} value={s}>{RANK_SOURCES[s].shortLabel}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {isCity && (
+                    <>
+                      <div className="min-w-[140px]">
+                        <label className="text-[11px] text-muted-foreground">平台</label>
+                        <select
+                          className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                          value={filterSource}
+                          onChange={e => setFilterSource(e.target.value as typeof filterSource)}
+                        >
+                          <option value="all">全部</option>
+                          {sourcesOfNodeCategory.map(s => (
+                            <option key={s} value={s}>{RANK_SOURCES[s].shortLabel}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="min-w-[140px]">
+                        <label className="text-[11px] text-muted-foreground inline-flex items-center gap-1"><MapPin className="w-3 h-3" />城市</label>
+                        <select
+                          className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                          value={filterCity}
+                          onChange={e => setFilterCity(e.target.value)}
+                        >
+                          {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </div>
+                    </>
+                  )}
+
+                  {isPOI && (
+                    <div className="min-w-[140px]">
+                      <label className="text-[11px] text-muted-foreground inline-flex items-center gap-1"><MapPin className="w-3 h-3" />省份</label>
+                      <select
+                        className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                        value={filterRegion}
+                        onChange={e => setFilterRegion(e.target.value)}
+                      >
+                        {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    </div>
+                  )}
+
+                  {(nodeCategory === "realtime" || nodeCategory === "city") && (
+                    <label className="flex items-center gap-1.5 text-xs px-2 py-1.5 border border-border rounded-md bg-card">
+                      <input type="checkbox" checked={travelOnly} onChange={e => setTravelOnly(e.target.checked)} className="rounded" />
+                      <span className="text-foreground">仅看旅游相关</span>
+                    </label>
+                  )}
+
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="text-[11px] text-muted-foreground">搜索</label>
+                    <div className="relative mt-1">
+                      <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <input
+                        placeholder={isPOI ? "搜索景点 / 酒店名称..." : "搜索话题 / 关键词..."}
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full pl-7 pr-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    className="px-3 py-1.5 text-xs border border-border rounded-md bg-card text-muted-foreground hover:text-foreground"
+                    onClick={() => { setFilterSource("all"); setSearch(""); setTravelOnly(false); setFilterRegion("全国"); }}
+                  >重置</button>
+                </div>
+
+                <SelectionToolbar
+                  currentList={nodeTopics}
+                  selectedIds={selectedIds}
+                  setSelectedIds={setSelectedIds}
+                  goReport={goReport}
+                />
+
+                {/* Realtime / Travel: board view when no source filter, table when filtered */}
+                {(cat.key === "realtime" || cat.key === "travel") && filterSource === "all" && (
+                  <div className={`grid gap-3 ${cat.key === "realtime" ? "grid-cols-4" : "grid-cols-3"}`}>
+                    {sourcesOfNodeCategory.map(src => (
+                      <RankingColumn
+                        key={src}
+                        source={src}
+                        topics={topics}
+                        highlightIds={highlightIds}
+                        onSelectTopic={goDetail}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* City list */}
+                {isCity && (
+                  <Card className="overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"></TableHead>
+                          <TableHead className="w-24">排名</TableHead>
+                          <TableHead>热点</TableHead>
+                          <TableHead className="w-28 text-right">热度值</TableHead>
+                          <TableHead className="w-72">相关帖子</TableHead>
                         </TableRow>
-                      );
-                    })}
-                    {tabTopics.length === 0 && (
-                      <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">该城市暂无榜单数据</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </Card>
-            )}
+                      </TableHeader>
+                      <TableBody>
+                        {nodeTopics.map(t => {
+                          const highlight = highlightIds.has(t.id);
+                          return (
+                            <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                              <TableCell onClick={e => e.stopPropagation()}>
+                                <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5"><RankBadge rank={t.rank} /><RankDelta topic={t} /></div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium text-sm text-foreground line-clamp-1 hover:text-primary">{t.title}</div>
+                                <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.summary}</div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <span className="text-sm font-semibold text-rose-600">{t.heat.toLocaleString()}</span>
+                              </TableCell>
+                              <TableCell>
+                                {t.relatedPosts?.[0] && (
+                                  <div className="text-xs">
+                                    <div className="text-primary line-clamp-1 hover:underline">{t.relatedPosts[0].title}</div>
+                                    <div className="text-[10px] text-muted-foreground">发布者: {t.relatedPosts[0].author || "—"}</div>
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        {nodeTopics.length === 0 && (
+                          <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">该城市暂无榜单数据</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </Card>
+                )}
 
-            {/* === POI 景点/酒店 list === */}
-            {isPOI && (
-              <Card className="overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10"></TableHead>
-                      <TableHead className="w-20">排名</TableHead>
-                      <TableHead className="w-20">缩略图</TableHead>
-                      <TableHead className="w-48">{cat.key === "attractions" ? "景点名称" : "酒店名称"}</TableHead>
-                      <TableHead className="w-24">所属地</TableHead>
-                      <TableHead className="w-28 text-right">热度值</TableHead>
-                      <TableHead>相关帖子</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tabTopics.map(t => {
-                      const highlight = highlightIds.has(t.id);
-                      return (
-                        <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
-                          <TableCell onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1.5">
-                              <RankBadge rank={t.rank} />
-                              <RankDelta topic={t} />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center">
-                              {cat.key === "attractions"
-                                ? <ImageIcon className="w-5 h-5 text-muted-foreground" />
-                                : <Building2 className="w-5 h-5 text-muted-foreground" />}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm font-medium text-foreground hover:text-primary line-clamp-1">{t.poiName ?? t.title}</div>
-                          </TableCell>
-                          <TableCell><Badge variant="outline" className="text-[10px]">{t.poiRegion ?? "全国"}</Badge></TableCell>
-                          <TableCell className="text-right">
-                            <span className="text-sm font-semibold text-rose-600 inline-flex items-center gap-0.5 justify-end">
-                              <Flame className="w-3 h-3" />{formatHeat(t.heat)}
-                            </span>
-                          </TableCell>
-                          <TableCell>
-                            {t.relatedPosts?.[0] && (
-                              <div className="text-xs">
-                                <div className="text-primary line-clamp-1 hover:underline">{t.relatedPosts[0].title}</div>
-                                <div className="text-[10px] text-muted-foreground">发布者: {t.relatedPosts[0].author}</div>
-                              </div>
-                            )}
-                          </TableCell>
+                {/* POI list */}
+                {isPOI && (
+                  <Card className="overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"></TableHead>
+                          <TableHead className="w-20">排名</TableHead>
+                          <TableHead className="w-20">缩略图</TableHead>
+                          <TableHead className="w-48">{cat.key === "attractions" ? "景点名称" : "酒店名称"}</TableHead>
+                          <TableHead className="w-24">所属地</TableHead>
+                          <TableHead className="w-28 text-right">热度值</TableHead>
+                          <TableHead>相关帖子</TableHead>
                         </TableRow>
-                      );
-                    })}
-                    {tabTopics.length === 0 && (
-                      <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">暂无数据</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </Card>
-            )}
+                      </TableHeader>
+                      <TableBody>
+                        {nodeTopics.map(t => {
+                          const highlight = highlightIds.has(t.id);
+                          return (
+                            <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                              <TableCell onClick={e => e.stopPropagation()}>
+                                <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5"><RankBadge rank={t.rank} /><RankDelta topic={t} /></div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="w-12 h-12 rounded-md bg-muted flex items-center justify-center">
+                                  {cat.key === "attractions"
+                                    ? <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                                    : <Building2 className="w-5 h-5 text-muted-foreground" />}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm font-medium text-foreground hover:text-primary line-clamp-1">{t.poiName ?? t.title}</div>
+                              </TableCell>
+                              <TableCell><Badge variant="outline" className="text-[10px]">{t.poiRegion ?? "全国"}</Badge></TableCell>
+                              <TableCell className="text-right">
+                                <span className="text-sm font-semibold text-rose-600 inline-flex items-center gap-0.5 justify-end">
+                                  <Flame className="w-3 h-3" />{formatHeat(t.heat)}
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                {t.relatedPosts?.[0] && (
+                                  <div className="text-xs">
+                                    <div className="text-primary line-clamp-1 hover:underline">{t.relatedPosts[0].title}</div>
+                                    <div className="text-[10px] text-muted-foreground">发布者: {t.relatedPosts[0].author}</div>
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        {nodeTopics.length === 0 && (
+                          <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">暂无数据</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </Card>
+                )}
 
-            {/* === Realtime/Travel: when filterSource selected, show full table === */}
-            {(cat.key === "realtime" || cat.key === "travel") && filterSource !== "all" && (
-              <Card className="overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10"></TableHead>
-                      <TableHead className="w-20">排名</TableHead>
-                      <TableHead>话题</TableHead>
-                      <TableHead className="w-28">来源</TableHead>
-                      <TableHead className="w-28 text-right">热度</TableHead>
-                      <TableHead className="w-20 text-right">涨幅</TableHead>
-                      <TableHead className="w-20">趋势</TableHead>
-                      <TableHead className="w-24">在榜时长</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {tabTopics.map(t => {
-                      const meta = RANK_SOURCES[t.source];
-                      const TIcon = TREND_META[t.trend].icon;
-                      const highlight = highlightIds.has(t.id);
-                      return (
-                        <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
-                          <TableCell onClick={e => e.stopPropagation()}>
-                            <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1.5"><RankBadge rank={t.rank} /><RankDelta topic={t} /></div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium text-sm text-foreground line-clamp-1 hover:text-primary">{t.title}</div>
-                            <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.summary}</div>
-                            <div className="flex items-center gap-1 mt-1 flex-wrap">
-                              {t.keywords.slice(0, 3).map(k => (
-                                <span key={k} className="text-[10px] px-1.5 py-0 rounded bg-muted text-muted-foreground">#{k}</span>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell><Badge variant="outline" className={`text-[10px] ${meta.cls}`}>{meta.shortLabel}</Badge></TableCell>
-                          <TableCell className="text-right">
-                            <span className="text-sm font-semibold text-rose-600 inline-flex items-center gap-0.5 justify-end">
-                              <Flame className="w-3 h-3" />{formatHeat(t.heat)}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {t.heatTrend !== 0 ? (
-                              <span className={`text-xs font-medium ${t.heatTrend > 0 ? "text-rose-600" : "text-emerald-600"}`}>
-                                {t.heatTrend > 0 ? "+" : ""}{t.heatTrend}%
-                              </span>
-                            ) : <span className="text-xs text-muted-foreground">—</span>}
-                          </TableCell>
-                          <TableCell>
-                            <span className={`text-xs inline-flex items-center gap-0.5 ${TREND_META[t.trend].cls}`}>
-                              <TIcon className="w-3 h-3" />{TREND_META[t.trend].label}
-                            </span>
-                          </TableCell>
-                          <TableCell><span className="text-xs text-muted-foreground">{t.duration}</span></TableCell>
+                {/* Realtime/Travel filtered table */}
+                {(cat.key === "realtime" || cat.key === "travel") && filterSource !== "all" && (
+                  <Card className="overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"></TableHead>
+                          <TableHead className="w-20">排名</TableHead>
+                          <TableHead>话题</TableHead>
+                          <TableHead className="w-28">来源</TableHead>
+                          <TableHead className="w-28 text-right">热度</TableHead>
+                          <TableHead className="w-20 text-right">涨幅</TableHead>
+                          <TableHead className="w-20">趋势</TableHead>
+                          <TableHead className="w-24">在榜时长</TableHead>
                         </TableRow>
-                      );
-                    })}
-                    {tabTopics.length === 0 && (
-                      <TableRow><TableCell colSpan={8} className="text-center py-12 text-muted-foreground text-sm">未找到匹配的话题</TableCell></TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </Card>
-            )}
-          </TabsContent>
-        ))}
+                      </TableHeader>
+                      <TableBody>
+                        {nodeTopics.map(t => {
+                          const meta = RANK_SOURCES[t.source];
+                          const TIcon = TREND_META[t.trend].icon;
+                          const highlight = highlightIds.has(t.id);
+                          return (
+                            <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                              <TableCell onClick={e => e.stopPropagation()}>
+                                <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1.5"><RankBadge rank={t.rank} /><RankDelta topic={t} /></div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="font-medium text-sm text-foreground line-clamp-1 hover:text-primary">{t.title}</div>
+                                <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.summary}</div>
+                                <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                  {t.keywords.slice(0, 3).map(k => (
+                                    <span key={k} className="text-[10px] px-1.5 py-0 rounded bg-muted text-muted-foreground">#{k}</span>
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell><Badge variant="outline" className={`text-[10px] ${meta.cls}`}>{meta.shortLabel}</Badge></TableCell>
+                              <TableCell className="text-right">
+                                <span className="text-sm font-semibold text-rose-600 inline-flex items-center gap-0.5 justify-end">
+                                  <Flame className="w-3 h-3" />{formatHeat(t.heat)}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {t.heatTrend !== 0 ? (
+                                  <span className={`text-xs font-medium ${t.heatTrend > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                    {t.heatTrend > 0 ? "+" : ""}{t.heatTrend}%
+                                  </span>
+                                ) : <span className="text-xs text-muted-foreground">—</span>}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`text-xs inline-flex items-center gap-0.5 ${TREND_META[t.trend].cls}`}>
+                                  <TIcon className="w-3 h-3" />{TREND_META[t.trend].label}
+                                </span>
+                              </TableCell>
+                              <TableCell><span className="text-xs text-muted-foreground">{t.duration}</span></TableCell>
+                            </TableRow>
+                          );
+                        })}
+                        {nodeTopics.length === 0 && (
+                          <TableRow><TableCell colSpan={8} className="text-center py-12 text-muted-foreground text-sm">未找到匹配的话题</TableCell></TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </Card>
+                )}
+              </TabsContent>
+            ))}
+          </Tabs>
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function SelectionToolbar({
+  currentList, selectedIds, setSelectedIds, goReport,
+}: {
+  currentList: RankTopic[];
+  selectedIds: string[];
+  setSelectedIds: (ids: string[]) => void;
+  goReport: (ids: string[]) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between text-[11px]">
+      <div className="flex items-center gap-3">
+        <label className="flex items-center gap-1">
+          <input
+            type="checkbox"
+            className="rounded"
+            checked={selectedIds.length > 0 && selectedIds.length === currentList.length}
+            onChange={e => setSelectedIds(e.target.checked ? currentList.map(x => x.id) : [])}
+          />
+          <span className="text-muted-foreground">全选</span>
+        </label>
+        {selectedIds.length > 0 && (
+          <>
+            <span className="text-primary font-medium">已选 {selectedIds.length} 个</span>
+            <Button size="sm" variant="default" className="h-6 text-[11px] gap-1" onClick={() => goReport(selectedIds)}>
+              <FileText className="w-3 h-3" /> 一键生成报告
+            </Button>
+            <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => setSelectedIds([])}>
+              取消选择
+            </Button>
+          </>
+        )}
+        <span className="ml-2 text-muted-foreground">共 {currentList.length} 条</span>
+      </div>
     </div>
   );
 }
