@@ -12,7 +12,7 @@ import {
   FileText, Eye, Download, Trash2, Search, Calendar,
   AlertTriangle, Settings2, ChevronRight,
   Repeat, Zap, ArrowLeft, Pencil, Check, Plus, LayoutTemplate, Sparkles, X, Clock,
-  Bell, Users, User as UserIcon, Layers, Link2,
+  Bell, Users, User as UserIcon, Layers, Link2, Hash,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -101,9 +101,10 @@ const FIELD_CATALOG: FieldDef[] = [
   // 数据集锁定（来自外部预填）
   { key: "eventSet", label: "事件集合", type: "lockset" },
   { key: "articleSet", label: "文章集合", type: "lockset" },
+  { key: "topicSet", label: "话题集合", type: "lockset" },
 ];
 const TIME_FIELD_KEYS = ["publishTime", "collectTime"];
-const LOCKSET_FIELD_KEYS = ["eventSet", "articleSet"];
+const LOCKSET_FIELD_KEYS = ["eventSet", "articleSet", "topicSet"];
 
 const OPERATORS_BY_TYPE: Record<FieldDef["type"], { value: string; label: string; mode: "single" | "chips" | "days" | "lockset" }[]> = {
   enum: [
@@ -218,6 +219,12 @@ const allReports: Report[] = [
     templateId: "TPL03", templateName: "热点追踪模板",
   },
   {
+    id: "RPT011", title: "社媒榜单-五一旅游话题速览", type: "专项报告", theme: "社媒榜单",
+    status: "completed", configCreatedAt: "2026-04-15 10:30", createdAt: "2026-04-15 10:42", pages: 9, format: "HTML",
+    author: "AI智能生成", size: "1.2MB", scheduleType: "once",
+    templateId: "TPL03", templateName: "热点追踪模板",
+  },
+  {
     id: "RPT004", title: "产品体验月度报告", type: "月报", theme: "产品体验主题",
     status: "completed", configCreatedAt: "2026-01-10 08:00", createdAt: "2026-04-01 08:00", pages: 18, format: "HTML",
     author: "系统自动生成", size: "5.2MB", scheduleType: "recurring", frequency: "monthly",
@@ -287,8 +294,8 @@ const employeeDirectory: Employee[] = [
   { name: "周杰", empId: "P11342", dept: "产品" },
 ];
 
-const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
-const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题"];
+const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "社媒榜单", "综合"];
+const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "社媒榜单"];
 
 type ReportTplChoice = { id: string; name: string; desc: string; tags: string[] };
 const reportTemplates: ReportTplChoice[] = [
@@ -305,7 +312,7 @@ const newCondition = (field = "business"): RuleCondition => {
 
 interface ReportPrefill {
   theme?: string;
-  scope: "articles" | "events";
+  scope: "articles" | "events" | "topics";
   ids: string[];
   titles?: string[];
   source?: string; // 来源页（用于提示）
@@ -413,7 +420,7 @@ export default function ReportManagement() {
     if (pf.theme) setWizTheme(pf.theme);
     setWizSchedule("once"); // 选定数据范围 → 默认一次性
     // 把锁定的数据集回填为一条「集合」条件 + 一条默认时间条件
-    const lockField = pf.scope === "events" ? "eventSet" : "articleSet";
+    const lockField = pf.scope === "events" ? "eventSet" : pf.scope === "topics" ? "topicSet" : "articleSet";
     const lockedCondition: RuleCondition = {
       id: "lockset",
       field: lockField,
@@ -981,7 +988,9 @@ export default function ReportManagement() {
                       <div className="flex items-center gap-2 text-sm flex-wrap">
                         {wizPrefill.scope === "events"
                           ? <Layers className="w-4 h-4 text-primary" />
-                          : <FileText className="w-4 h-4 text-primary" />}
+                          : wizPrefill.scope === "topics"
+                            ? <Hash className="w-4 h-4 text-primary" />
+                            : <FileText className="w-4 h-4 text-primary" />}
                         <span className="font-medium text-foreground">已锁定数据范围</span>
                         {wizTheme && (
                           <Badge variant="secondary" className="text-[10px] gap-1">
@@ -989,8 +998,8 @@ export default function ReportManagement() {
                           </Badge>
                         )}
                         <Badge variant="secondary" className="text-[10px] gap-1">
-                          {wizPrefill.scope === "events" ? <Layers className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
-                          {wizPrefill.scope === "events" ? "事件" : "文章"} · {wizPrefill.ids.length} 条
+                          {wizPrefill.scope === "events" ? <Layers className="w-3 h-3" /> : wizPrefill.scope === "topics" ? <Hash className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+                          {wizPrefill.scope === "events" ? "事件" : wizPrefill.scope === "topics" ? "话题" : "文章"} · {wizPrefill.ids.length} 条
                         </Badge>
                         {wizPrefill.source && (
                           <Badge variant="secondary" className="text-[10px] gap-1">
@@ -1011,7 +1020,7 @@ export default function ReportManagement() {
                       </button>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      已自动回填到下方"查询条件"中（{wizPrefill.scope === "events" ? "事件集合" : "文章集合"} · 属于已选集合）。可在条件区追加其他筛选与时间范围；移除该锁定条件等同于清除范围。
+                      已自动回填到下方"查询条件"中（{wizPrefill.scope === "events" ? "事件集合" : wizPrefill.scope === "topics" ? "话题集合" : "文章集合"} · 属于已选集合）。可在条件区追加其他筛选与时间范围；移除该锁定条件等同于清除范围。
                     </p>
                   </div>
                 )}
