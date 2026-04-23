@@ -13,6 +13,7 @@ import HotspotDiscover from "@/pages/HotspotDiscover";
 import HotspotList from "@/pages/HotspotList";
 import HotspotDetail from "@/pages/HotspotDetail";
 import SocialRankingList from "@/pages/SocialRankingList";
+import SocialRankingDetail from "@/pages/SocialRankingDetail";
 import ExperienceOverview from "@/pages/ExperienceOverview";
 import PlaceholderPage from "@/components/PlaceholderPage";
 import ThemeList from "@/pages/ThemeList";
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/hotspot/event-detail" element={<HotspotDetail />} />
             {/* 洞察主题 - 社媒榜单 */}
             <Route path="/social-ranking/list" element={<SocialRankingList />} />
+            <Route path="/social-ranking/topic/:id" element={<SocialRankingDetail />} />
             {/* 洞察主题 - 产品体验 */}
             <Route path="/experience/overview" element={<ExperienceOverview />} />
             <Route path="/experience/detail" element={<PlaceholderPage title="产品体验列表" />} />
