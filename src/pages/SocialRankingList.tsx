@@ -780,6 +780,7 @@ export default function SocialRankingList() {
                       </TableBody>
                     </Table>
                   </Card>
+                  </div>
                 )}
               </TabsContent>
             ))}
