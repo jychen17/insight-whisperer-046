@@ -79,7 +79,8 @@ function RankingColumn({
             <button
               key={t.id}
               onClick={() => onSelectTopic(t)}
-              className={`w-full text-left px-3 py-2.5 hover:bg-muted/40 transition-colors flex items-start gap-2.5 relative ${
+              title={`${t.title}\n\n${t.summary}\n\n来源:${meta.shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()}`}
+              className={`w-full text-left px-3 py-2.5 hover:bg-primary/5 transition-colors flex items-start gap-2.5 relative ${
                 highlight ? "bg-amber-50/60 animate-pulse-once" : ""
               } ${isBoom ? "border-l-2 border-l-destructive" : isNew ? "border-l-2 border-l-amber-500" : ""}`}
             >
