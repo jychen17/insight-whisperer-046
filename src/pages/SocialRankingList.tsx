@@ -79,7 +79,8 @@ function RankingColumn({
             <button
               key={t.id}
               onClick={() => onSelectTopic(t)}
-              className={`w-full text-left px-3 py-2.5 hover:bg-muted/40 transition-colors flex items-start gap-2.5 relative ${
+              title={`${t.title}\n\n${t.summary}\n\n来源:${meta.shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()}`}
+              className={`w-full text-left px-3 py-2.5 hover:bg-primary/5 transition-colors flex items-start gap-2.5 relative ${
                 highlight ? "bg-amber-50/60 animate-pulse-once" : ""
               } ${isBoom ? "border-l-2 border-l-destructive" : isNew ? "border-l-2 border-l-amber-500" : ""}`}
             >
@@ -117,7 +118,7 @@ type MainTab = "all" | "node";
 export default function SocialRankingList() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [mainTab, setMainTab] = useState<MainTab>("all");
+  const [mainTab, setMainTab] = useState<MainTab>("node");
 
   // Filters (shared across tabs but visually grouped)
   const [filterCategory, setFilterCategory] = useState<"all" | BoardCategory>("all");
@@ -300,8 +301,8 @@ export default function SocialRankingList() {
       {/* Main tabs: 全部 / 节点信息 */}
       <Tabs value={mainTab} onValueChange={v => { setMainTab(v as MainTab); setSelectedIds([]); }}>
         <TabsList>
-          <TabsTrigger value="all">全部 ({allTopics.length})</TabsTrigger>
           <TabsTrigger value="node">节点信息</TabsTrigger>
+          <TabsTrigger value="all">全部 ({allTopics.length})</TabsTrigger>
         </TabsList>
 
         {/* ─────────── 全部 tab ─────────── */}
@@ -383,7 +384,7 @@ export default function SocialRankingList() {
                   const highlight = highlightIds.has(t.id);
                   const catLabel = BOARD_CATEGORIES.find(c => c.key === meta.category)?.label.replace("社媒", "") ?? "";
                   return (
-                    <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                    <TableRow key={t.id} className={`hover:bg-primary/5 cursor-pointer transition-colors ${highlight ? "bg-amber-50/60" : ""}`} title={`${t.title}\n\n${t.summary}\n\n来源:${RANK_SOURCES[t.source].shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()} · ${TREND_META[t.trend].label}`} onClick={() => goDetail(t)}>
                       <TableCell onClick={e => e.stopPropagation()}>
                         <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
                       </TableCell>
@@ -569,18 +570,32 @@ export default function SocialRankingList() {
                   goReport={goReport}
                 />
 
-                {/* Realtime / Travel: board view when no source filter, table when filtered */}
-                {(cat.key === "realtime" || cat.key === "travel") && filterSource === "all" && (
-                  <div className={`grid gap-3 ${cat.key === "realtime" ? "grid-cols-4" : "grid-cols-3"}`}>
-                    {sourcesOfNodeCategory.map(src => (
-                      <RankingColumn
-                        key={src}
-                        source={src}
-                        topics={topics}
-                        highlightIds={highlightIds}
-                        onSelectTopic={goDetail}
-                      />
-                    ))}
+                {/* Realtime / Travel: always show board view (TOP per source) */}
+                {(cat.key === "realtime" || cat.key === "travel") && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xs font-semibold text-muted-foreground inline-flex items-center gap-1.5">
+                        <Flame className="w-3.5 h-3.5 text-rose-500" />
+                        各榜 TOP 看板
+                        <span className="text-[10px] text-muted-foreground/70 font-normal">点击话题进入详情</span>
+                      </h3>
+                      {filterSource !== "all" && (
+                        <span className="text-[10px] text-muted-foreground">已按「{RANK_SOURCES[filterSource as RankSource].shortLabel}」过滤</span>
+                      )}
+                    </div>
+                    <div className={`grid gap-3 ${cat.key === "realtime" ? "grid-cols-4" : "grid-cols-3"}`}>
+                      {sourcesOfNodeCategory
+                        .filter(src => filterSource === "all" || filterSource === src)
+                        .map(src => (
+                          <RankingColumn
+                            key={src}
+                            source={src}
+                            topics={topics}
+                            highlightIds={highlightIds}
+                            onSelectTopic={goDetail}
+                          />
+                        ))}
+                    </div>
                   </div>
                 )}
 
@@ -593,6 +608,8 @@ export default function SocialRankingList() {
                           <TableHead className="w-10"></TableHead>
                           <TableHead className="w-24">排名</TableHead>
                           <TableHead>热点</TableHead>
+                          <TableHead className="w-24">来源</TableHead>
+                          <TableHead className="w-20">趋势</TableHead>
                           <TableHead className="w-28 text-right">热度值</TableHead>
                           <TableHead className="w-72">相关帖子</TableHead>
                         </TableRow>
@@ -600,8 +617,10 @@ export default function SocialRankingList() {
                       <TableBody>
                         {nodeTopics.map(t => {
                           const highlight = highlightIds.has(t.id);
+                          const meta = RANK_SOURCES[t.source];
+                          const TIcon = TREND_META[t.trend].icon;
                           return (
-                            <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                            <TableRow key={t.id} className={`hover:bg-primary/5 cursor-pointer transition-colors ${highlight ? "bg-amber-50/60" : ""}`} title={`${t.title}\n\n${t.summary}\n\n来源:${RANK_SOURCES[t.source].shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()} · ${TREND_META[t.trend].label}`} onClick={() => goDetail(t)}>
                               <TableCell onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
                               </TableCell>
@@ -611,9 +630,22 @@ export default function SocialRankingList() {
                               <TableCell>
                                 <div className="font-medium text-sm text-foreground line-clamp-1 hover:text-primary">{t.title}</div>
                                 <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.summary}</div>
+                                {t.travelRelated && (
+                                  <Badge variant="outline" className="mt-1 text-[10px] gap-0.5 bg-primary/5 text-primary border-primary/20">
+                                    <Plane className="w-2.5 h-2.5" />旅游
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell><Badge variant="outline" className={`text-[10px] ${meta.cls}`}>{meta.shortLabel}</Badge></TableCell>
+                              <TableCell>
+                                <span className={`text-xs inline-flex items-center gap-0.5 ${TREND_META[t.trend].cls}`}>
+                                  <TIcon className="w-3 h-3" />{TREND_META[t.trend].label}
+                                </span>
                               </TableCell>
                               <TableCell className="text-right">
-                                <span className="text-sm font-semibold text-rose-600">{t.heat.toLocaleString()}</span>
+                                <span className="text-sm font-semibold text-rose-600 inline-flex items-center gap-0.5 justify-end">
+                                  <Flame className="w-3 h-3" />{t.heat.toLocaleString()}
+                                </span>
                               </TableCell>
                               <TableCell>
                                 {t.relatedPosts?.[0] && (
@@ -627,7 +659,7 @@ export default function SocialRankingList() {
                           );
                         })}
                         {nodeTopics.length === 0 && (
-                          <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground text-sm">该城市暂无榜单数据</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">该城市暂无榜单数据</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
@@ -645,15 +677,18 @@ export default function SocialRankingList() {
                           <TableHead className="w-20">缩略图</TableHead>
                           <TableHead className="w-48">{cat.key === "attractions" ? "景点名称" : "酒店名称"}</TableHead>
                           <TableHead className="w-24">所属地</TableHead>
+                          <TableHead className="w-20">趋势</TableHead>
                           <TableHead className="w-28 text-right">热度值</TableHead>
+                          <TableHead className="w-20 text-right">涨幅</TableHead>
                           <TableHead>相关帖子</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {nodeTopics.map(t => {
                           const highlight = highlightIds.has(t.id);
+                          const TIcon = TREND_META[t.trend].icon;
                           return (
-                            <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                            <TableRow key={t.id} className={`hover:bg-primary/5 cursor-pointer transition-colors ${highlight ? "bg-amber-50/60" : ""}`} title={`${t.title}\n\n${t.summary}\n\n来源:${RANK_SOURCES[t.source].shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()} · ${TREND_META[t.trend].label}`} onClick={() => goDetail(t)}>
                               <TableCell onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
                               </TableCell>
@@ -669,12 +704,25 @@ export default function SocialRankingList() {
                               </TableCell>
                               <TableCell>
                                 <div className="text-sm font-medium text-foreground hover:text-primary line-clamp-1">{t.poiName ?? t.title}</div>
+                                <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.summary}</div>
                               </TableCell>
                               <TableCell><Badge variant="outline" className="text-[10px]">{t.poiRegion ?? "全国"}</Badge></TableCell>
+                              <TableCell>
+                                <span className={`text-xs inline-flex items-center gap-0.5 ${TREND_META[t.trend].cls}`}>
+                                  <TIcon className="w-3 h-3" />{TREND_META[t.trend].label}
+                                </span>
+                              </TableCell>
                               <TableCell className="text-right">
                                 <span className="text-sm font-semibold text-rose-600 inline-flex items-center gap-0.5 justify-end">
                                   <Flame className="w-3 h-3" />{formatHeat(t.heat)}
                                 </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {t.heatTrend !== 0 ? (
+                                  <span className={`text-xs font-medium ${t.heatTrend > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                    {t.heatTrend > 0 ? "+" : ""}{t.heatTrend}%
+                                  </span>
+                                ) : <span className="text-xs text-muted-foreground">—</span>}
                               </TableCell>
                               <TableCell>
                                 {t.relatedPosts?.[0] && (
@@ -688,15 +736,20 @@ export default function SocialRankingList() {
                           );
                         })}
                         {nodeTopics.length === 0 && (
-                          <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">暂无数据</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">暂无数据</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
                   </Card>
                 )}
 
-                {/* Realtime/Travel filtered table */}
-                {(cat.key === "realtime" || cat.key === "travel") && filterSource !== "all" && (
+                {/* Realtime/Travel: full table with all fields */}
+                {(cat.key === "realtime" || cat.key === "travel") && (
+                  <div>
+                    <h3 className="text-xs font-semibold text-muted-foreground mb-2 inline-flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5" />
+                      话题完整列表 <span className="text-[10px] font-normal text-muted-foreground/70">共 {nodeTopics.length} 条 · hover 行查看摘要</span>
+                    </h3>
                   <Card className="overflow-hidden">
                     <Table>
                       <TableHeader>
@@ -717,7 +770,7 @@ export default function SocialRankingList() {
                           const TIcon = TREND_META[t.trend].icon;
                           const highlight = highlightIds.has(t.id);
                           return (
-                            <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                            <TableRow key={t.id} className={`hover:bg-primary/5 cursor-pointer transition-colors ${highlight ? "bg-amber-50/60" : ""}`} title={`${t.title}\n\n${t.summary}\n\n来源:${RANK_SOURCES[t.source].shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()} · ${TREND_META[t.trend].label}`} onClick={() => goDetail(t)}>
                               <TableCell onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
                               </TableCell>
@@ -761,6 +814,7 @@ export default function SocialRankingList() {
                       </TableBody>
                     </Table>
                   </Card>
+                  </div>
                 )}
               </TabsContent>
             ))}
