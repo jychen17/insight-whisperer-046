@@ -578,6 +578,7 @@ export default function ReportManagement() {
                   <TableHead>报告名称</TableHead>
                   <TableHead>调度类型</TableHead>
                   <TableHead>所属主题</TableHead>
+                  <TableHead>创建时间</TableHead>
                   <TableHead>最近生成时间</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead className="text-right">操作</TableHead>
