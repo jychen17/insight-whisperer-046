@@ -83,3 +83,79 @@ export const rankTopics: RankTopic[] = [
 
 export const formatHeat = (n: number) =>
   n >= 10000 ? `${(n / 10000).toFixed(1)}w` : `${n}`;
+
+// ─── Time-series helpers (deterministic mock based on topic id) ───
+const hashCode = (s: string) => s.split("").reduce((a, c) => ((a << 5) - a + c.charCodeAt(0)) | 0, 0);
+const seedRand = (seed: number) => {
+  let x = Math.abs(seed) || 1;
+  return () => { x = (x * 9301 + 49297) % 233280; return x / 233280; };
+};
+
+export interface RankPoint { time: string; rank: number | null; }
+export interface HeatPoint { time: string; heat: number; }
+
+// 24 小时排名变化（每个榜单源一条折线）
+export function buildRankHistory(topic: RankTopic, source: RankSource): RankPoint[] {
+  const rng = seedRand(hashCode(topic.id + source));
+  const inThisBoard = topic.crossSources.includes(source) || topic.source === source;
+  const baseRank = topic.source === source ? topic.rank : (10 + Math.floor(rng() * 30));
+  const points: RankPoint[] = [];
+  for (let i = 23; i >= 0; i--) {
+    const t = `${String((22 - i + 24) % 24).padStart(2, "0")}:00`;
+    if (!inThisBoard) { points.push({ time: t, rank: null }); continue; }
+    // 距离当前越近越接近 baseRank;远的时候有更大波动,首次上榜前为 null
+    const distance = i / 23;
+    const noise = (rng() - 0.5) * 8;
+    let r = Math.round(baseRank + distance * 6 + noise);
+    if (r < 1) r = 1;
+    if (r > 50) r = 50;
+    // 模拟"新上榜":只有最近 1-3 个点有数据
+    if (topic.trend === "new" && i > 3) { points.push({ time: t, rank: null }); continue; }
+    points.push({ time: t, rank: r });
+  }
+  return points;
+}
+
+// 24 小时热度曲线
+export function buildHeatHistory(topic: RankTopic): HeatPoint[] {
+  const rng = seedRand(hashCode(topic.id + "heat"));
+  const peak = topic.heat;
+  const points: HeatPoint[] = [];
+  for (let i = 23; i >= 0; i--) {
+    const t = `${String((22 - i + 24) % 24).padStart(2, "0")}:00`;
+    let factor: number;
+    if (topic.trend === "boom" || topic.trend === "up") {
+      factor = 0.15 + (1 - i / 23) * 0.85 + (rng() - 0.5) * 0.1;
+    } else if (topic.trend === "down") {
+      factor = 0.4 + (i / 23) * 0.6 + (rng() - 0.5) * 0.1;
+    } else if (topic.trend === "new") {
+      factor = i > 3 ? 0 : 0.4 + (3 - i) * 0.2;
+    } else {
+      factor = 0.7 + (rng() - 0.5) * 0.2;
+    }
+    points.push({ time: t, heat: Math.max(0, Math.round(peak * factor)) });
+  }
+  return points;
+}
+
+export const findTopic = (id: string) => rankTopics.find(t => t.id === id);
+
+// 用于"刷新":返回扰动后的新数据快照(同一时刻调用结果一致,通过 timestamp 改变)
+export function refreshSnapshot(timestamp: number): { topics: RankTopic[]; updatedIds: string[] } {
+  const rng = seedRand(timestamp);
+  const updatedIds: string[] = [];
+  const topics = rankTopics.map(t => {
+    const shift = Math.floor((rng() - 0.5) * 4); // -2 ~ +2
+    const heatShift = Math.floor((rng() - 0.5) * t.heat * 0.15);
+    const newRank = Math.max(1, Math.min(50, t.rank + shift));
+    const newHeat = Math.max(1000, t.heat + heatShift);
+    let newTrend: TrendDir = t.trend;
+    // 偶尔触发新爆点
+    if (rng() > 0.85 && newHeat - t.heat > t.heat * 0.05) { newTrend = "boom"; updatedIds.push(t.id); }
+    else if (rng() > 0.9) { newTrend = "new"; updatedIds.push(t.id); }
+    else if (shift !== 0 || heatShift !== 0) updatedIds.push(t.id);
+    return { ...t, rank: newRank, prevRank: t.rank, heat: newHeat, trend: newTrend };
+  });
+  return { topics, updatedIds };
+}
+
