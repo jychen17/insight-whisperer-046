@@ -101,9 +101,10 @@ const FIELD_CATALOG: FieldDef[] = [
   // 数据集锁定（来自外部预填）
   { key: "eventSet", label: "事件集合", type: "lockset" },
   { key: "articleSet", label: "文章集合", type: "lockset" },
+  { key: "topicSet", label: "话题集合", type: "lockset" },
 ];
 const TIME_FIELD_KEYS = ["publishTime", "collectTime"];
-const LOCKSET_FIELD_KEYS = ["eventSet", "articleSet"];
+const LOCKSET_FIELD_KEYS = ["eventSet", "articleSet", "topicSet"];
 
 const OPERATORS_BY_TYPE: Record<FieldDef["type"], { value: string; label: string; mode: "single" | "chips" | "days" | "lockset" }[]> = {
   enum: [
@@ -287,8 +288,8 @@ const employeeDirectory: Employee[] = [
   { name: "周杰", empId: "P11342", dept: "产品" },
 ];
 
-const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "综合"];
-const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题"];
+const themeOptions = ["全部", "舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "社媒榜单", "综合"];
+const themeChoices = ["舆情主题", "行业咨询主题", "热点洞察主题", "产品体验主题", "社媒榜单"];
 
 type ReportTplChoice = { id: string; name: string; desc: string; tags: string[] };
 const reportTemplates: ReportTplChoice[] = [
@@ -305,7 +306,7 @@ const newCondition = (field = "business"): RuleCondition => {
 
 interface ReportPrefill {
   theme?: string;
-  scope: "articles" | "events";
+  scope: "articles" | "events" | "topics";
   ids: string[];
   titles?: string[];
   source?: string; // 来源页（用于提示）
@@ -413,7 +414,7 @@ export default function ReportManagement() {
     if (pf.theme) setWizTheme(pf.theme);
     setWizSchedule("once"); // 选定数据范围 → 默认一次性
     // 把锁定的数据集回填为一条「集合」条件 + 一条默认时间条件
-    const lockField = pf.scope === "events" ? "eventSet" : "articleSet";
+    const lockField = pf.scope === "events" ? "eventSet" : pf.scope === "topics" ? "topicSet" : "articleSet";
     const lockedCondition: RuleCondition = {
       id: "lockset",
       field: lockField,
