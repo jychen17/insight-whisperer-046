@@ -1,8 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Flame, TrendingUp, TrendingDown, Minus, Sparkles, Search, Bell, FileText,
-  Settings, ArrowUpRight, ArrowDownRight, Hash, MapPin, Plane, Star, Layers, Download, ChevronDown, CheckCircle2,
+  Settings, ArrowUpRight, ArrowDownRight, Hash, Plane, Layers, Download, ChevronDown, CheckCircle2,
+  RefreshCw, X, ExternalLink,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import {
-  rankTopics, RANK_SOURCES, formatHeat,
+  rankTopics as initialTopics, RANK_SOURCES, formatHeat, refreshSnapshot,
   type RankSource, type RankTopic, type TrendDir, type TopicCategory,
 } from "@/lib/socialRankingData";
 
@@ -27,15 +29,16 @@ const CATEGORIES: TopicCategory[] = [
   "明星娱乐","旅游目的地","节假出行","社会民生","美食","酒店住宿","交通出行","户外活动",
 ];
 
-function RankBadge({ rank, trend }: { rank: number; trend: TrendDir }) {
+const fmtTime = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`;
+
+function RankBadge({ rank }: { rank: number }) {
   const top3 = rank <= 3;
   const colorMap = ["bg-rose-500 text-white", "bg-orange-500 text-white", "bg-amber-500 text-white"];
   return (
     <div className={`inline-flex items-center justify-center w-7 h-7 rounded-md text-xs font-bold shrink-0 ${
       top3 ? colorMap[rank - 1] : "bg-muted text-foreground"
-    }`}>
-      {rank}
-    </div>
+    }`}>{rank}</div>
   );
 }
 
@@ -52,28 +55,47 @@ function RankDelta({ topic }: { topic: RankTopic }) {
 
 // ─── Per-source ranking column ───
 function RankingColumn({
-  source, topics, onSelect,
-}: { source: RankSource; topics: RankTopic[]; onSelect: (t: RankTopic) => void }) {
+  source, topics, highlightIds, activeSource, onSelectSource, onSelectTopic,
+}: {
+  source: RankSource;
+  topics: RankTopic[];
+  highlightIds: Set<string>;
+  activeSource: "all" | RankSource;
+  onSelectSource: (s: RankSource) => void;
+  onSelectTopic: (t: RankTopic) => void;
+}) {
   const meta = RANK_SOURCES[source];
   const list = topics.filter(t => t.source === source).sort((a, b) => a.rank - b.rank).slice(0, 10);
+  const isActive = activeSource === source;
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className={`px-4 py-3 flex items-center justify-between ${meta.cls}`}>
+    <Card className={`p-0 overflow-hidden transition-all ${isActive ? "ring-2 ring-primary shadow-md" : ""}`}>
+      <button
+        onClick={() => onSelectSource(source)}
+        className={`w-full px-4 py-3 flex items-center justify-between ${meta.cls} hover:opacity-90 transition-opacity`}
+        title="点击联动筛选话题列表"
+      >
         <div className="flex items-center gap-2">
           <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
           <span className="text-sm font-semibold">{meta.platform} · {meta.board}</span>
         </div>
-        <span className="text-[10px] opacity-80">TOP 10</span>
-      </div>
+        <span className="text-[10px] opacity-80 inline-flex items-center gap-1">
+          {isActive && <CheckCircle2 className="w-3 h-3" />} TOP 10
+        </span>
+      </button>
       <div className="divide-y divide-border">
         {list.map(t => {
+          const highlight = highlightIds.has(t.id);
+          const isBoom = t.trend === "boom";
+          const isNew = t.trend === "new";
           return (
             <button
               key={t.id}
-              onClick={() => onSelect(t)}
-              className="w-full text-left px-3 py-2.5 hover:bg-muted/40 transition-colors flex items-start gap-2.5"
+              onClick={() => onSelectTopic(t)}
+              className={`w-full text-left px-3 py-2.5 hover:bg-muted/40 transition-colors flex items-start gap-2.5 relative ${
+                highlight ? "bg-amber-50/60 animate-pulse-once" : ""
+              } ${isBoom ? "border-l-2 border-l-destructive" : isNew ? "border-l-2 border-l-amber-500" : ""}`}
             >
-              <RankBadge rank={t.rank} trend={t.trend} />
+              <RankBadge rank={t.rank} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-1.5">
                   <span className="text-[13px] font-medium text-foreground line-clamp-1 flex-1">{t.title}</span>
@@ -113,8 +135,42 @@ export default function SocialRankingList() {
   const [sortBy, setSortBy] = useState<"heat_desc" | "rank_asc" | "trend_desc">("heat_desc");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // ─── Refresh state (Feature 3) ───
+  const [topics, setTopics] = useState<RankTopic[]>(initialTopics);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date(2026, 3, 15, 22, 0, 0));
+  const [refreshing, setRefreshing] = useState(false);
+  const [highlightIds, setHighlightIds] = useState<Set<string>>(new Set());
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleRefresh = () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    setTimeout(() => {
+      const ts = Date.now();
+      const { topics: next, updatedIds } = refreshSnapshot(ts);
+      setTopics(next);
+      setLastUpdated(new Date());
+      // Highlight only topics that became boom or new this round
+      const newOrBoom = next.filter(t => updatedIds.includes(t.id) && (t.trend === "boom" || t.trend === "new")).map(t => t.id);
+      setHighlightIds(new Set(newOrBoom));
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+      highlightTimer.current = setTimeout(() => setHighlightIds(new Set()), 6000);
+      const boomCount = next.filter(t => t.trend === "boom" && updatedIds.includes(t.id)).length;
+      const newCount = next.filter(t => t.trend === "new" && updatedIds.includes(t.id)).length;
+      toast.success(
+        boomCount + newCount > 0
+          ? `数据已更新 · 新增 ${newCount} 条上榜、${boomCount} 条爆点`
+          : "数据已是最新"
+      );
+      setRefreshing(false);
+    }, 600);
+  };
+
+  useEffect(() => () => { if (highlightTimer.current) clearTimeout(highlightTimer.current); }, []);
+
+  // ─── Filtering (list view) ───
   const filtered = useMemo(() => {
-    let list = rankTopics;
+    let list = topics;
     if (search) list = list.filter(t => t.title.includes(search) || t.keywords.some(k => k.includes(search)));
     if (filterSource !== "all") list = list.filter(t => t.source === filterSource);
     if (filterCategory !== "all") list = list.filter(t => t.category === filterCategory);
@@ -127,32 +183,54 @@ export default function SocialRankingList() {
         case "trend_desc":return b.heatTrend - a.heatTrend;
       }
     });
-  }, [search, filterSource, filterCategory, filterTrend, travelOnly, sortBy]);
+  }, [topics, search, filterSource, filterCategory, filterTrend, travelOnly, sortBy]);
 
-  // ─── At-a-glance hero topics: top-3 boom/up trending across all boards ───
   const heroTopics = useMemo(() => {
-    return [...rankTopics]
+    return [...topics]
       .filter(t => t.trend === "boom" || t.trend === "new" || (t.prevRank !== undefined && t.prevRank - t.rank >= 2))
       .sort((a, b) => b.heat - a.heat)
       .slice(0, 4);
-  }, []);
+  }, [topics]);
 
   const stats = useMemo(() => ({
-    total: rankTopics.length,
-    travel: rankTopics.filter(t => t.travelRelated).length,
-    newToday: rankTopics.filter(t => t.trend === "new").length,
-    boom: rankTopics.filter(t => t.trend === "boom").length,
-  }), []);
+    total: topics.length,
+    travel: topics.filter(t => t.travelRelated).length,
+    newToday: topics.filter(t => t.trend === "new").length,
+    boom: topics.filter(t => t.trend === "boom").length,
+  }), [topics]);
 
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
+  // ─── Feature 4: Click a board column to drive table filter ───
+  const handleSelectSource = (s: RankSource) => {
+    setFilterSource(prev => prev === s ? "all" : s); // toggle
+    setView("list");
+    toast.info(`已联动筛选: ${RANK_SOURCES[s].shortLabel}（旅游/趋势 等其他筛选已保留）`);
+  };
+
+  // ─── Feature 1: navigate to topic detail ───
+  const goDetail = (t: RankTopic) => navigate(`/social-ranking/topic/${t.id}`);
+
+  // ─── Feature 2: bulk report ───
   const goReport = (ids: string[]) => {
-    const titles = rankTopics.filter(t => ids.includes(t.id)).map(t => t.title);
+    if (ids.length === 0) {
+      toast.error("请先选择至少一个话题");
+      return;
+    }
+    const titles = topics.filter(t => ids.includes(t.id)).map(t => t.title);
+    toast.success(`已为 ${ids.length} 个话题创建报告任务,跳转到报告管理...`);
     navigate("/analysis/report-manage", {
       state: { reportPrefill: { theme: "社媒榜单", scope: "topics", ids, titles, source: "社媒榜单列表" } }
     });
   };
+
+  const activeFilterCount =
+    (filterSource !== "all" ? 1 : 0) +
+    (filterCategory !== "all" ? 1 : 0) +
+    (filterTrend !== "all" ? 1 : 0) +
+    (travelOnly ? 1 : 0) +
+    (search ? 1 : 0);
 
   return (
     <div className="space-y-5">
@@ -167,6 +245,19 @@ export default function SocialRankingList() {
           </p>
         </div>
         <div className="flex items-center gap-2 text-xs">
+          {/* Feature 3: refresh + last update */}
+          <div className="hidden md:flex items-center gap-1 text-muted-foreground mr-1">
+            <span className="text-[11px]">数据更新:</span>
+            <span className="text-[11px] font-mono text-foreground">{fmtTime(lastUpdated)}</span>
+          </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
+            {refreshing ? "刷新中..." : "刷新"}
+          </button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="px-3 py-1.5 border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1">
@@ -193,10 +284,7 @@ export default function SocialRankingList() {
             onClick={() => goReport(selectedIds)}
           >
             <FileText className="w-3 h-3" />
-            报告设置
-            {selectedIds.length > 0 && (
-              <span className="ml-1 px-1.5 rounded bg-primary/15 text-primary text-[10px]">已选 {selectedIds.length}</span>
-            )}
+            {selectedIds.length > 0 ? `生成报告 (${selectedIds.length})` : "报告设置"}
           </button>
           <button
             className="px-3 py-1.5 border border-border rounded-md bg-primary/10 text-primary border-primary/30 inline-flex items-center gap-1"
@@ -215,17 +303,22 @@ export default function SocialRankingList() {
             <h3 className="text-sm font-semibold text-foreground">当前最热话题</h3>
             <span className="text-[11px] text-muted-foreground">· 跨平台爆点 / 新上榜 / 快速攀升</span>
           </div>
-          <span className="text-[11px] text-muted-foreground">实时刷新 · 截至 2026-04-15 22:00</span>
+          <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+            <RefreshCw className="w-3 h-3" />最近刷新 {fmtTime(lastUpdated)}
+          </span>
         </div>
         <div className="grid grid-cols-4 gap-3">
           {heroTopics.map((t) => {
             const meta = RANK_SOURCES[t.source];
             const TIcon = TREND_META[t.trend].icon;
+            const highlighted = highlightIds.has(t.id);
             return (
               <button
                 key={t.id}
-                onClick={() => toggleSelect(t.id)}
-                className="text-left bg-card rounded-lg border border-border p-3 hover:border-primary/40 hover:shadow-sm transition-all group"
+                onClick={() => goDetail(t)}
+                className={`text-left bg-card rounded-lg border p-3 hover:border-primary/40 hover:shadow-sm transition-all group ${
+                  highlighted ? "border-amber-400 ring-2 ring-amber-200" : "border-border"
+                }`}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline" className={`text-[10px] ${meta.cls}`}>{meta.shortLabel}</Badge>
@@ -288,20 +381,70 @@ export default function SocialRankingList() {
       <Tabs value={view} onValueChange={v => setView(v as "board" | "list")}>
         <TabsList>
           <TabsTrigger value="board" className="gap-1.5"><Layers className="w-3.5 h-3.5" />榜单看板</TabsTrigger>
-          <TabsTrigger value="list" className="gap-1.5"><Hash className="w-3.5 h-3.5" />话题列表 <span className="ml-1 text-[11px] opacity-70">({rankTopics.length})</span></TabsTrigger>
+          <TabsTrigger value="list" className="gap-1.5">
+            <Hash className="w-3.5 h-3.5" />话题列表
+            <span className="ml-1 text-[11px] opacity-70">({filtered.length}/{topics.length})</span>
+          </TabsTrigger>
         </TabsList>
 
-        {/* ───── Board view: 5 ranked columns side by side ───── */}
-        <TabsContent value="board" className="mt-4">
+        {/* ───── Board view ───── */}
+        <TabsContent value="board" className="mt-4 space-y-2">
+          <div className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+            <ExternalLink className="w-3 h-3" />
+            提示:点击榜单标题可联动筛选下方话题列表;点击具体话题进入详情。
+          </div>
           <div className="grid grid-cols-5 gap-3">
             {(Object.keys(RANK_SOURCES) as RankSource[]).map(src => (
-              <RankingColumn key={src} source={src} topics={rankTopics} onSelect={(t) => toggleSelect(t.id)} />
+              <RankingColumn
+                key={src}
+                source={src}
+                topics={topics}
+                highlightIds={highlightIds}
+                activeSource={filterSource}
+                onSelectSource={handleSelectSource}
+                onSelectTopic={goDetail}
+              />
             ))}
           </div>
         </TabsContent>
 
-        {/* ───── List view: unified table ───── */}
+        {/* ───── List view ───── */}
         <TabsContent value="list" className="mt-4 space-y-4">
+          {/* Active filter chips (Feature 4 visibility) */}
+          {activeFilterCount > 0 && (
+            <div className="flex items-center gap-2 flex-wrap text-[11px]">
+              <span className="text-muted-foreground">已应用筛选:</span>
+              {filterSource !== "all" && (
+                <Badge variant="secondary" className="gap-1 cursor-pointer" onClick={() => setFilterSource("all")}>
+                  来源: {RANK_SOURCES[filterSource].shortLabel} <X className="w-3 h-3" />
+                </Badge>
+              )}
+              {filterCategory !== "all" && (
+                <Badge variant="secondary" className="gap-1 cursor-pointer" onClick={() => setFilterCategory("all")}>
+                  分类: {filterCategory} <X className="w-3 h-3" />
+                </Badge>
+              )}
+              {filterTrend !== "all" && (
+                <Badge variant="secondary" className="gap-1 cursor-pointer" onClick={() => setFilterTrend("all")}>
+                  趋势: {TREND_META[filterTrend].label} <X className="w-3 h-3" />
+                </Badge>
+              )}
+              {travelOnly && (
+                <Badge variant="secondary" className="gap-1 cursor-pointer" onClick={() => setTravelOnly(false)}>
+                  仅旅游相关 <X className="w-3 h-3" />
+                </Badge>
+              )}
+              {search && (
+                <Badge variant="secondary" className="gap-1 cursor-pointer" onClick={() => setSearch("")}>
+                  关键词: {search} <X className="w-3 h-3" />
+                </Badge>
+              )}
+              <button className="text-primary hover:underline ml-1" onClick={() => {
+                setFilterSource("all"); setFilterCategory("all"); setFilterTrend("all"); setTravelOnly(false); setSearch("");
+              }}>清空全部</button>
+            </div>
+          )}
+
           {/* Filters */}
           <div className="bg-card rounded-lg border border-border p-4">
             <div className="grid grid-cols-6 gap-3">
@@ -378,8 +521,11 @@ export default function SocialRankingList() {
                 {selectedIds.length > 0 && (
                   <>
                     <span className="text-primary font-medium">已选 {selectedIds.length} 个话题</span>
-                    <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={() => goReport(selectedIds)}>
-                      <FileText className="w-3 h-3" /> 生成报告
+                    <Button size="sm" variant="default" className="h-6 text-[11px] gap-1" onClick={() => goReport(selectedIds)}>
+                      <FileText className="w-3 h-3" /> 一键生成报告
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-6 text-[11px]" onClick={() => setSelectedIds([])}>
+                      取消选择
                     </Button>
                   </>
                 )}
@@ -418,19 +564,24 @@ export default function SocialRankingList() {
                 {filtered.map(t => {
                   const meta = RANK_SOURCES[t.source];
                   const TIcon = TREND_META[t.trend].icon;
+                  const highlight = highlightIds.has(t.id);
                   return (
-                    <TableRow key={t.id} className="hover:bg-muted/30">
-                      <TableCell>
+                    <TableRow
+                      key={t.id}
+                      className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`}
+                      onClick={() => goDetail(t)}
+                    >
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
-                          <RankBadge rank={t.rank} trend={t.trend} />
+                          <RankBadge rank={t.rank} />
                           <RankDelta topic={t} />
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-medium text-sm text-foreground line-clamp-1">{t.title}</div>
+                        <div className="font-medium text-sm text-foreground line-clamp-1 hover:text-primary">{t.title}</div>
                         <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.summary}</div>
                         <div className="flex items-center gap-1 mt-1 flex-wrap">
                           {t.keywords.slice(0, 3).map(k => (
