@@ -676,13 +676,16 @@ export default function SocialRankingList() {
                           <TableHead className="w-20">缩略图</TableHead>
                           <TableHead className="w-48">{cat.key === "attractions" ? "景点名称" : "酒店名称"}</TableHead>
                           <TableHead className="w-24">所属地</TableHead>
+                          <TableHead className="w-20">趋势</TableHead>
                           <TableHead className="w-28 text-right">热度值</TableHead>
+                          <TableHead className="w-20 text-right">涨幅</TableHead>
                           <TableHead>相关帖子</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {nodeTopics.map(t => {
                           const highlight = highlightIds.has(t.id);
+                          const TIcon = TREND_META[t.trend].icon;
                           return (
                             <TableRow key={t.id} className={`hover:bg-primary/5 cursor-pointer transition-colors ${highlight ? "bg-amber-50/60" : ""}`} title={`${t.title}\n\n${t.summary}\n\n来源:${RANK_SOURCES[t.source].shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()} · ${TREND_META[t.trend].label}`} onClick={() => goDetail(t)}>
                               <TableCell onClick={e => e.stopPropagation()}>
@@ -700,12 +703,25 @@ export default function SocialRankingList() {
                               </TableCell>
                               <TableCell>
                                 <div className="text-sm font-medium text-foreground hover:text-primary line-clamp-1">{t.poiName ?? t.title}</div>
+                                <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{t.summary}</div>
                               </TableCell>
                               <TableCell><Badge variant="outline" className="text-[10px]">{t.poiRegion ?? "全国"}</Badge></TableCell>
+                              <TableCell>
+                                <span className={`text-xs inline-flex items-center gap-0.5 ${TREND_META[t.trend].cls}`}>
+                                  <TIcon className="w-3 h-3" />{TREND_META[t.trend].label}
+                                </span>
+                              </TableCell>
                               <TableCell className="text-right">
                                 <span className="text-sm font-semibold text-rose-600 inline-flex items-center gap-0.5 justify-end">
                                   <Flame className="w-3 h-3" />{formatHeat(t.heat)}
                                 </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {t.heatTrend !== 0 ? (
+                                  <span className={`text-xs font-medium ${t.heatTrend > 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                                    {t.heatTrend > 0 ? "+" : ""}{t.heatTrend}%
+                                  </span>
+                                ) : <span className="text-xs text-muted-foreground">—</span>}
                               </TableCell>
                               <TableCell>
                                 {t.relatedPosts?.[0] && (
@@ -719,7 +735,7 @@ export default function SocialRankingList() {
                           );
                         })}
                         {nodeTopics.length === 0 && (
-                          <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground text-sm">暂无数据</TableCell></TableRow>
+                          <TableRow><TableCell colSpan={9} className="text-center py-12 text-muted-foreground text-sm">暂无数据</TableCell></TableRow>
                         )}
                       </TableBody>
                     </Table>
