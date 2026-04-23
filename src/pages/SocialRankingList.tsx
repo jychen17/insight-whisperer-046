@@ -130,6 +130,8 @@ export default function SocialRankingList() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [periodMode, setPeriodMode] = useState<"day" | "month">("day");
   const [date, setDate] = useState("2026-04-22");
+  // Quick filters in 节点信息 tab: only show 新上榜 / 爆点
+  const [quickFilter, setQuickFilter] = useState<"all" | "new" | "boom">("all");
 
   // Node tab uses its own active category (for board layout & POI/city specialized tables)
   const [nodeCategory, setNodeCategory] = useState<BoardCategory>("realtime");
