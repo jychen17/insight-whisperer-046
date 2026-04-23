@@ -35,6 +35,7 @@ const allThemes: ThemeItem[] = [
   { id: "sentiment", name: "舆情主题", icon: "🛡️", description: "品牌声誉风险监测与预警", owner: "张三", type: "builtin", status: "active", dataCount: 1284, alertCount: 3, updatedAt: "2026-03-29 10:24", updatedBy: "张三" },
   { id: "industry", name: "行业资讯主题", icon: "🌐", description: "行业动态、竞品动向、市场趋势监测", owner: "李四", type: "builtin", status: "active", dataCount: 856, alertCount: 0, updatedAt: "2026-03-28 16:08", updatedBy: "李四" },
   { id: "hotspot", name: "热点洞察主题", icon: "⚡", description: "社媒热点发现、话题趋势追踪", owner: "王五", type: "builtin", status: "active", dataCount: 2150, alertCount: 1, updatedAt: "2026-03-27 09:42", updatedBy: "王五" },
+  { id: "social-ranking", name: "社媒榜单主题", icon: "📈", description: "抖音/微博/小红书 实时与旅游榜单聚合", owner: "王五", type: "builtin", status: "active", dataCount: 1860, alertCount: 0, updatedAt: "2026-04-15 22:00", updatedBy: "王五" },
   { id: "experience", name: "产品体验主题", icon: "💡", description: "用户反馈收集、产品问题洞察", owner: "赵六", type: "builtin", status: "active", dataCount: 673, alertCount: 2, updatedAt: "2026-03-26 14:55", updatedBy: "赵六" },
   { id: "brand", name: "品牌口碑监测", icon: "📊", description: "品牌口碑评价与传播效果监测", owner: "孙七", type: "custom", status: "active", dataCount: 432, alertCount: 0, updatedAt: "2026-03-25 11:30", updatedBy: "孙七" },
   { id: "crisis", name: "危机事件监测", icon: "🚨", description: "突发事件与危机舆情快速响应", owner: "张三", type: "custom", status: "inactive", dataCount: 0, alertCount: 0, updatedAt: "2026-03-20 17:12", updatedBy: "管理员" },
@@ -230,7 +231,15 @@ export default function ThemeList() {
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-xs gap-1"
-                          onClick={() => navigate(`/${theme.id === "industry" ? "industry" : theme.id === "hotspot" ? "hotspot" : theme.id === "experience" ? "experience" : "sentiment"}/overview`)}
+                          onClick={() => {
+                            const map: Record<string, string> = {
+                              industry: "/industry/overview",
+                              hotspot: "/hotspot/discover",
+                              experience: "/experience/overview",
+                              "social-ranking": "/social-ranking/list",
+                            };
+                            navigate(map[theme.id] ?? "/sentiment/overview");
+                          }}
                         >
                           <LayoutDashboard className="w-3.5 h-3.5" />
                           看板
