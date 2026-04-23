@@ -130,6 +130,8 @@ export default function SocialRankingList() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [periodMode, setPeriodMode] = useState<"day" | "month">("day");
   const [date, setDate] = useState("2026-04-22");
+  // Quick filters in 节点信息 tab: only show 新上榜 / 爆点
+  const [quickFilter, setQuickFilter] = useState<"all" | "new" | "boom">("all");
 
   // Node tab uses its own active category (for board layout & POI/city specialized tables)
   const [nodeCategory, setNodeCategory] = useState<BoardCategory>("realtime");
@@ -213,8 +215,25 @@ export default function SocialRankingList() {
     if (nodeCategory === "city") list = list.filter(t => t.city === filterCity);
     if ((nodeCategory === "attractions" || nodeCategory === "hotels") && filterRegion !== "全国")
       list = list.filter(t => t.poiRegion === filterRegion);
+    if (quickFilter !== "all") list = list.filter(t => t.trend === quickFilter);
     return [...list].sort((a, b) => a.rank - b.rank);
-  }, [topics, nodeCategory, filterSource, filterCity, filterRegion, travelOnly, search]);
+  }, [topics, nodeCategory, filterSource, filterCity, filterRegion, travelOnly, search, quickFilter]);
+
+  // Topics fed to the per-source board columns — also respects quickFilter
+  const boardTopics = useMemo(() => {
+    if (quickFilter === "all") return topics;
+    return topics.filter(t => t.trend === quickFilter);
+  }, [topics, quickFilter]);
+
+  // Counts for quick-filter chips (within current category, before quickFilter applied)
+  const quickCounts = useMemo(() => {
+    const base = topics.filter(t => RANK_SOURCES[t.source].category === nodeCategory);
+    return {
+      all: base.length,
+      new: base.filter(t => t.trend === "new").length,
+      boom: base.filter(t => t.trend === "boom").length,
+    };
+  }, [topics, nodeCategory]);
 
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -563,6 +582,33 @@ export default function SocialRankingList() {
                   >重置</button>
                 </div>
 
+                {/* Quick filter chips: 新上榜 / 爆点 */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[11px] text-muted-foreground">快速筛选:</span>
+                  {([
+                    { key: "all",  label: "全部",   icon: null,                              cls: "border-border text-foreground", active: "bg-primary text-primary-foreground border-primary" },
+                    { key: "new",  label: "新上榜", icon: <Sparkles className="w-3 h-3" />, cls: "border-amber-200 text-amber-700 bg-amber-50/60 hover:bg-amber-100", active: "bg-amber-500 text-white border-amber-500" },
+                    { key: "boom", label: "爆点",   icon: <Flame className="w-3 h-3" />,    cls: "border-destructive/30 text-destructive bg-destructive/5 hover:bg-destructive/10", active: "bg-destructive text-destructive-foreground border-destructive" },
+                  ] as const).map(opt => {
+                    const active = quickFilter === opt.key;
+                    const count = quickCounts[opt.key];
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => setQuickFilter(opt.key)}
+                        className={`px-2.5 py-1 text-[11px] rounded-full border inline-flex items-center gap-1 transition-colors ${active ? opt.active : opt.cls}`}
+                      >
+                        {opt.icon}
+                        {opt.label}
+                        <span className={`text-[10px] ${active ? "opacity-90" : "opacity-70"}`}>· {count}</span>
+                      </button>
+                    );
+                  })}
+                  {quickFilter !== "all" && (
+                    <span className="text-[10px] text-muted-foreground">已筛选「{quickFilter === "new" ? "新上榜" : "爆点"}」话题，表头字段与排序保持不变</span>
+                  )}
+                </div>
+
                 <SelectionToolbar
                   currentList={nodeTopics}
                   selectedIds={selectedIds}
@@ -590,7 +636,7 @@ export default function SocialRankingList() {
                           <RankingColumn
                             key={src}
                             source={src}
-                            topics={topics}
+                            topics={boardTopics}
                             highlightIds={highlightIds}
                             onSelectTopic={goDetail}
                           />
