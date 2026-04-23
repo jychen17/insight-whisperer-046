@@ -614,8 +614,17 @@ export default function ReportManagement() {
                       <TableCell><Badge variant="secondary" className="text-xs">{r.theme}</Badge></TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar className="w-3 h-3" />{r.createdAt}
+                          <Calendar className="w-3 h-3" />{r.configCreatedAt}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {r.createdAt ? (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Calendar className="w-3 h-3" />{r.createdAt}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell><Badge variant={statusConfig[r.status].variant} className="text-xs">{statusConfig[r.status].label}</Badge></TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
