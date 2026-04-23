@@ -697,6 +697,27 @@ export default function SocialRankingList() {
                   {quickFilter !== "all" && (
                     <span className="text-[10px] text-muted-foreground">已筛选「{quickFilter === "new" ? "新上榜" : "爆点"}」话题，表头字段与排序保持不变</span>
                   )}
+
+                  <div className="ml-auto">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="px-2.5 py-1 text-[11px] border border-border rounded-md bg-card text-foreground inline-flex items-center gap-1 hover:bg-muted">
+                          <Download className="w-3 h-3" />
+                          导出当前结果
+                          <span className="text-muted-foreground">({nodeTopics.length})</span>
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onClick={() => exportNodeData("csv")}>
+                          <FileText className="w-3.5 h-3.5" />导出为 CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => exportNodeData("xlsx")}>
+                          <FileText className="w-3.5 h-3.5" />导出为 Excel
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
 
                 <SelectionToolbar
