@@ -256,66 +256,77 @@ export default function SocialRankingList() {
   const isCity = nodeCategory === "city";
 
   // ────────── Export helpers (CSV / Excel-compatible) ──────────
-  const exportNodeData = (format: "csv" | "xlsx") => {
-    if (nodeTopics.length === 0) {
-      toast.error("当前筛选结果为空，无可导出数据");
+  // scope: "current" = current filtered list of the active tab; "selected" = selected ids
+  const exportData = (format: "csv" | "xlsx", scope: "current" | "selected") => {
+    // Source list adapts to active main tab + scope
+    const baseList = mainTab === "node" ? nodeTopics : allTopics;
+    const list = scope === "selected"
+      ? baseList.filter(t => selectedIds.includes(t.id))
+      : baseList;
+
+    if (list.length === 0) {
+      toast.error(scope === "selected" ? "请先勾选至少一条话题" : "当前筛选结果为空，无可导出数据");
       return;
     }
-    // Build rows that match the visible table headers per category
+
     let headers: string[];
     let rows: (string | number)[][];
     const trendLabel = (t: RankTopic) => TREND_META[t.trend].label;
+    const useNodeShape = mainTab === "node";
 
-    if (isCity) {
+    if (useNodeShape && isCity) {
       headers = ["排名", "排名变化", "热点", "摘要", "来源", "趋势", "热度值", "城市", "旅游相关", "相关帖子标题", "相关帖子作者"];
-      rows = nodeTopics.map(t => [
+      rows = list.map(t => [
         t.rank,
         t.prevRank === undefined ? "—" : (t.prevRank - t.rank),
-        t.title,
-        t.summary,
+        t.title, t.summary,
         RANK_SOURCES[t.source].shortLabel,
-        trendLabel(t),
-        t.heat,
+        trendLabel(t), t.heat,
         t.city ?? "",
         t.travelRelated ? "是" : "否",
         t.relatedPosts?.[0]?.title ?? "",
         t.relatedPosts?.[0]?.author ?? "",
       ]);
-    } else if (isPOI) {
+    } else if (useNodeShape && isPOI) {
       headers = ["排名", "排名变化", nodeCategory === "attractions" ? "景点名称" : "酒店名称", "摘要", "所属地", "趋势", "热度值", "涨幅(%)", "相关帖子标题", "相关帖子作者"];
-      rows = nodeTopics.map(t => [
+      rows = list.map(t => [
         t.rank,
         t.prevRank === undefined ? "—" : (t.prevRank - t.rank),
-        t.poiName ?? t.title,
-        t.summary,
+        t.poiName ?? t.title, t.summary,
         t.poiRegion ?? "全国",
-        trendLabel(t),
-        t.heat,
-        t.heatTrend,
+        trendLabel(t), t.heat, t.heatTrend,
         t.relatedPosts?.[0]?.title ?? "",
         t.relatedPosts?.[0]?.author ?? "",
       ]);
     } else {
-      headers = ["排名", "排名变化", "话题", "摘要", "关键词", "来源", "热度", "涨幅(%)", "趋势", "在榜时长", "旅游相关"];
-      rows = nodeTopics.map(t => [
-        t.rank,
-        t.prevRank === undefined ? "—" : (t.prevRank - t.rank),
-        t.title,
-        t.summary,
-        t.keywords.join(" / "),
-        RANK_SOURCES[t.source].shortLabel,
-        t.heat,
-        t.heatTrend,
-        trendLabel(t),
-        t.duration,
-        t.travelRelated ? "是" : "否",
-      ]);
+      // Default shape: 全部 tab + 实时/旅游 节点
+      headers = ["排名", "排名变化", "话题", "摘要", "关键词", "分类", "来源", "热度", "涨幅(%)", "趋势", "在榜时长", "旅游相关"];
+      rows = list.map(t => {
+        const meta = RANK_SOURCES[t.source];
+        const catLbl = BOARD_CATEGORIES.find(c => c.key === meta.category)?.label ?? meta.category;
+        return [
+          t.rank,
+          t.prevRank === undefined ? "—" : (t.prevRank - t.rank),
+          t.title, t.summary,
+          t.keywords.join(" / "),
+          catLbl,
+          meta.shortLabel,
+          t.heat, t.heatTrend,
+          trendLabel(t), t.duration,
+          t.travelRelated ? "是" : "否",
+        ];
+      });
     }
 
-    const catLabel = BOARD_CATEGORIES.find(c => c.key === nodeCategory)?.label ?? nodeCategory;
-    const qfLabel = quickFilter === "all" ? "全部" : quickFilter === "new" ? "新上榜" : "爆点";
+    const tabLabel = mainTab === "node"
+      ? (BOARD_CATEGORIES.find(c => c.key === nodeCategory)?.label ?? nodeCategory)
+      : "全部";
+    const qfLabel = mainTab === "node"
+      ? (quickFilter === "all" ? "全部" : quickFilter === "new" ? "新上榜" : "爆点")
+      : (travelOnly ? "仅旅游" : "全部");
+    const scopeLabel = scope === "selected" ? `所选${list.length}条` : `当前${list.length}条`;
     const ts = `${lastUpdated.getFullYear()}${String(lastUpdated.getMonth() + 1).padStart(2, "0")}${String(lastUpdated.getDate()).padStart(2, "0")}_${String(lastUpdated.getHours()).padStart(2, "0")}${String(lastUpdated.getMinutes()).padStart(2, "0")}`;
-    const filename = `社媒榜单_${catLabel}_${qfLabel}_${ts}.${format === "csv" ? "csv" : "xls"}`;
+    const filename = `社媒榜单_${tabLabel}_${qfLabel}_${scopeLabel}_${ts}.${format === "csv" ? "csv" : "xls"}`;
 
     const escape = (v: string | number) => {
       const s = String(v ?? "");
@@ -324,11 +335,9 @@ export default function SocialRankingList() {
 
     let blob: Blob;
     if (format === "csv") {
-      // Excel-friendly CSV: UTF-8 BOM + CRLF
       const csv = [headers, ...rows].map(r => r.map(escape).join(",")).join("\r\n");
       blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
     } else {
-      // Excel-readable HTML table (.xls). Opens cleanly in Excel/WPS without extra deps.
       const tdEsc = (v: string | number) => String(v ?? "")
         .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       const html =
@@ -342,8 +351,9 @@ export default function SocialRankingList() {
     const a = document.createElement("a");
     a.href = url; a.download = filename; document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
-    toast.success(`已导出 ${nodeTopics.length} 条 · ${filename}`);
+    toast.success(`已导出 ${list.length} 条 · ${filename}`);
   };
+
 
   const currentList = mainTab === "all" ? allTopics : nodeTopics;
 
