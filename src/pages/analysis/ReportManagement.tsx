@@ -982,7 +982,9 @@ export default function ReportManagement() {
                       <div className="flex items-center gap-2 text-sm flex-wrap">
                         {wizPrefill.scope === "events"
                           ? <Layers className="w-4 h-4 text-primary" />
-                          : <FileText className="w-4 h-4 text-primary" />}
+                          : wizPrefill.scope === "topics"
+                            ? <Hash className="w-4 h-4 text-primary" />
+                            : <FileText className="w-4 h-4 text-primary" />}
                         <span className="font-medium text-foreground">已锁定数据范围</span>
                         {wizTheme && (
                           <Badge variant="secondary" className="text-[10px] gap-1">
@@ -990,8 +992,8 @@ export default function ReportManagement() {
                           </Badge>
                         )}
                         <Badge variant="secondary" className="text-[10px] gap-1">
-                          {wizPrefill.scope === "events" ? <Layers className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
-                          {wizPrefill.scope === "events" ? "事件" : "文章"} · {wizPrefill.ids.length} 条
+                          {wizPrefill.scope === "events" ? <Layers className="w-3 h-3" /> : wizPrefill.scope === "topics" ? <Hash className="w-3 h-3" /> : <FileText className="w-3 h-3" />}
+                          {wizPrefill.scope === "events" ? "事件" : wizPrefill.scope === "topics" ? "话题" : "文章"} · {wizPrefill.ids.length} 条
                         </Badge>
                         {wizPrefill.source && (
                           <Badge variant="secondary" className="text-[10px] gap-1">
@@ -1012,7 +1014,7 @@ export default function ReportManagement() {
                       </button>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      已自动回填到下方"查询条件"中（{wizPrefill.scope === "events" ? "事件集合" : "文章集合"} · 属于已选集合）。可在条件区追加其他筛选与时间范围；移除该锁定条件等同于清除范围。
+                      已自动回填到下方"查询条件"中（{wizPrefill.scope === "events" ? "事件集合" : wizPrefill.scope === "topics" ? "话题集合" : "文章集合"} · 属于已选集合）。可在条件区追加其他筛选与时间范围；移除该锁定条件等同于清除范围。
                     </p>
                   </div>
                 )}
