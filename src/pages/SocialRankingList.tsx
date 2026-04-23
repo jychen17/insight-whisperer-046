@@ -117,7 +117,7 @@ type MainTab = "all" | "node";
 export default function SocialRankingList() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [mainTab, setMainTab] = useState<MainTab>("all");
+  const [mainTab, setMainTab] = useState<MainTab>("node");
 
   // Filters (shared across tabs but visually grouped)
   const [filterCategory, setFilterCategory] = useState<"all" | BoardCategory>("all");
