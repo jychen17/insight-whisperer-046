@@ -386,12 +386,31 @@ export default function SocialRankingList() {
                 <Download className="w-3 h-3" />导出数据<ChevronDown className="w-3 h-3" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem><FileText className="w-3.5 h-3.5" />导出当前列表</DropdownMenuItem>
-              <DropdownMenuItem disabled={selectedIds.length === 0}>
-                <CheckCircle2 className="w-3.5 h-3.5" />
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuLabel className="text-[11px] text-muted-foreground font-normal">
+                导出当前列表
+                <span className="ml-1 text-foreground">
+                  ({mainTab === "node"
+                    ? `${BOARD_CATEGORIES.find(c => c.key === nodeCategory)?.label}${quickFilter !== "all" ? "·" + (quickFilter === "new" ? "新上榜" : "爆点") : ""} · ${nodeTopics.length}条`
+                    : `全部 · ${allTopics.length}条`})
+                </span>
+              </DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => exportData("csv", "current")}>
+                <FileText className="w-3.5 h-3.5" />导出为 CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportData("xlsx", "current")}>
+                <FileText className="w-3.5 h-3.5" />导出为 Excel
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel className="text-[11px] text-muted-foreground font-normal">
                 导出所选数据
-                {selectedIds.length > 0 && <span className="ml-auto text-xs text-muted-foreground">{selectedIds.length}</span>}
+                {selectedIds.length > 0 && <span className="ml-1 text-foreground">({selectedIds.length}条)</span>}
+              </DropdownMenuLabel>
+              <DropdownMenuItem disabled={selectedIds.length === 0} onClick={() => exportData("csv", "selected")}>
+                <CheckCircle2 className="w-3.5 h-3.5" />导出所选 (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={selectedIds.length === 0} onClick={() => exportData("xlsx", "selected")}>
+                <CheckCircle2 className="w-3.5 h-3.5" />导出所选 (Excel)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
