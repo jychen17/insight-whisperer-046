@@ -172,14 +172,6 @@ export default function HotspotList() {
         </div>
       </div>
 
-      {/* ───── Stat cards ───── */}
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard title="未来7天热点活动" value={stats.upcoming} change={18.5} />
-        <StatCard title="今日新增热点" value={stats.newToday} change={45.2} />
-        <StatCard title="业务高相关热点" value={stats.highBiz} change={22.8} />
-        <StatCard title="跨源大热点" value={stats.cross} change={32.1} />
-      </div>
-
       {/* Tabs: events list / all articles list */}
       <Tabs value={hotspotView} onValueChange={(v) => setHotspotView(v as "events" | "clues")}>
         <TabsList>

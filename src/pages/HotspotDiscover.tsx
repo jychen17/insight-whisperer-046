@@ -12,6 +12,13 @@ import { MapPin, Tag, TrendingUp, Flame } from "lucide-react";
 import { hotspotEvents, type HotspotEvent } from "@/lib/hotspotData";
 import { CityView, CategoryView } from "@/components/hotspot/HotspotViews";
 
+const listStats = {
+  upcoming: hotspotEvents.filter(e => new Date(e.date) >= new Date("2026-04-15")).length,
+  newToday: hotspotEvents.filter(e => e.isNew).length,
+  highBiz: hotspotEvents.filter(e => e.businessRelevance >= 4).length,
+  cross: hotspotEvents.filter(e => e.crossSource >= 2).length,
+};
+
 const hotItems = [
   { rank: 1, title: "清明假期出行人数创新高", heat: 125000, platform: "微博", time: "2小时前", sentiment: "正向" },
   { rank: 2, title: "机票价格暴涨引发网友热议", heat: 98700, platform: "抖音", time: "3小时前", sentiment: "负向" },
@@ -129,6 +136,13 @@ export default function HotspotDiscover() {
         <StatCard title="上升热点" value={42} change={15.8} />
         <StatCard title="旅游相关热点" value={36} change={45.2} />
         <StatCard title="负面热点" value={8} change={-12.3} />
+      </div>
+
+      <div className="grid grid-cols-4 gap-4">
+        <StatCard title="未来7天热点活动" value={listStats.upcoming} change={18.5} />
+        <StatCard title="今日新增热点" value={listStats.newToday} change={45.2} />
+        <StatCard title="业务高相关热点" value={listStats.highBiz} change={22.8} />
+        <StatCard title="跨源大热点" value={listStats.cross} change={32.1} />
       </div>
 
       {/* ───── Sub-views: 实时榜 / 城市视图 / 品类视图 / 原始榜单 ───── */}
