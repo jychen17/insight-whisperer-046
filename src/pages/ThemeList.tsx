@@ -231,7 +231,15 @@ export default function ThemeList() {
                           variant="ghost"
                           size="sm"
                           className="h-7 px-2 text-xs gap-1"
-                          onClick={() => navigate(`/${theme.id === "industry" ? "industry" : theme.id === "hotspot" ? "hotspot" : theme.id === "experience" ? "experience" : "sentiment"}/overview`)}
+                          onClick={() => {
+                            const map: Record<string, string> = {
+                              industry: "/industry/overview",
+                              hotspot: "/hotspot/discover",
+                              experience: "/experience/overview",
+                              "social-ranking": "/social-ranking/list",
+                            };
+                            navigate(map[theme.id] ?? "/sentiment/overview");
+                          }}
                         >
                           <LayoutDashboard className="w-3.5 h-3.5" />
                           看板
