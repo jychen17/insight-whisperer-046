@@ -387,6 +387,137 @@ export const defaultThemes: ThemeConfig[] = [
     createdAt: "2026-02-01", updatedAt: "2026-03-27",
   },
   {
+    id: "social-ranking", name: "社媒榜单主题",
+    description: "聚合抖音/微博/小红书/百度/快手 社媒实时榜、旅游榜、同城榜、景点榜、酒店榜",
+    owner: "王五", type: "builtin", status: "active", icon: "📈",
+    dataSources: [
+      // ── 实时榜 ──
+      defaultDS({ taskId: "sr_dy_rt", taskName: "抖音实时热点榜", taskType: "榜单", platforms: ["抖音"],
+        intervalHours: 1, timeRange: "实时",
+        conditionTree: { id: "root", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "platform", operator: "equals", value: "抖音" },
+        ]},
+      }),
+      defaultDS({ taskId: "sr_wb_rt", taskName: "微博实时热搜榜", taskType: "榜单", platforms: ["微博"],
+        intervalHours: 1, timeRange: "实时",
+        conditionTree: { id: "root", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "platform", operator: "equals", value: "微博" },
+        ]},
+      }),
+      defaultDS({ taskId: "sr_bd_rt", taskName: "百度实时热搜榜", taskType: "榜单", platforms: ["百度"],
+        intervalHours: 1, timeRange: "实时",
+        conditionTree: { id: "root", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "platform", operator: "equals", value: "百度" },
+        ]},
+      }),
+      defaultDS({ taskId: "sr_ks_rt", taskName: "快手实时热点榜", taskType: "榜单", platforms: ["快手"],
+        intervalHours: 1, timeRange: "实时",
+        conditionTree: { id: "root", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "platform", operator: "equals", value: "快手" },
+        ]},
+      }),
+      // ── 旅游榜 ──
+      defaultDS({ taskId: "sr_wb_travel", taskName: "微博旅游榜单", taskType: "榜单", platforms: ["微博"],
+        intervalHours: 24, timeRange: "每日 12:00 当日数据",
+        conditionTree: { id: "root", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "topic", operator: "contains", value: "旅游" },
+        ]},
+        includeWords: ["旅游", "出行", "景点", "目的地", "民宿", "攻略"],
+      }),
+      defaultDS({ taskId: "sr_xhs_travel", taskName: "小红书旅游榜单", taskType: "榜单", platforms: ["小红书"],
+        intervalHours: 24, timeRange: "每日 12:00 昨日数据",
+        conditionTree: { id: "root", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "topic", operator: "contains", value: "旅游" },
+        ]},
+        includeWords: ["旅行", "Citywalk", "打卡", "民宿", "种草", "攻略"],
+      }),
+      defaultDS({ taskId: "sr_dy_travel", taskName: "抖音旅游榜单", taskType: "榜单", platforms: ["抖音"],
+        intervalHours: 6, timeRange: "实时",
+        conditionTree: { id: "root", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "topic", operator: "contains", value: "旅游" },
+        ]},
+        includeWords: ["旅游", "景点", "自驾", "徒步"],
+      }),
+      // ── 同城榜 ──
+      defaultDS({ taskId: "sr_wb_city", taskName: "微博同城榜单",
+        taskType: "榜单", platforms: ["微博"], intervalHours: 1, timeRange: "实时",
+        taskParams: [{ platforms: ["微博"], topics: ["北京", "上海", "广州", "深圳", "成都", "杭州", "武汉", "西安"] }],
+        conditionTree: { id: "root", type: "group", logic: "OR", children: [
+          { id: "c1", type: "condition", field: "topic", operator: "contains", value: "同城" },
+        ]},
+      }),
+      defaultDS({ taskId: "sr_dy_city", taskName: "抖音同城榜单",
+        taskType: "榜单", platforms: ["抖音"], intervalHours: 1, timeRange: "实时",
+        taskParams: [{ platforms: ["抖音"], topics: ["北京", "上海", "广州", "深圳", "成都", "杭州", "武汉", "西安"] }],
+      }),
+      // ── POI ──
+      defaultDS({ taskId: "sr_attractions", taskName: "景点热度榜", taskType: "榜单", platforms: ["微博", "小红书", "抖音"],
+        intervalHours: 24, timeRange: "日榜 T-2 / 月榜",
+        conditionTree: { id: "root", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "topic", operator: "equals", value: "旅游" },
+        ]},
+        includeWords: ["景点", "景区", "打卡", "门票"],
+      }),
+      defaultDS({ taskId: "sr_hotels", taskName: "酒店热度榜", taskType: "榜单", platforms: ["微博", "小红书", "抖音"],
+        intervalHours: 24, timeRange: "日榜 T-2 / 月榜",
+        conditionTree: { id: "root", type: "group", logic: "AND", children: [
+          { id: "c1", type: "condition", field: "topic", operator: "equals", value: "酒店住宿" },
+        ]},
+        includeWords: ["酒店", "民宿", "度假", "入住"],
+      }),
+    ],
+    conditionTree: { id: "root", type: "group", logic: "AND", children: [] },
+    fieldConfigs: [
+      { key: "platform", fieldType: "raw", displayPosition: "list", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["微博", "抖音", "小红书", "百度", "快手"] },
+      { key: "publish_time", fieldType: "raw", displayPosition: "list", isFilter: false, filterType: "text", hasSystemEnum: false, enumValues: [] },
+      { key: "topic", fieldType: "ai", displayPosition: "both", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["明星娱乐", "旅游目的地", "节假出行", "社会民生", "美食", "酒店住宿", "交通出行", "户外活动", "文化展览", "演出活动"] },
+      { key: "heat_score", fieldType: "calc", displayPosition: "both", isFilter: true, filterType: "text", hasSystemEnum: false, enumValues: [], isSortable: true, isDefaultSort: true, sortDirection: "desc" },
+      { key: "growth_rate", fieldType: "calc", displayPosition: "list", isFilter: false, filterType: "text", hasSystemEnum: false, enumValues: [] },
+      { key: "ferment_level", fieldType: "calc", displayPosition: "both", isFilter: true, filterType: "enum", hasSystemEnum: true, enumValues: ["低", "中", "快"] },
+    ],
+    mergeNodes: [
+      { id: "sr_mn1", name: "跨平台同话题聚合", enabled: true,
+        mergeConditions: [
+          { id: "mc1", field: "content", operator: "similarity_gte", value: "75" },
+          { id: "mc2", field: "publish_time", operator: "time_within", value: "12" },
+        ],
+        mergeConditionTree: {
+          id: "mct_sr1", type: "group", logic: "AND", children: [
+            { id: "mc1t", type: "condition", field: "content", operator: "similarity_gte", value: "75" },
+            { id: "mc2t", type: "condition", field: "publish_time", operator: "time_within", value: "12" },
+          ],
+        },
+        order: 1,
+        displayFields: [
+          { key: "platform", fieldType: "raw", position: "list" },
+          { key: "heat_score", fieldType: "calc", position: "both" },
+        ],
+      },
+      { id: "sr_mn2", name: "POI 名称归并", enabled: true,
+        mergeConditions: [
+          { id: "mc3", field: "topic", operator: "equals", value: "" },
+        ],
+        mergeConditionTree: {
+          id: "mct_sr2", type: "group", logic: "AND", children: [
+            { id: "mc3t", type: "condition", field: "topic", operator: "equals", value: "" },
+          ],
+        },
+        order: 2,
+        displayFields: [
+          { key: "platform", fieldType: "raw", position: "list" },
+        ],
+      },
+    ],
+    dashboardWidgets: [
+      { id: "sr_w1", type: "statCard", title: "在榜话题总数", metric: "话题数", position: 1, tagField: "topic" },
+      { id: "sr_w2", type: "statCard", title: "旅游业务相关", metric: "旅游话题数", position: 2, tagField: "topic" },
+      { id: "sr_w3", type: "lineChart", title: "热度趋势", metric: "时间", position: 3, tagField: "publish_time" },
+      { id: "sr_w4", type: "barChart", title: "平台分布", metric: "平台", position: 4, tagField: "platform" },
+      { id: "sr_w5", type: "table", title: "热门话题榜", metric: "热度", position: 5, tagField: "heat_score" },
+    ],
+    createdAt: "2026-04-15", updatedAt: "2026-04-22",
+  },
+  {
     id: "experience", name: "产品体验主题", description: "用户反馈收集、产品问题洞察", owner: "赵六",
     type: "builtin", status: "active", icon: "💡",
     dataSources: [defaultDS({ taskId: "t6", taskName: "用户反馈监控", platforms: ["小红书", "黑猫投诉", "微博"],
