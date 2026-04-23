@@ -194,7 +194,7 @@ export default function SocialRankingDetail() {
               <YAxis reversed domain={[1, 50]} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} width={28} />
               <Tooltip
                 contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid hsl(var(--border))" }}
-                formatter={(v: unknown, name: string) => [v ?? "未上榜", RANK_SOURCES[name as RankSource].shortLabel]}
+                formatter={(v: number | string | null, name: string) => [v == null ? "未上榜" : `#${v}`, RANK_SOURCES[name as RankSource].shortLabel]}
               />
               {allSources.map(s => (
                 <Line
@@ -236,7 +236,7 @@ export default function SocialRankingDetail() {
               <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => formatHeat(Number(v))} width={40} />
               <Tooltip
                 contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid hsl(var(--border))" }}
-                formatter={(v: unknown) => [formatHeat(Number(v)), "热度"]}
+                formatter={(v: number) => [formatHeat(v), "热度"]}
               />
               <Area type="monotone" dataKey="heat" stroke="#f43f5e" strokeWidth={2} fill="url(#heatGrad)" />
             </AreaChart>
