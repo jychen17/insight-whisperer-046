@@ -236,7 +236,7 @@ export default function ThemeList() {
                               industry: "/industry/overview",
                               hotspot: "/hotspot/discover",
                               experience: "/experience/overview",
-                              "social-ranking": "/social-ranking/list",
+                              "social-ranking": "/social-ranking/dashboard",
                             };
                             navigate(map[theme.id] ?? "/sentiment/overview");
                           }}
