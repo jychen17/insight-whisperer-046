@@ -185,14 +185,14 @@ const buildSentimentConfig = (): ReportConfigDetail => ({
 const allReports: Report[] = [
   {
     id: "RPT001", title: "Q1舆情态势分析报告", type: "季度报告", theme: "舆情主题",
-    status: "completed", createdAt: "2026-03-28 09:00", pages: 24, format: "HTML",
+    status: "completed", configCreatedAt: "2026-03-28 08:50", createdAt: "2026-03-28 09:00", pages: 24, format: "HTML",
     author: "李总监", size: "2.4MB", scheduleType: "once",
     templateId: "TPL01", templateName: "舆情日报模板",
     config: { ...buildSentimentConfig(), scheduleType: "once", frequency: undefined },
   },
   {
     id: "RPT002", title: "行业竞品监测周报", type: "周报", theme: "行业咨询主题",
-    status: "completed", createdAt: "2026-03-29 10:00", pages: 12, format: "HTML",
+    status: "completed", configCreatedAt: "2026-03-01 10:00", createdAt: "2026-04-05 10:00", pages: 12, format: "HTML",
     author: "系统自动生成", size: "1.8MB", scheduleType: "recurring", frequency: "weekly",
     templateId: "TPL02", templateName: "竞品对比模板",
     config: {
@@ -213,13 +213,13 @@ const allReports: Report[] = [
   },
   {
     id: "RPT003", title: "热点事件专项分析-清明出行", type: "专项报告", theme: "热点洞察主题",
-    status: "generating", createdAt: "2026-03-30 15:30", pages: 0, format: "HTML",
+    status: "generating", configCreatedAt: "2026-03-30 15:30", createdAt: "", pages: 0, format: "HTML",
     author: "AI生成中", size: "-", scheduleType: "once",
     templateId: "TPL03", templateName: "热点追踪模板",
   },
   {
     id: "RPT004", title: "产品体验月度报告", type: "月报", theme: "产品体验主题",
-    status: "completed", createdAt: "2026-03-25 08:00", pages: 18, format: "HTML",
+    status: "completed", configCreatedAt: "2026-01-10 08:00", createdAt: "2026-04-01 08:00", pages: 18, format: "HTML",
     author: "系统自动生成", size: "5.2MB", scheduleType: "recurring", frequency: "monthly",
     templateId: "TPL04", templateName: "体验洞察模板",
     issues: [
@@ -230,7 +230,7 @@ const allReports: Report[] = [
   },
   {
     id: "RPT007", title: "国内机票负面舆情日报", type: "日报", theme: "舆情主题",
-    status: "completed", createdAt: "2026-03-31 09:00", pages: 6, format: "HTML",
+    status: "completed", configCreatedAt: "2026-03-20 09:00", createdAt: "2026-03-31 09:00", pages: 6, format: "HTML",
     author: "系统自动生成", size: "0.8MB", scheduleType: "recurring", frequency: "daily",
     templateId: "TPL01", templateName: "舆情通用模板",
     config: buildSentimentConfig(),
@@ -244,12 +244,12 @@ const allReports: Report[] = [
   },
   {
     id: "RPT009", title: "XX产品投诉事件深度分析", type: "专项报告", theme: "舆情主题",
-    status: "completed", createdAt: "2026-03-28 16:00", pages: 15, format: "HTML",
+    status: "completed", configCreatedAt: "2026-03-28 15:30", createdAt: "2026-03-28 16:00", pages: 15, format: "HTML",
     author: "AI智能生成", size: "3.1MB", scheduleType: "once",
   },
   {
     id: "RPT010", title: "一级事件-退款纠纷追踪报告", type: "专项报告", theme: "舆情主题",
-    status: "failed", createdAt: "2026-03-27 11:00", pages: 0, format: "HTML",
+    status: "failed", configCreatedAt: "2026-03-27 10:50", createdAt: "2026-03-27 11:00", pages: 0, format: "HTML",
     author: "系统", size: "-", scheduleType: "once",
   },
 ];
