@@ -300,8 +300,8 @@ export default function SocialRankingList() {
       {/* Main tabs: 全部 / 节点信息 */}
       <Tabs value={mainTab} onValueChange={v => { setMainTab(v as MainTab); setSelectedIds([]); }}>
         <TabsList>
-          <TabsTrigger value="all">全部 ({allTopics.length})</TabsTrigger>
           <TabsTrigger value="node">节点信息</TabsTrigger>
+          <TabsTrigger value="all">全部 ({allTopics.length})</TabsTrigger>
         </TabsList>
 
         {/* ─────────── 全部 tab ─────────── */}
