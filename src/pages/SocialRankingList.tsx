@@ -215,8 +215,25 @@ export default function SocialRankingList() {
     if (nodeCategory === "city") list = list.filter(t => t.city === filterCity);
     if ((nodeCategory === "attractions" || nodeCategory === "hotels") && filterRegion !== "全国")
       list = list.filter(t => t.poiRegion === filterRegion);
+    if (quickFilter !== "all") list = list.filter(t => t.trend === quickFilter);
     return [...list].sort((a, b) => a.rank - b.rank);
-  }, [topics, nodeCategory, filterSource, filterCity, filterRegion, travelOnly, search]);
+  }, [topics, nodeCategory, filterSource, filterCity, filterRegion, travelOnly, search, quickFilter]);
+
+  // Topics fed to the per-source board columns — also respects quickFilter
+  const boardTopics = useMemo(() => {
+    if (quickFilter === "all") return topics;
+    return topics.filter(t => t.trend === quickFilter);
+  }, [topics, quickFilter]);
+
+  // Counts for quick-filter chips (within current category, before quickFilter applied)
+  const quickCounts = useMemo(() => {
+    const base = topics.filter(t => RANK_SOURCES[t.source].category === nodeCategory);
+    return {
+      all: base.length,
+      new: base.filter(t => t.trend === "new").length,
+      boom: base.filter(t => t.trend === "boom").length,
+    };
+  }, [topics, nodeCategory]);
 
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
