@@ -219,6 +219,12 @@ const allReports: Report[] = [
     templateId: "TPL03", templateName: "热点追踪模板",
   },
   {
+    id: "RPT011", title: "社媒榜单-五一旅游话题速览", type: "专项报告", theme: "社媒榜单",
+    status: "completed", configCreatedAt: "2026-04-15 10:30", createdAt: "2026-04-15 10:42", pages: 9, format: "HTML",
+    author: "AI智能生成", size: "1.2MB", scheduleType: "once",
+    templateId: "TPL03", templateName: "热点追踪模板",
+  },
+  {
     id: "RPT004", title: "产品体验月度报告", type: "月报", theme: "产品体验主题",
     status: "completed", configCreatedAt: "2026-01-10 08:00", createdAt: "2026-04-01 08:00", pages: 18, format: "HTML",
     author: "系统自动生成", size: "5.2MB", scheduleType: "recurring", frequency: "monthly",
