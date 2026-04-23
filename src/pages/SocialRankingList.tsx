@@ -569,18 +569,32 @@ export default function SocialRankingList() {
                   goReport={goReport}
                 />
 
-                {/* Realtime / Travel: board view when no source filter, table when filtered */}
-                {(cat.key === "realtime" || cat.key === "travel") && filterSource === "all" && (
-                  <div className={`grid gap-3 ${cat.key === "realtime" ? "grid-cols-4" : "grid-cols-3"}`}>
-                    {sourcesOfNodeCategory.map(src => (
-                      <RankingColumn
-                        key={src}
-                        source={src}
-                        topics={topics}
-                        highlightIds={highlightIds}
-                        onSelectTopic={goDetail}
-                      />
-                    ))}
+                {/* Realtime / Travel: always show board view (TOP per source) */}
+                {(cat.key === "realtime" || cat.key === "travel") && (
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-xs font-semibold text-muted-foreground inline-flex items-center gap-1.5">
+                        <Flame className="w-3.5 h-3.5 text-rose-500" />
+                        各榜 TOP 看板
+                        <span className="text-[10px] text-muted-foreground/70 font-normal">点击话题进入详情</span>
+                      </h3>
+                      {filterSource !== "all" && (
+                        <span className="text-[10px] text-muted-foreground">已按「{RANK_SOURCES[filterSource as RankSource].shortLabel}」过滤</span>
+                      )}
+                    </div>
+                    <div className={`grid gap-3 ${cat.key === "realtime" ? "grid-cols-4" : "grid-cols-3"}`}>
+                      {sourcesOfNodeCategory
+                        .filter(src => filterSource === "all" || filterSource === src)
+                        .map(src => (
+                          <RankingColumn
+                            key={src}
+                            source={src}
+                            topics={topics}
+                            highlightIds={highlightIds}
+                            onSelectTopic={goDetail}
+                          />
+                        ))}
+                    </div>
                   </div>
                 )}
 
