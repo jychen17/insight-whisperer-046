@@ -25,11 +25,17 @@ const TREND_META: Record<TrendDir, { icon: typeof TrendingUp; cls: string; label
 };
 
 const SOURCE_LINE_COLOR: Record<RankSource, string> = {
-  douyin_realtime: "#0f172a",
-  douyin_travel:   "#64748b",
-  weibo_realtime:  "#e11d48",
-  weibo_travel:    "#f59e0b",
-  xhs_travel:      "#ec4899",
+  douyin_realtime:   "#0f172a",
+  douyin_travel:     "#64748b",
+  douyin_city:       "#475569",
+  weibo_realtime:    "#e11d48",
+  weibo_travel:      "#f59e0b",
+  weibo_city:        "#fb7185",
+  xhs_travel:        "#ec4899",
+  baidu_realtime:    "#3b82f6",
+  kuaishou_realtime: "#f97316",
+  attraction_board:  "#10b981",
+  hotel_board:       "#8b5cf6",
 };
 
 export default function SocialRankingDetail() {
