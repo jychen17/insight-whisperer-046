@@ -12,7 +12,7 @@ import {
   FileText, Eye, Download, Trash2, Search, Calendar,
   AlertTriangle, Settings2, ChevronRight,
   Repeat, Zap, ArrowLeft, Pencil, Check, Plus, LayoutTemplate, Sparkles, X, Clock,
-  Bell, Users, User as UserIcon, Layers, Link2,
+  Bell, Users, User as UserIcon, Layers, Link2, Hash,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { useNavigate, useLocation } from "react-router-dom";
