@@ -383,7 +383,7 @@ export default function SocialRankingList() {
                   const highlight = highlightIds.has(t.id);
                   const catLabel = BOARD_CATEGORIES.find(c => c.key === meta.category)?.label.replace("社媒", "") ?? "";
                   return (
-                    <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                    <TableRow key={t.id} className={`hover:bg-primary/5 cursor-pointer transition-colors ${highlight ? "bg-amber-50/60" : ""}`} title={`${t.title}\n\n${t.summary}\n\n来源:${RANK_SOURCES[t.source].shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()} · ${TREND_META[t.trend].label}`} onClick={() => goDetail(t)}>
                       <TableCell onClick={e => e.stopPropagation()}>
                         <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
                       </TableCell>
@@ -615,7 +615,7 @@ export default function SocialRankingList() {
                         {nodeTopics.map(t => {
                           const highlight = highlightIds.has(t.id);
                           return (
-                            <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                            <TableRow key={t.id} className={`hover:bg-primary/5 cursor-pointer transition-colors ${highlight ? "bg-amber-50/60" : ""}`} title={`${t.title}\n\n${t.summary}\n\n来源:${RANK_SOURCES[t.source].shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()} · ${TREND_META[t.trend].label}`} onClick={() => goDetail(t)}>
                               <TableCell onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
                               </TableCell>
@@ -667,7 +667,7 @@ export default function SocialRankingList() {
                         {nodeTopics.map(t => {
                           const highlight = highlightIds.has(t.id);
                           return (
-                            <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                            <TableRow key={t.id} className={`hover:bg-primary/5 cursor-pointer transition-colors ${highlight ? "bg-amber-50/60" : ""}`} title={`${t.title}\n\n${t.summary}\n\n来源:${RANK_SOURCES[t.source].shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()} · ${TREND_META[t.trend].label}`} onClick={() => goDetail(t)}>
                               <TableCell onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
                               </TableCell>
@@ -736,7 +736,7 @@ export default function SocialRankingList() {
                           const TIcon = TREND_META[t.trend].icon;
                           const highlight = highlightIds.has(t.id);
                           return (
-                            <TableRow key={t.id} className={`hover:bg-muted/30 cursor-pointer ${highlight ? "bg-amber-50/60" : ""}`} onClick={() => goDetail(t)}>
+                            <TableRow key={t.id} className={`hover:bg-primary/5 cursor-pointer transition-colors ${highlight ? "bg-amber-50/60" : ""}`} title={`${t.title}\n\n${t.summary}\n\n来源:${RANK_SOURCES[t.source].shortLabel} · 排名#${t.rank} · 热度${t.heat.toLocaleString()} · ${TREND_META[t.trend].label}`} onClick={() => goDetail(t)}>
                               <TableCell onClick={e => e.stopPropagation()}>
                                 <input type="checkbox" className="rounded" checked={selectedIds.includes(t.id)} onChange={() => toggleSelect(t.id)} />
                               </TableCell>
