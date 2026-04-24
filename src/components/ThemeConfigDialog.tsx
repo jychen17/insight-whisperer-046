@@ -1238,23 +1238,77 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
 
                       {node.enabled && (
                         <div className="p-3 space-y-3">
-                          {/* Display fields for merge result - grouped by type */}
+                          {/* Display fields for merge result - compact picker + selected table */}
                           <div className="p-3 bg-card rounded-md border border-border space-y-2">
-                            <label className="text-[10px] text-muted-foreground">合并后展示字段（AI标签/原始字段/计算字段）</label>
-
-                            <div className="flex items-center border border-border rounded-md bg-card px-2 mb-2">
-                              <Search className="w-3 h-3 text-muted-foreground shrink-0" />
-                              <input value={mergeFieldSearch} onChange={e => setMergeFieldSearch(e.target.value)}
-                                className="flex-1 px-2 py-1.5 text-[10px] bg-transparent text-foreground outline-none"
-                                placeholder="搜索字段..." />
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-[10px] text-muted-foreground">合并后展示字段 · 已选 <span className="text-primary font-medium">{(node.displayFields || []).length}</span> 个</label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="flex items-center gap-1 px-2 py-1 text-[10px] border border-border rounded-md bg-card text-foreground hover:bg-muted">
+                                    <Plus className="w-2.5 h-2.5" /> 添加字段
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80 p-0 bg-card" align="end">
+                                  <div className="p-2 border-b border-border">
+                                    <div className="flex items-center border border-border rounded-md bg-card px-2">
+                                      <Search className="w-3 h-3 text-muted-foreground shrink-0" />
+                                      <input value={mergeFieldSearch} onChange={e => setMergeFieldSearch(e.target.value)}
+                                        className="flex-1 px-2 py-1.5 text-[11px] bg-transparent text-foreground outline-none"
+                                        placeholder="搜索字段..." autoFocus />
+                                    </div>
+                                  </div>
+                                  <div className="max-h-72 overflow-y-auto p-1">
+                                    {(["ai", "raw", "calc"] as const).map(ftype => {
+                                      const fields = ALL_FIELDS.filter(f => f.fieldType === ftype).filter(f => !mergeFieldSearch || f.label.includes(mergeFieldSearch) || f.key.includes(mergeFieldSearch));
+                                      if (fields.length === 0) return null;
+                                      const selectedCount = fields.filter(f => (node.displayFields || []).some(d => d.key === f.key)).length;
+                                      const allSelected = selectedCount === fields.length;
+                                      return (
+                                        <div key={ftype} className="mb-1.5">
+                                          <div className="flex items-center justify-between px-2 py-1">
+                                            <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+                                              <span className={`w-1.5 h-1.5 rounded-full ${ftype === "ai" ? "bg-purple-500" : ftype === "calc" ? "bg-primary" : "bg-muted-foreground"}`} />
+                                              {FIELD_TYPE_LABELS[ftype]}
+                                              <span className="text-muted-foreground">({fields.length})</span>
+                                              {selectedCount > 0 && <Badge className="text-[8px] px-1 py-0 bg-primary/10 text-primary border-0">已选{selectedCount}</Badge>}
+                                            </div>
+                                            <button onClick={() => toggleAllMergeDisplayFields(node.id, ftype, !allSelected)}
+                                              className="text-[9px] text-primary hover:underline">{allSelected ? "取消全选" : "全选"}</button>
+                                          </div>
+                                          <div className="grid grid-cols-2 gap-0.5">
+                                            {fields.map(f => {
+                                              const selected = (node.displayFields || []).some(d => d.key === f.key);
+                                              return (
+                                                <button key={f.key} onClick={() => toggleMergeDisplayField(node.id, f.key)}
+                                                  className={`flex items-center gap-1.5 px-2 py-1 rounded text-[10px] text-left transition-colors ${selected ? "bg-primary/10 text-primary" : "hover:bg-muted text-foreground"}`}>
+                                                  <div className={`w-3 h-3 rounded border flex items-center justify-center shrink-0 ${selected ? "border-primary bg-primary" : "border-muted-foreground/40"}`}>
+                                                    {selected && <Check className="w-2 h-2 text-primary-foreground" />}
+                                                  </div>
+                                                  <span className="truncate">{f.label}</span>
+                                                </button>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                             </div>
 
-                            {/* Selected merge fields with drag-and-drop ordering */}
-                            {(node.displayFields || []).length > 0 && (
-                              <div className="border border-primary/20 rounded-md p-2 bg-primary/5 mb-2">
-                                <div className="text-[10px] font-medium text-foreground mb-1.5 flex items-center gap-1">
-                                  <GripVertical className="w-2.5 h-2.5 text-muted-foreground" />
-                                  已选合并字段顺序（拖动 ⋮⋮ 调整）· 共 {(node.displayFields || []).length} 个
+                            {/* Selected fields - compact table */}
+                            {(node.displayFields || []).length > 0 ? (
+                              <div className="border border-border rounded-md overflow-hidden">
+                                <div className="grid grid-cols-[20px_24px_minmax(0,1fr)_72px_44px_44px_88px_24px] items-center gap-1.5 px-2 py-1 bg-muted/40 text-[9px] text-muted-foreground font-medium">
+                                  <span></span>
+                                  <span className="text-center">#</span>
+                                  <span>字段</span>
+                                  <span>位置</span>
+                                  <span className="text-center">筛选</span>
+                                  <span className="text-center">排序</span>
+                                  <span>默认排序</span>
+                                  <span></span>
                                 </div>
                                 <SortableList
                                   items={node.displayFields || []}
@@ -1262,17 +1316,43 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                   renderItem={(df, idx, handle) => {
                                     const fdef = ALL_FIELDS.find(f => f.key === df.key);
                                     return (
-                                      <div className="flex items-center gap-1.5 px-1.5 py-1 bg-card rounded border border-border">
+                                      <div className="grid grid-cols-[20px_24px_minmax(0,1fr)_72px_44px_44px_88px_24px] items-center gap-1.5 px-2 py-1 border-t border-border bg-card hover:bg-muted/20">
                                         {handle}
-                                        <span className="text-[9px] font-mono text-muted-foreground w-5">{idx + 1}</span>
-                                        <Badge className={`text-[8px] px-1 py-0 border-0 ${
-                                          df.fieldType === "ai" ? "bg-purple-500/10 text-purple-600 dark:text-purple-300" :
-                                          df.fieldType === "calc" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                                        }`}>{FIELD_TYPE_LABELS[df.fieldType]}</Badge>
-                                        <span className="text-[10px] text-foreground flex-1">{fdef?.label || df.key}</span>
+                                        <Badge className="text-[8px] px-1 py-0 bg-primary text-primary-foreground border-0 font-mono justify-self-center">{idx + 1}</Badge>
+                                        <div className="flex items-center gap-1 min-w-0">
+                                          <Badge className={`text-[8px] px-1 py-0 border-0 shrink-0 ${
+                                            df.fieldType === "ai" ? "bg-purple-500/10 text-purple-600 dark:text-purple-300" :
+                                            df.fieldType === "calc" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                                          }`}>{df.fieldType === "ai" ? "AI" : df.fieldType === "calc" ? "计算" : "原生"}</Badge>
+                                          <span className="text-[10px] text-foreground truncate">{fdef?.label || df.key}</span>
+                                        </div>
+                                        <select value={df.position} onChange={e => updateMergeDisplayField(node.id, df.key, { position: e.target.value as MergeDisplayField["position"] })}
+                                          className="px-1 py-0.5 text-[9px] border border-border rounded bg-card text-foreground w-full">
+                                          <option value="list">列表</option><option value="detail">详情</option><option value="both">都展示</option>
+                                        </select>
+                                        <div className="flex justify-center">
+                                          <Switch checked={df.isFilter || false} onCheckedChange={checked => updateMergeDisplayField(node.id, df.key, { isFilter: checked })} className="scale-[0.6]" />
+                                        </div>
+                                        <div className="flex justify-center">
+                                          <Switch checked={df.isSortable || false} onCheckedChange={checked => updateMergeDisplayField(node.id, df.key, { isSortable: checked, isDefaultSort: false })} className="scale-[0.6]" />
+                                        </div>
+                                        <div className="flex items-center gap-0.5">
+                                          {df.isSortable ? (
+                                            <>
+                                              <button onClick={() => updateMergeDisplayField(node.id, df.key, { isDefaultSort: !df.isDefaultSort, sortDirection: df.sortDirection || "desc" })}
+                                                className={`px-1 py-0.5 text-[8px] rounded border ${df.isDefaultSort ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>默认</button>
+                                              {df.isDefaultSort && (
+                                                <select value={df.sortDirection || "desc"} onChange={e => updateMergeDisplayField(node.id, df.key, { sortDirection: e.target.value as "asc" | "desc" })}
+                                                  className="px-0.5 py-0.5 text-[8px] border border-border rounded bg-card text-foreground">
+                                                  <option value="desc">降</option><option value="asc">升</option>
+                                                </select>
+                                              )}
+                                            </>
+                                          ) : <span className="text-[9px] text-muted-foreground">—</span>}
+                                        </div>
                                         <button
                                           onClick={() => toggleMergeDisplayField(node.id, df.key)}
-                                          className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                          className="p-0.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive justify-self-center"
                                           title="移除"
                                         ><Trash2 className="w-2.5 h-2.5" /></button>
                                       </div>
@@ -1280,95 +1360,18 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                   }}
                                 />
                               </div>
+                            ) : (
+                              <div className="border border-dashed border-border rounded-md py-4 text-center text-[10px] text-muted-foreground">
+                                暂无展示字段，点击右上角"添加字段"选择
+                              </div>
                             )}
-
-                            {(["ai", "raw", "calc"] as const).map(ftype => {
-                              const fields = ALL_FIELDS.filter(f => f.fieldType === ftype).filter(f => !mergeFieldSearch || f.label.includes(mergeFieldSearch) || f.key.includes(mergeFieldSearch));
-                              if (fields.length === 0) return null;
-                              const selectedCount = fields.filter(f => (node.displayFields || []).some(d => d.key === f.key)).length;
-                              const allSelected = selectedCount === fields.length;
-                              const collapsed = collapsedGroups[`merge_${node.id}_${ftype}`];
-                              return (
-                                <div key={ftype} className="mb-1">
-                                  <div className="flex items-center justify-between px-2 py-1.5 bg-muted/40 rounded-t border border-border">
-                                    <button onClick={() => toggleGroup(`merge_${node.id}_${ftype}`)} className="flex items-center gap-1.5 text-[10px] font-medium text-foreground">
-                                      {collapsed ? <ChevronRight className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
-                                      <span className={`w-1.5 h-1.5 rounded-full ${ftype === "ai" ? "bg-purple-500" : ftype === "calc" ? "bg-primary" : "bg-muted-foreground"}`} />
-                                      {FIELD_TYPE_LABELS[ftype]}
-                                      <Badge className="text-[9px] px-1 py-0 bg-muted text-muted-foreground border-0">{fields.length}</Badge>
-                                      {selectedCount > 0 && <Badge className="text-[9px] px-1 py-0 bg-primary/10 text-primary border-0">已选{selectedCount}</Badge>}
-                                    </button>
-                                    <button onClick={() => toggleAllMergeDisplayFields(node.id, ftype, !allSelected)}
-                                      className="text-[9px] text-primary hover:underline">{allSelected ? "取消全选" : "全选"}</button>
-                                  </div>
-                                  {!collapsed && (
-                                    <div className="border border-t-0 border-border rounded-b divide-y divide-border">
-                                      {fields.map(f => {
-                                        const df = (node.displayFields || []).find(d => d.key === f.key);
-                                        const selected = !!df;
-                                        return (
-                                          <div key={f.key} className={`px-2 py-1.5 transition-colors ${selected ? "bg-primary/5" : ""}`}>
-                                            <div className="flex items-center justify-between">
-                                              <div className="flex items-center gap-2 cursor-pointer" onClick={() => toggleMergeDisplayField(node.id, f.key)}>
-                                                <div className={`w-3.5 h-3.5 rounded border-2 flex items-center justify-center shrink-0 ${selected ? "border-primary bg-primary" : "border-muted-foreground/30"}`}>
-                                                  {selected && <Check className="w-2 h-2 text-primary-foreground" />}
-                                                </div>
-                                                {selected && df && (() => {
-                                                  const orderIdx = (node.displayFields || []).findIndex(d => d.key === f.key);
-                                                  return <Badge className="text-[8px] px-1 py-0 bg-primary text-primary-foreground border-0 font-mono">#{orderIdx + 1}</Badge>;
-                                                })()}
-                                                <span className="text-[10px] font-medium text-foreground">{f.label}</span>
-                                              </div>
-                                              {selected && df && (
-                                                <div className="flex items-center gap-1.5">
-                                                  <select value={df.position} onChange={e => updateMergeDisplayField(node.id, df.key, { position: e.target.value as MergeDisplayField["position"] })}
-                                                    className="px-1 py-0.5 text-[9px] border border-border rounded bg-card text-foreground">
-                                                    <option value="list">列表</option><option value="detail">详情</option><option value="both">都展示</option>
-                                                  </select>
-                                                  <div className="flex items-center gap-0.5">
-                                                    <span className="text-[9px] text-muted-foreground">筛选</span>
-                                                    <Switch checked={df.isFilter || false} onCheckedChange={checked => updateMergeDisplayField(node.id, df.key, { isFilter: checked })} className="scale-[0.55]" />
-                                                  </div>
-                                                  {df.isFilter && f.hasSystemEnum && (
-                                                    <select value={df.filterType || "enum"} onChange={e => updateMergeDisplayField(node.id, df.key, { filterType: e.target.value as "enum" | "text" })}
-                                                      className="px-1 py-0.5 text-[8px] border border-border rounded bg-card text-foreground">
-                                                      <option value="enum">下拉</option><option value="text">搜索</option>
-                                                    </select>
-                                                  )}
-                                                  <div className="flex items-center gap-0.5">
-                                                    <span className="text-[9px] text-muted-foreground">排序</span>
-                                                    <Switch checked={df.isSortable || false} onCheckedChange={checked => updateMergeDisplayField(node.id, df.key, { isSortable: checked, isDefaultSort: false })} className="scale-[0.55]" />
-                                                  </div>
-                                                  {df.isSortable && (
-                                                    <div className="flex items-center gap-0.5">
-                                                      <button onClick={() => updateMergeDisplayField(node.id, df.key, { isDefaultSort: true, sortDirection: df.sortDirection || "desc" })}
-                                                        className={`px-1 py-0.5 text-[8px] rounded border ${df.isDefaultSort ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground"}`}>默认</button>
-                                                      {df.isDefaultSort && (
-                                                        <select value={df.sortDirection || "desc"} onChange={e => updateMergeDisplayField(node.id, df.key, { sortDirection: e.target.value as "asc" | "desc" })}
-                                                          className="px-0.5 py-0.5 text-[8px] border border-border rounded bg-card text-foreground">
-                                                          <option value="desc">降序</option><option value="asc">升序</option>
-                                                        </select>
-                                                      )}
-                                                    </div>
-                                                  )}
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
 
                             {/* Merge default sort summary */}
                             {(node.displayFields || []).some(df => df.isDefaultSort) && (
-                              <div className="bg-primary/5 border border-primary/20 rounded p-2 mt-1">
+                              <div className="bg-primary/5 border border-primary/20 rounded p-1.5">
                                 <p className="text-[10px] text-primary">
-                                  📋 默认排序：按「{ALL_FIELDS.find(f => f.key === (node.displayFields || []).find(df => df.isDefaultSort)?.key)?.label}」
-                                  {(node.displayFields || []).find(df => df.isDefaultSort)?.sortDirection === "asc" ? "升序" : "降序"}排列
+                                  📋 默认排序：「{ALL_FIELDS.find(f => f.key === (node.displayFields || []).find(df => df.isDefaultSort)?.key)?.label}」
+                                  {(node.displayFields || []).find(df => df.isDefaultSort)?.sortDirection === "asc" ? " 升序" : " 降序"}
                                 </p>
                               </div>
                             )}
