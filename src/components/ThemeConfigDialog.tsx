@@ -86,7 +86,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
   const [platformSearch, setPlatformSearch] = useState<Record<string, string>>({});
 
   const isEdit = !!theme;
-  const steps = ["基本信息", "数据源", "入主题条件", "字段配置", "合并管线"];
+  const steps = ["基本信息", "数据源", "字段配置", "入主题条件", "合并管线"];
 
   useEffect(() => {
     if (open) {
@@ -448,6 +448,10 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
 
   const fieldsByType = { ai: ALL_FIELDS.filter(f => f.fieldType === "ai"), raw: ALL_FIELDS.filter(f => f.fieldType === "raw"), calc: ALL_FIELDS.filter(f => f.fieldType === "calc") };
   const filteredFields = (fields: typeof ALL_FIELDS) => fields.filter(f => !fieldSearch || f.label.includes(fieldSearch) || f.key.includes(fieldSearch));
+
+  // 入主题条件可选字段：原生字段 + 上一步「字段配置」中已选的 AI 标签 / 计算字段
+  const selectedNonRawKeys = new Set(form.fieldConfigs.filter(fc => fc.fieldType !== "raw").map(fc => fc.key));
+  const availableConditionFields = ALL_FIELDS.filter(f => f.fieldType === "raw" || selectedNonRawKeys.has(f.key));
 
   const toggleGroup = (g: string) => setCollapsedGroups(prev => ({ ...prev, [g]: !prev[g] }));
 
@@ -875,8 +879,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
             </div>
           )}
 
-          {/* ═══════ Step 3: Entry Conditions (basic + advanced) ═══════ */}
-          {step === 2 && (
+          {/* ═══════ Step 4: Entry Conditions (basic + advanced) ═══════ */}
+          {step === 3 && (
             <div className="space-y-5">
               <div>
                 <label className="text-xs font-medium text-foreground mb-1 block">各数据源入主题条件</label>
@@ -1007,6 +1011,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                   depth={0}
                                   isRoot
                                   maxOneGroup
+                                  availableFields={availableConditionFields}
                                 />
                               </div>
                             )}
@@ -1017,11 +1022,16 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                   </>
                 )}
               </div>
+              {availableConditionFields.length === 0 && (
+                <div className="text-[11px] text-muted-foreground bg-muted/30 border border-dashed border-border rounded-md p-2">
+                  提示：高级配置仅支持「原生字段」+ 上一步「字段配置」中已选的 AI 标签 / 计算字段。请先完成字段配置。
+                </div>
+              )}
             </div>
           )}
 
-          {/* ═══════ Step 4: Field Configuration (with display order) ═══════ */}
-          {step === 3 && (
+          {/* ═══════ Step 3: Field Configuration (with display order) ═══════ */}
+          {step === 2 && (
             <div className="space-y-5">
               <div>
                 <div className="flex items-center justify-between mb-2">
@@ -1515,26 +1525,27 @@ function MergeConditionTreeEditor({
 // ── Nested Condition Tree Editor ────────────────────────────
 
 function ConditionTreeEditor({
-  node, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot, maxOneGroup,
+  node, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot, maxOneGroup, availableFields,
 }: {
   node: ConditionNode; onAddCondition: (parentId: string) => void; onAddGroup: (parentId: string) => void;
   onRemove: (id: string) => void; onUpdate: (id: string, u: Partial<ConditionNode>) => void;
-  depth: number; isRoot?: boolean; maxOneGroup?: boolean;
+  depth: number; isRoot?: boolean; maxOneGroup?: boolean; availableFields?: typeof ALL_FIELDS;
 }) {
+  const fieldsPool = availableFields ?? ALL_FIELDS;
   if (node.type === "condition") {
     return (
       <div className="flex items-center gap-2 py-1.5">
         <select value={node.field || ""} onChange={e => onUpdate(node.id, { field: e.target.value })}
           className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground flex-1 min-w-[100px]">
           <option value="">选择字段</option>
-          {ALL_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+          {fieldsPool.map(f => <option key={f.key} value={f.key}>{f.label}（{FIELD_TYPE_LABELS[f.fieldType]}）</option>)}
         </select>
         <select value={node.operator || "equals"} onChange={e => onUpdate(node.id, { operator: e.target.value })}
           className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
           {OPERATORS.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
         </select>
         {(() => {
-          const fieldDef = ALL_FIELDS.find(f => f.key === node.field);
+          const fieldDef = fieldsPool.find(f => f.key === node.field);
           if (fieldDef?.hasSystemEnum && fieldDef.enumValues.length > 0) {
             return (
               <select value={node.value || ""} onChange={e => onUpdate(node.id, { value: e.target.value })}
@@ -1585,7 +1596,7 @@ function ConditionTreeEditor({
         {children.map((child, ci) => (
           <div key={child.id}>
             {ci > 0 && <div className="text-[10px] text-primary font-medium py-0.5 ml-2">{node.logic}</div>}
-            <ConditionTreeEditor node={child} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} maxOneGroup={maxOneGroup} />
+            <ConditionTreeEditor node={child} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} maxOneGroup={maxOneGroup} availableFields={availableFields} />
           </div>
         ))}
         {children.length === 0 && <p className="text-[10px] text-muted-foreground py-2 text-center">点击上方按钮添加条件或嵌套分组</p>}
