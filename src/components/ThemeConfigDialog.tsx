@@ -875,7 +875,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
             </div>
           )}
 
-          {/* ═══════ Step 3: Entry Conditions (basic + advanced) ═══════ */}
+          {/* ═══════ Step 4: Entry Conditions (basic + advanced) ═══════ */}
           {step === 3 && (
             <div className="space-y-5">
               <div>
