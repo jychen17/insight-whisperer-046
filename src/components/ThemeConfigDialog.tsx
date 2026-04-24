@@ -1460,7 +1460,7 @@ const MERGE_COND_OPS = [
 ];
 
 function MergeConditionTreeEditor({
-  node, mergeNodeId, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot,
+  node, mergeNodeId, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot, availableFieldKeys,
 }: {
   node: MergeConditionNode; mergeNodeId: string;
   onAddCondition: (mergeNodeId: string, parentId: string) => void;
@@ -1468,14 +1468,18 @@ function MergeConditionTreeEditor({
   onRemove: (mergeNodeId: string, nodeId: string) => void;
   onUpdate: (mergeNodeId: string, nodeId: string, u: Partial<MergeConditionNode>) => void;
   depth: number; isRoot?: boolean;
+  availableFieldKeys?: string[];
 }) {
+  const fieldsPool = availableFieldKeys
+    ? ALL_FIELDS.filter(f => availableFieldKeys.includes(f.key))
+    : ALL_FIELDS;
   if (node.type === "condition") {
     return (
       <div className="flex items-center gap-2 py-1.5">
         <select value={node.field || ""} onChange={e => onUpdate(mergeNodeId, node.id, { field: e.target.value })}
           className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground flex-1 min-w-[100px]">
           <option value="">选择字段</option>
-          {ALL_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}（{FIELD_TYPE_LABELS[f.fieldType]}）</option>)}
+          {fieldsPool.map(f => <option key={f.key} value={f.key}>{f.label}（{FIELD_TYPE_LABELS[f.fieldType]}）</option>)}
         </select>
         <select value={node.operator || "equals"} onChange={e => onUpdate(mergeNodeId, node.id, { operator: e.target.value as any })}
           className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
@@ -1517,7 +1521,7 @@ function MergeConditionTreeEditor({
         {children.map((child, ci) => (
           <div key={child.id}>
             {ci > 0 && <div className="text-[10px] text-primary font-medium py-0.5 ml-2">{node.logic}</div>}
-            <MergeConditionTreeEditor node={child} mergeNodeId={mergeNodeId} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} />
+            <MergeConditionTreeEditor node={child} mergeNodeId={mergeNodeId} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} availableFieldKeys={availableFieldKeys} />
           </div>
         ))}
         {children.length === 0 && <p className="text-[10px] text-muted-foreground py-2 text-center">点击上方按钮添加条件或嵌套分组</p>}
