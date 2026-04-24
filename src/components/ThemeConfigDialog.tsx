@@ -1596,7 +1596,7 @@ function ConditionTreeEditor({
         {children.map((child, ci) => (
           <div key={child.id}>
             {ci > 0 && <div className="text-[10px] text-primary font-medium py-0.5 ml-2">{node.logic}</div>}
-            <ConditionTreeEditor node={child} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} maxOneGroup={maxOneGroup} />
+            <ConditionTreeEditor node={child} onAddCondition={onAddCondition} onAddGroup={onAddGroup} onRemove={onRemove} onUpdate={onUpdate} depth={depth + 1} maxOneGroup={maxOneGroup} availableFields={availableFields} />
           </div>
         ))}
         {children.length === 0 && <p className="text-[10px] text-muted-foreground py-2 text-center">点击上方按钮添加条件或嵌套分组</p>}
