@@ -1238,26 +1238,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
 
                       {node.enabled && (
                         <div className="p-3 space-y-3">
-                          {/* Merge condition tree */}
-                          <div className="p-3 bg-card rounded-md border border-border space-y-2">
-                            <label className="text-[10px] text-muted-foreground">合并条件（支持 AND / OR 和 () 嵌套）</label>
-                            <MergeConditionTreeEditor
-                              node={node.mergeConditionTree || { id: `mct_${node.id}`, type: "group", logic: "AND", children: [] }}
-                              mergeNodeId={node.id}
-                              onAddCondition={addMergeTreeCondition}
-                              onAddGroup={addMergeTreeGroup}
-                              onRemove={removeMergeTreeNode}
-                              onUpdate={updateMergeTreeNode}
-                              depth={0}
-                              isRoot
-                            />
-                            {node.mergeConditionTree && (node.mergeConditionTree.children || []).length > 0 && (
-                              <div className="bg-muted/30 rounded p-2 mt-1">
-                                <p className="text-[10px] text-primary">💡 合并规则：{mergeConditionTreeToText(node.mergeConditionTree)}</p>
-                              </div>
-                            )}
-                          </div>
-
                           {/* Display fields for merge result - grouped by type */}
                           <div className="p-3 bg-card rounded-md border border-border space-y-2">
                             <label className="text-[10px] text-muted-foreground">合并后展示字段（AI标签/原始字段/计算字段）</label>
@@ -1390,6 +1370,30 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                                   📋 默认排序：按「{ALL_FIELDS.find(f => f.key === (node.displayFields || []).find(df => df.isDefaultSort)?.key)?.label}」
                                   {(node.displayFields || []).find(df => df.isDefaultSort)?.sortDirection === "asc" ? "升序" : "降序"}排列
                                 </p>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Merge condition tree */}
+                          <div className="p-3 bg-card rounded-md border border-border space-y-2">
+                            <label className="text-[10px] text-muted-foreground">合并条件（支持 AND / OR 和 () 嵌套）· 可选字段基于上方已选展示字段 + 原始字段</label>
+                            <MergeConditionTreeEditor
+                              node={node.mergeConditionTree || { id: `mct_${node.id}`, type: "group", logic: "AND", children: [] }}
+                              mergeNodeId={node.id}
+                              onAddCondition={addMergeTreeCondition}
+                              onAddGroup={addMergeTreeGroup}
+                              onRemove={removeMergeTreeNode}
+                              onUpdate={updateMergeTreeNode}
+                              depth={0}
+                              isRoot
+                              availableFieldKeys={Array.from(new Set([
+                                ...ALL_FIELDS.filter(f => f.fieldType === "raw").map(f => f.key),
+                                ...(node.displayFields || []).filter(df => df.fieldType !== "raw").map(df => df.key),
+                              ]))}
+                            />
+                            {node.mergeConditionTree && (node.mergeConditionTree.children || []).length > 0 && (
+                              <div className="bg-muted/30 rounded p-2 mt-1">
+                                <p className="text-[10px] text-primary">💡 合并规则：{mergeConditionTreeToText(node.mergeConditionTree)}</p>
                               </div>
                             )}
                           </div>
