@@ -1023,15 +1023,6 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
                   提示：高级配置仅支持「原生字段」+ 上一步「字段配置」中已选的 AI 标签 / 计算字段。请先完成字段配置。
                 </div>
               )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </>
-                )}
-              </div>
             </div>
           )}
 
