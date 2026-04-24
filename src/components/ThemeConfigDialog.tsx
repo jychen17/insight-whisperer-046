@@ -86,7 +86,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
   const [platformSearch, setPlatformSearch] = useState<Record<string, string>>({});
 
   const isEdit = !!theme;
-  const steps = ["基本信息", "数据源", "入主题条件", "字段配置", "合并管线"];
+  const steps = ["基本信息", "数据源", "字段配置", "入主题条件", "合并管线"];
 
   useEffect(() => {
     if (open) {
