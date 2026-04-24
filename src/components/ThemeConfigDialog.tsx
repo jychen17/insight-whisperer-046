@@ -876,7 +876,7 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
           )}
 
           {/* ═══════ Step 3: Entry Conditions (basic + advanced) ═══════ */}
-          {step === 2 && (
+          {step === 3 && (
             <div className="space-y-5">
               <div>
                 <label className="text-xs font-medium text-foreground mb-1 block">各数据源入主题条件</label>
@@ -1020,8 +1020,8 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
             </div>
           )}
 
-          {/* ═══════ Step 4: Field Configuration (with display order) ═══════ */}
-          {step === 3 && (
+          {/* ═══════ Step 3: Field Configuration (with display order) ═══════ */}
+          {step === 2 && (
             <div className="space-y-5">
               <div>
                 <div className="flex items-center justify-between mb-2">
