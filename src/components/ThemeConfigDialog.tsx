@@ -1525,26 +1525,27 @@ function MergeConditionTreeEditor({
 // ── Nested Condition Tree Editor ────────────────────────────
 
 function ConditionTreeEditor({
-  node, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot, maxOneGroup,
+  node, onAddCondition, onAddGroup, onRemove, onUpdate, depth, isRoot, maxOneGroup, availableFields,
 }: {
   node: ConditionNode; onAddCondition: (parentId: string) => void; onAddGroup: (parentId: string) => void;
   onRemove: (id: string) => void; onUpdate: (id: string, u: Partial<ConditionNode>) => void;
-  depth: number; isRoot?: boolean; maxOneGroup?: boolean;
+  depth: number; isRoot?: boolean; maxOneGroup?: boolean; availableFields?: typeof ALL_FIELDS;
 }) {
+  const fieldsPool = availableFields ?? ALL_FIELDS;
   if (node.type === "condition") {
     return (
       <div className="flex items-center gap-2 py-1.5">
         <select value={node.field || ""} onChange={e => onUpdate(node.id, { field: e.target.value })}
           className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground flex-1 min-w-[100px]">
           <option value="">选择字段</option>
-          {ALL_FIELDS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+          {fieldsPool.map(f => <option key={f.key} value={f.key}>{f.label}（{FIELD_TYPE_LABELS[f.fieldType]}）</option>)}
         </select>
         <select value={node.operator || "equals"} onChange={e => onUpdate(node.id, { operator: e.target.value })}
           className="px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground">
           {OPERATORS.map(op => <option key={op.value} value={op.value}>{op.label}</option>)}
         </select>
         {(() => {
-          const fieldDef = ALL_FIELDS.find(f => f.key === node.field);
+          const fieldDef = fieldsPool.find(f => f.key === node.field);
           if (fieldDef?.hasSystemEnum && fieldDef.enumValues.length > 0) {
             return (
               <select value={node.value || ""} onChange={e => onUpdate(node.id, { value: e.target.value })}
