@@ -449,6 +449,10 @@ export default function ThemeConfigDialog({ open, onOpenChange, theme, onSave, i
   const fieldsByType = { ai: ALL_FIELDS.filter(f => f.fieldType === "ai"), raw: ALL_FIELDS.filter(f => f.fieldType === "raw"), calc: ALL_FIELDS.filter(f => f.fieldType === "calc") };
   const filteredFields = (fields: typeof ALL_FIELDS) => fields.filter(f => !fieldSearch || f.label.includes(fieldSearch) || f.key.includes(fieldSearch));
 
+  // 入主题条件可选字段：原生字段 + 上一步「字段配置」中已选的 AI 标签 / 计算字段
+  const selectedNonRawKeys = new Set(form.fieldConfigs.filter(fc => fc.fieldType !== "raw").map(fc => fc.key));
+  const availableConditionFields = ALL_FIELDS.filter(f => f.fieldType === "raw" || selectedNonRawKeys.has(f.key));
+
   const toggleGroup = (g: string) => setCollapsedGroups(prev => ({ ...prev, [g]: !prev[g] }));
 
   return (
