@@ -12,7 +12,7 @@ import {
   Search, MapPin, Calendar, Flame, TrendingUp, Music2, Palette,
   Sparkles, ExternalLink, Bell, FileText, ArrowUpRight, Ticket, BookOpen, Hash,
   ChevronDown, ChevronUp, Download, Settings, CheckCircle2, Globe, Eye, Tag, Layers,
-  ListChecks,
+  ListChecks, GraduationCap, Trophy, CalendarDays, PartyPopper, Landmark,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 
@@ -22,23 +22,24 @@ import StatCard from "@/components/StatCard";
 // Helpers
 // ────────────────────────────────────────────────────────────
 const CATEGORY_META: Record<Category, { icon: typeof Music2; cls: string }> = {
+  "考试": { icon: GraduationCap, cls: "bg-indigo-100 text-indigo-700 border-indigo-200" },
   "演唱会": { icon: Music2, cls: "bg-purple-100 text-purple-700 border-purple-200" },
-  "音乐节": { icon: Music2, cls: "bg-pink-100 text-pink-700 border-pink-200" },
-  "展览": { icon: Palette, cls: "bg-blue-100 text-blue-700 border-blue-200" },
-  "市集": { icon: Sparkles, cls: "bg-amber-100 text-amber-700 border-amber-200" },
-  "节庆": { icon: Sparkles, cls: "bg-rose-100 text-rose-700 border-rose-200" },
-  "亲子": { icon: Sparkles, cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  "线上热议": { icon: Hash, cls: "bg-orange-100 text-orange-700 border-orange-200" },
+  "展会": { icon: Palette, cls: "bg-blue-100 text-blue-700 border-blue-200" },
+  "演出赛事": { icon: Trophy, cls: "bg-rose-100 text-rose-700 border-rose-200" },
+  "节假日": { icon: CalendarDays, cls: "bg-amber-100 text-amber-700 border-amber-200" },
+  "活动": { icon: PartyPopper, cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
 };
 
 const SOURCE_META: Record<SourceKind, { icon: typeof Ticket; label: string; cls: string }> = {
   damai: { icon: Ticket, label: "大麦", cls: "text-rose-600" },
   bendibao: { icon: BookOpen, label: "本地宝", cls: "text-blue-600" },
   ranking: { icon: TrendingUp, label: "热榜", cls: "text-orange-600" },
+  gov: { icon: Landmark, label: "政府网站", cls: "text-slate-600" },
+  exam: { icon: GraduationCap, label: "考试官网", cls: "text-indigo-600" },
 };
 
-const ALL_PLATFORMS = ["全部", "大麦网", "本地宝", "微博热搜", "抖音热点", "小红书热搜"];
-const ALL_CITIES = ["上海", "北京", "成都", "广州", "全国"];
+const ALL_CITIES = ["全国", "上海", "北京", "成都", "广州", "武汉", "西双版纳"];
+const HEAT_LEVELS: Array<"高" | "中" | "低"> = ["高", "中", "低"];
 
 const formatHeat = (n: number) => n >= 10000 ? `${(n / 10000).toFixed(1)}w` : `${n}`;
 
