@@ -12,7 +12,7 @@ import {
   Search, MapPin, Calendar, Flame, TrendingUp, Music2, Palette,
   Sparkles, ExternalLink, Bell, FileText, ArrowUpRight, Ticket, BookOpen, Hash,
   ChevronDown, ChevronUp, Download, Settings, CheckCircle2, Globe, Eye, Tag, Layers,
-  ListChecks,
+  ListChecks, GraduationCap, Trophy, CalendarDays, PartyPopper, Landmark,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 
@@ -22,23 +22,24 @@ import StatCard from "@/components/StatCard";
 // Helpers
 // ────────────────────────────────────────────────────────────
 const CATEGORY_META: Record<Category, { icon: typeof Music2; cls: string }> = {
+  "考试": { icon: GraduationCap, cls: "bg-indigo-100 text-indigo-700 border-indigo-200" },
   "演唱会": { icon: Music2, cls: "bg-purple-100 text-purple-700 border-purple-200" },
-  "音乐节": { icon: Music2, cls: "bg-pink-100 text-pink-700 border-pink-200" },
-  "展览": { icon: Palette, cls: "bg-blue-100 text-blue-700 border-blue-200" },
-  "市集": { icon: Sparkles, cls: "bg-amber-100 text-amber-700 border-amber-200" },
-  "节庆": { icon: Sparkles, cls: "bg-rose-100 text-rose-700 border-rose-200" },
-  "亲子": { icon: Sparkles, cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  "线上热议": { icon: Hash, cls: "bg-orange-100 text-orange-700 border-orange-200" },
+  "展会": { icon: Palette, cls: "bg-blue-100 text-blue-700 border-blue-200" },
+  "演出赛事": { icon: Trophy, cls: "bg-rose-100 text-rose-700 border-rose-200" },
+  "节假日": { icon: CalendarDays, cls: "bg-amber-100 text-amber-700 border-amber-200" },
+  "活动": { icon: PartyPopper, cls: "bg-emerald-100 text-emerald-700 border-emerald-200" },
 };
 
 const SOURCE_META: Record<SourceKind, { icon: typeof Ticket; label: string; cls: string }> = {
   damai: { icon: Ticket, label: "大麦", cls: "text-rose-600" },
   bendibao: { icon: BookOpen, label: "本地宝", cls: "text-blue-600" },
   ranking: { icon: TrendingUp, label: "热榜", cls: "text-orange-600" },
+  gov: { icon: Landmark, label: "政府网站", cls: "text-slate-600" },
+  exam: { icon: GraduationCap, label: "考试官网", cls: "text-indigo-600" },
 };
 
-const ALL_PLATFORMS = ["全部", "大麦网", "本地宝", "微博热搜", "抖音热点", "小红书热搜"];
-const ALL_CITIES = ["上海", "北京", "成都", "广州", "全国"];
+const ALL_CITIES = ["全国", "上海", "北京", "成都", "广州", "武汉", "西双版纳"];
+const HEAT_LEVELS: Array<"高" | "中" | "低"> = ["高", "中", "低"];
 
 const formatHeat = (n: number) => n >= 10000 ? `${(n / 10000).toFixed(1)}w` : `${n}`;
 
@@ -74,6 +75,7 @@ export default function HotspotList() {
 
   // filters
   const [filterImportance, setFilterImportance] = useState<"all" | Importance>("all");
+  const [filterHeat, setFilterHeat] = useState<"all" | "高" | "中" | "低">("all");
   const [filterCity, setFilterCity] = useState("全部");
   const [filterCategory, setFilterCategory] = useState<"all" | Category>("all");
   const [filterSource, setFilterSource] = useState<"all" | SourceKind>("all");
@@ -84,9 +86,10 @@ export default function HotspotList() {
 
   const filtered = useMemo(() => {
     let list = mockEvents;
-    if (searchQuery) list = list.filter(e => e.title.includes(searchQuery) || e.city.includes(searchQuery));
+    if (searchQuery) list = list.filter(e => e.title.includes(searchQuery) || e.city.includes(searchQuery) || (e.subType ?? "").includes(searchQuery));
     if (filterImportance !== "all") list = list.filter(e => e.importance === filterImportance);
-    if (filterCity !== "全部") list = list.filter(e => e.city === filterCity);
+    if (filterHeat !== "all") list = list.filter(e => e.heatLevel === filterHeat);
+    if (filterCity !== "全部") list = list.filter(e => e.city === filterCity || e.province === filterCity);
     if (filterCategory !== "all") list = list.filter(e => e.category === filterCategory);
     if (filterSource !== "all") list = list.filter(e => e.sources.some(s => s.kind === filterSource));
     if (filterDateStart) list = list.filter(e => e.date >= filterDateStart);
@@ -100,7 +103,7 @@ export default function HotspotList() {
         default: return 0;
       }
     });
-  }, [searchQuery, filterImportance, filterCity, filterCategory, filterSource, filterDateStart, filterDateEnd, sortBy]);
+  }, [searchQuery, filterImportance, filterHeat, filterCity, filterCategory, filterSource, filterDateStart, filterDateEnd, sortBy]);
 
   const stats = useMemo(() => ({
     upcoming: mockEvents.filter(e => new Date(e.date) >= new Date("2026-04-15")).length,
@@ -191,9 +194,20 @@ export default function HotspotList() {
         <TabsContent value="events" className="space-y-4 mt-4">
           {/* Filters card */}
           <div className="bg-card rounded-lg border border-border p-4">
-            <div className="grid grid-cols-6 gap-3">
+            <div className="grid grid-cols-7 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground">热点等级</label>
+                <label className="text-xs text-muted-foreground">热度分级</label>
+                <select
+                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                  value={filterHeat}
+                  onChange={e => setFilterHeat(e.target.value as typeof filterHeat)}
+                >
+                  <option value="all">全部</option>
+                  {HEAT_LEVELS.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">业务重要性</label>
                 <select
                   className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
                   value={filterImportance}
@@ -206,7 +220,7 @@ export default function HotspotList() {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">城市</label>
+                <label className="text-xs text-muted-foreground">省份/城市</label>
                 <select
                   className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
                   value={filterCity}
@@ -217,7 +231,7 @@ export default function HotspotList() {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">活动品类</label>
+                <label className="text-xs text-muted-foreground">热点类型</label>
                 <select
                   className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
                   value={filterCategory}
@@ -238,6 +252,8 @@ export default function HotspotList() {
                   <option value="damai">大麦演出</option>
                   <option value="bendibao">本地宝</option>
                   <option value="ranking">社媒热榜</option>
+                  <option value="gov">政府网站</option>
+                  <option value="exam">考试官网</option>
                 </select>
               </div>
               <div>
@@ -336,6 +352,14 @@ export default function HotspotList() {
                             <Badge variant="outline" className={`text-[11px] gap-1 ${Cat.cls}`}>
                               <CatIcon className="w-3 h-3" /> {event.category}
                             </Badge>
+                            {event.subType && (
+                              <Badge variant="outline" className="text-[10px] text-muted-foreground border-border">{event.subType}</Badge>
+                            )}
+                            <Badge variant="outline" className={`text-[10px] ${
+                              event.heatLevel === "高" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                              event.heatLevel === "中" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                              "bg-muted text-muted-foreground"
+                            }`}>热度{event.heatLevel}</Badge>
                             {event.isNew && <Badge className="h-4 text-[10px] px-1.5 bg-rose-500">NEW</Badge>}
                             <h3 className="text-sm font-semibold text-foreground">{event.title}</h3>
                             <span className="text-[10px] text-muted-foreground/60 font-mono" title="热点ID">#{event.id}</span>

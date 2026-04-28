@@ -79,7 +79,7 @@ const OPERATORS: Record<string, { value: string; label: string }[]> = {
 
 const RISK_VALUES = ["重大", "一般"];
 const CATEGORY_OPTIONS = ["票价吐槽", "辅营加购", "盲盒吐槽", "演出赛事抢票", "抢票吐槽", "催出票", "舆情跟评", "其他"];
-const HOTSPOT_CATEGORY_OPTIONS = ["演唱会", "音乐节", "展览", "市集", "节庆", "亲子", "线上热议"];
+const HOTSPOT_CATEGORY_OPTIONS = ["考试", "演唱会", "展会", "演出赛事", "节假日", "活动"];
 const HOTSPOT_CITY_OPTIONS = ["上海", "北京", "成都", "广州", "深圳", "杭州", "全国"];
 const HOTSPOT_PLATFORM_OPTIONS = ["大麦网", "本地宝", "微博热搜", "抖音热点", "小红书热搜"];
 

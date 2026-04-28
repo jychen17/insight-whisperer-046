@@ -14,6 +14,13 @@ import { CityView, CategoryView } from "@/components/hotspot/HotspotViews";
 
 const listStats = {
   upcoming: hotspotEvents.filter(e => new Date(e.date) >= new Date("2026-04-15")).length,
+  exam: hotspotEvents.filter(e => e.category === "考试").length,
+  concert: hotspotEvents.filter(e => e.category === "演唱会").length,
+  expo: hotspotEvents.filter(e => e.category === "展会").length,
+  match: hotspotEvents.filter(e => e.category === "演出赛事").length,
+  holiday: hotspotEvents.filter(e => e.category === "节假日").length,
+  activity: hotspotEvents.filter(e => e.category === "活动").length,
+  highHeat: hotspotEvents.filter(e => e.heatLevel === "高").length,
   newToday: hotspotEvents.filter(e => e.isNew).length,
   highBiz: hotspotEvents.filter(e => e.businessRelevance >= 4).length,
   cross: hotspotEvents.filter(e => e.crossSource >= 2).length,
@@ -132,17 +139,19 @@ export default function HotspotDiscover() {
       </div>
 
       <div className="grid grid-cols-4 gap-4">
-        <StatCard title="实时热点数" value={128} change={23.5} />
-        <StatCard title="上升热点" value={42} change={15.8} />
-        <StatCard title="旅游相关热点" value={36} change={45.2} />
-        <StatCard title="负面热点" value={8} change={-12.3} />
+        <StatCard title="未来30天热点活动" value={listStats.upcoming} change={18.5} />
+        <StatCard title="今日新增热点" value={listStats.newToday} change={45.2} />
+        <StatCard title="高热度事件" value={listStats.highHeat} change={22.8} />
+        <StatCard title="跨源大热点" value={listStats.cross} change={32.1} />
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard title="未来7天热点活动" value={listStats.upcoming} change={18.5} />
-        <StatCard title="今日新增热点" value={listStats.newToday} change={45.2} />
-        <StatCard title="业务高相关热点" value={listStats.highBiz} change={22.8} />
-        <StatCard title="跨源大热点" value={listStats.cross} change={32.1} />
+      <div className="grid grid-cols-6 gap-3">
+        <StatCard title="考试" value={listStats.exam} change={6.0} />
+        <StatCard title="演唱会" value={listStats.concert} change={45.2} />
+        <StatCard title="展会" value={listStats.expo} change={18.5} />
+        <StatCard title="演出赛事" value={listStats.match} change={26.4} />
+        <StatCard title="节假日" value={listStats.holiday} change={12.3} />
+        <StatCard title="活动" value={listStats.activity} change={8.7} />
       </div>
 
       {/* ───── Sub-views: 实时榜 / 城市视图 / 品类视图 / 原始榜单 ───── */}
