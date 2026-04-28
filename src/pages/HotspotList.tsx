@@ -194,9 +194,20 @@ export default function HotspotList() {
         <TabsContent value="events" className="space-y-4 mt-4">
           {/* Filters card */}
           <div className="bg-card rounded-lg border border-border p-4">
-            <div className="grid grid-cols-6 gap-3">
+            <div className="grid grid-cols-7 gap-3">
               <div>
-                <label className="text-xs text-muted-foreground">热点等级</label>
+                <label className="text-xs text-muted-foreground">热度分级</label>
+                <select
+                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                  value={filterHeat}
+                  onChange={e => setFilterHeat(e.target.value as typeof filterHeat)}
+                >
+                  <option value="all">全部</option>
+                  {HEAT_LEVELS.map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">业务重要性</label>
                 <select
                   className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
                   value={filterImportance}
@@ -209,7 +220,7 @@ export default function HotspotList() {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">城市</label>
+                <label className="text-xs text-muted-foreground">省份/城市</label>
                 <select
                   className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
                   value={filterCity}
@@ -220,7 +231,7 @@ export default function HotspotList() {
                 </select>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">活动品类</label>
+                <label className="text-xs text-muted-foreground">热点类型</label>
                 <select
                   className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
                   value={filterCategory}
@@ -241,6 +252,8 @@ export default function HotspotList() {
                   <option value="damai">大麦演出</option>
                   <option value="bendibao">本地宝</option>
                   <option value="ranking">社媒热榜</option>
+                  <option value="gov">政府网站</option>
+                  <option value="exam">考试官网</option>
                 </select>
               </div>
               <div>
