@@ -185,6 +185,25 @@ export const ALL_FIELDS = [
   { key: "sov", label: "SOV份额", fieldType: "calc" as const, hasSystemEnum: false, enumValues: [] },
   { key: "nps", label: "NPS评分", fieldType: "calc" as const, hasSystemEnum: false, enumValues: [] },
   { key: "growth_rate", label: "增长率", fieldType: "calc" as const, hasSystemEnum: false, enumValues: [] },
+  // ── 热点洞察主题字段（hot_event 数据模型） ──
+  { key: "event_name", label: "事件名称", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "event_source", label: "数据源", fieldType: "raw" as const, hasSystemEnum: true, enumValues: ["大麦网", "本地宝", "微博", "抖音", "小红书", "国务院办公厅", "国家公务员局", "研招网", "公考雷达"] },
+  { key: "event_type", label: "热点类型", fieldType: "ai" as const, hasSystemEnum: true, enumValues: ["考试", "演唱会", "展会", "演出赛事", "节假日", "活动"] },
+  { key: "event_subtype", label: "细分类型", fieldType: "ai" as const, hasSystemEnum: true, enumValues: ["研究生考试", "公务员考试", "职业资格考试", "事业单位考试", "演唱会", "音乐节", "音乐演出", "车展", "漫展", "科技展", "博览展会", "其他展会", "马拉松", "球赛", "电竞", "体育赛事", "剧场演出", "光影演出", "全国法定", "地域特殊", "民俗活动", "时令活动", "开放活动"] },
+  { key: "event_province", label: "省份", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "event_city", label: "城市", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "venue_name", label: "场馆/考点", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "event_start_date", label: "开始日期", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "event_end_date", label: "结束日期", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "heat_level", label: "热度分级", fieldType: "ai" as const, hasSystemEnum: true, enumValues: ["高", "中", "低"] },
+  { key: "artist_name", label: "艺人名称", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "ticket_open_time", label: "开票时间", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "want_count", label: "想看人数", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "ticket_print_datetime", label: "打印准考证时间", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "recruit_count", label: "招录人数", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "affected_regions", label: "涉及地区", fieldType: "raw" as const, hasSystemEnum: false, enumValues: [] },
+  { key: "activity_scale", label: "活动规模", fieldType: "raw" as const, hasSystemEnum: true, enumValues: ["大型", "中型", "小型"] },
+  { key: "days_to_start", label: "距离开始天数", fieldType: "calc" as const, hasSystemEnum: false, enumValues: [] },
 ];
 
 const FIELD_LABELS: Record<string, string> = Object.fromEntries(ALL_FIELDS.map(f => [f.key, f.label]));
