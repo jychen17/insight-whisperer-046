@@ -14,6 +14,13 @@ import { CityView, CategoryView } from "@/components/hotspot/HotspotViews";
 
 const listStats = {
   upcoming: hotspotEvents.filter(e => new Date(e.date) >= new Date("2026-04-15")).length,
+  exam: hotspotEvents.filter(e => e.category === "考试").length,
+  concert: hotspotEvents.filter(e => e.category === "演唱会").length,
+  expo: hotspotEvents.filter(e => e.category === "展会").length,
+  match: hotspotEvents.filter(e => e.category === "演出赛事").length,
+  holiday: hotspotEvents.filter(e => e.category === "节假日").length,
+  activity: hotspotEvents.filter(e => e.category === "活动").length,
+  highHeat: hotspotEvents.filter(e => e.heatLevel === "高").length,
   newToday: hotspotEvents.filter(e => e.isNew).length,
   highBiz: hotspotEvents.filter(e => e.businessRelevance >= 4).length,
   cross: hotspotEvents.filter(e => e.crossSource >= 2).length,
