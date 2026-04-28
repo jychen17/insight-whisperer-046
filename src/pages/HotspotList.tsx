@@ -352,6 +352,14 @@ export default function HotspotList() {
                             <Badge variant="outline" className={`text-[11px] gap-1 ${Cat.cls}`}>
                               <CatIcon className="w-3 h-3" /> {event.category}
                             </Badge>
+                            {event.subType && (
+                              <Badge variant="outline" className="text-[10px] text-muted-foreground border-border">{event.subType}</Badge>
+                            )}
+                            <Badge variant="outline" className={`text-[10px] ${
+                              event.heatLevel === "高" ? "bg-rose-50 text-rose-700 border-rose-200" :
+                              event.heatLevel === "中" ? "bg-amber-50 text-amber-700 border-amber-200" :
+                              "bg-muted text-muted-foreground"
+                            }`}>热度{event.heatLevel}</Badge>
                             {event.isNew && <Badge className="h-4 text-[10px] px-1.5 bg-rose-500">NEW</Badge>}
                             <h3 className="text-sm font-semibold text-foreground">{event.title}</h3>
                             <span className="text-[10px] text-muted-foreground/60 font-mono" title="热点ID">#{event.id}</span>
