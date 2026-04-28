@@ -75,6 +75,7 @@ export default function HotspotList() {
 
   // filters
   const [filterImportance, setFilterImportance] = useState<"all" | Importance>("all");
+  const [filterHeat, setFilterHeat] = useState<"all" | "高" | "中" | "低">("all");
   const [filterCity, setFilterCity] = useState("全部");
   const [filterCategory, setFilterCategory] = useState<"all" | Category>("all");
   const [filterSource, setFilterSource] = useState<"all" | SourceKind>("all");
@@ -85,9 +86,10 @@ export default function HotspotList() {
 
   const filtered = useMemo(() => {
     let list = mockEvents;
-    if (searchQuery) list = list.filter(e => e.title.includes(searchQuery) || e.city.includes(searchQuery));
+    if (searchQuery) list = list.filter(e => e.title.includes(searchQuery) || e.city.includes(searchQuery) || (e.subType ?? "").includes(searchQuery));
     if (filterImportance !== "all") list = list.filter(e => e.importance === filterImportance);
-    if (filterCity !== "全部") list = list.filter(e => e.city === filterCity);
+    if (filterHeat !== "all") list = list.filter(e => e.heatLevel === filterHeat);
+    if (filterCity !== "全部") list = list.filter(e => e.city === filterCity || e.province === filterCity);
     if (filterCategory !== "all") list = list.filter(e => e.category === filterCategory);
     if (filterSource !== "all") list = list.filter(e => e.sources.some(s => s.kind === filterSource));
     if (filterDateStart) list = list.filter(e => e.date >= filterDateStart);
@@ -101,7 +103,7 @@ export default function HotspotList() {
         default: return 0;
       }
     });
-  }, [searchQuery, filterImportance, filterCity, filterCategory, filterSource, filterDateStart, filterDateEnd, sortBy]);
+  }, [searchQuery, filterImportance, filterHeat, filterCity, filterCategory, filterSource, filterDateStart, filterDateEnd, sortBy]);
 
   const stats = useMemo(() => ({
     upcoming: mockEvents.filter(e => new Date(e.date) >= new Date("2026-04-15")).length,
