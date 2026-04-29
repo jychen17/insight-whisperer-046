@@ -209,175 +209,153 @@ export default function HotspotList() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ========== EVENTS LIST VIEW ========== */}
-        <TabsContent value="events" className="space-y-4 mt-4">
-          {/* Filters card */}
-          <div className="bg-card rounded-lg border border-border p-4">
-            <div className="grid grid-cols-7 gap-3">
-              <div>
-                <label className="text-xs text-muted-foreground">热度分级</label>
-                <select
-                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                  value={filterHeat}
-                  onChange={e => setFilterHeat(e.target.value as typeof filterHeat)}
-                >
-                  <option value="all">全部</option>
-                  {HEAT_LEVELS.map(h => <option key={h} value={h}>{h}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">业务重要性</label>
-                <select
-                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                  value={filterImportance}
-                  onChange={e => setFilterImportance(e.target.value as typeof filterImportance)}
-                >
-                  <option value="all">全部</option>
-                  <option value="high">重大</option>
-                  <option value="medium">一般</option>
-                  <option value="low">低</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">省份/城市</label>
-                <select
-                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                  value={filterCity}
-                  onChange={e => setFilterCity(e.target.value)}
-                >
-                  <option value="全部">全部</option>
-                  {ALL_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">热点类型</label>
-                <select
-                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                  value={filterCategory}
-                  onChange={e => setFilterCategory(e.target.value as typeof filterCategory)}
-                >
-                  <option value="all">全部</option>
-                  {(Object.keys(CATEGORY_META) as Category[]).map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">数据源</label>
-                <select
-                  className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                  value={filterSource}
-                  onChange={e => setFilterSource(e.target.value as typeof filterSource)}
-                >
-                  <option value="all">全部</option>
-                  <option value="damai">大麦演出</option>
-                  <option value="bendibao">本地宝</option>
-                  <option value="ranking">社媒热榜</option>
-                  <option value="gov">政府网站</option>
-                  <option value="exam">考试官网</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">活动日期</label>
-                <div className="flex gap-1 mt-1">
-                  <input type="date" className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" value={filterDateStart} onChange={e => setFilterDateStart(e.target.value)} />
-                  <input type="date" className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" value={filterDateEnd} onChange={e => setFilterDateEnd(e.target.value)} />
+        {/* ========== CLUSTERED VIEWS (share filters) ========== */}
+        {(["time", "city", "province", "subtype", "category"] as const).map(view => (
+          <TabsContent key={view} value={view} className="space-y-4 mt-4">
+            {/* Filters card */}
+            <div className="bg-card rounded-lg border border-border p-4">
+              <div className="grid grid-cols-7 gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground">热度分级</label>
+                  <select
+                    className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={filterHeat}
+                    onChange={e => setFilterHeat(e.target.value as typeof filterHeat)}
+                  >
+                    <option value="all">全部</option>
+                    {HEAT_LEVELS.map(h => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">业务重要性</label>
+                  <select
+                    className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={filterImportance}
+                    onChange={e => setFilterImportance(e.target.value as typeof filterImportance)}
+                  >
+                    <option value="all">全部</option>
+                    <option value="high">重大</option>
+                    <option value="medium">一般</option>
+                    <option value="low">低</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">省份/城市</label>
+                  <select
+                    className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={filterCity}
+                    onChange={e => setFilterCity(e.target.value)}
+                  >
+                    <option value="全部">全部</option>
+                    {ALL_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">热点类型</label>
+                  <select
+                    className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={filterCategory}
+                    onChange={e => setFilterCategory(e.target.value as typeof filterCategory)}
+                  >
+                    <option value="all">全部</option>
+                    {(Object.keys(CATEGORY_META) as Category[]).map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">数据源</label>
+                  <select
+                    className="w-full mt-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                    value={filterSource}
+                    onChange={e => setFilterSource(e.target.value as typeof filterSource)}
+                  >
+                    <option value="all">全部</option>
+                    <option value="damai">大麦演出</option>
+                    <option value="bendibao">本地宝</option>
+                    <option value="ranking">社媒热榜</option>
+                    <option value="gov">政府网站</option>
+                    <option value="exam">考试官网</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">活动日期</label>
+                  <div className="flex gap-1 mt-1">
+                    <input type="date" className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" value={filterDateStart} onChange={e => setFilterDateStart(e.target.value)} />
+                    <input type="date" className="flex-1 px-2 py-1.5 text-xs border border-border rounded-md bg-card text-foreground" value={filterDateEnd} onChange={e => setFilterDateEnd(e.target.value)} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground">搜索热点</label>
+                  <div className="relative mt-1">
+                    <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      placeholder="搜索事件 / 城市..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="w-full pl-7 pr-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
+                    />
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="text-xs text-muted-foreground">搜索热点</label>
-                <div className="relative mt-1">
-                  <Search className="w-3 h-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    placeholder="搜索事件 / 城市..."
-                    value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full pl-7 pr-3 py-1.5 text-xs border border-border rounded-md bg-card text-foreground"
-                  />
+              <div className="flex justify-between items-center mt-3">
+                <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={selectedIds.length > 0 && selectedIds.length === filtered.length}
+                      onChange={e => {
+                        if (e.target.checked) setSelectedIds(filtered.map(x => x.id));
+                        else setSelectedIds([]);
+                      }}
+                    />
+                    <span>全选</span>
+                  </label>
+                  {selectedIds.length > 0 && (
+                    <>
+                      <span className="text-primary font-medium">已选 {selectedIds.length} 个热点</span>
+                      <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={() => goReport(selectedIds)}>
+                        <FileText className="w-3 h-3" /> 生成报告
+                      </Button>
+                    </>
+                  )}
+                  <span className="ml-2">共 {filtered.length} 个热点</span>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <select
+                    value={sortBy}
+                    onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                    className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
+                  >
+                    <option value="date_asc">活动日期升序</option>
+                    <option value="heat_desc">综合热度降序</option>
+                    <option value="trend_desc">热度增幅降序</option>
+                    <option value="biz_desc">业务相关度降序</option>
+                  </select>
                 </div>
               </div>
             </div>
-            <div className="flex justify-between items-center mt-3">
-              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                <label className="flex items-center gap-1">
-                  <input
-                    type="checkbox"
-                    className="rounded"
-                    checked={selectedIds.length > 0 && selectedIds.length === filtered.length}
-                    onChange={e => {
-                      if (e.target.checked) setSelectedIds(filtered.map(x => x.id));
-                      else setSelectedIds([]);
-                    }}
-                  />
-                  <span>全选</span>
-                </label>
-                {selectedIds.length > 0 && (
-                  <>
-                    <span className="text-primary font-medium">已选 {selectedIds.length} 个热点</span>
-                    <Button size="sm" variant="outline" className="h-6 text-[11px] gap-1" onClick={() => goReport(selectedIds)}>
-                      <FileText className="w-3 h-3" /> 生成报告
-                    </Button>
-                  </>
-                )}
-                <span className="ml-2">共 {filtered.length} 个热点</span>
-              </div>
-              <div className="flex gap-2 items-center">
-                <div className="flex rounded-md border border-border overflow-hidden text-[11px]">
-                  <button
-                    className={`px-2 py-1 ${groupMode === "cluster" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted/50"}`}
-                    onClick={() => setGroupMode("cluster")}
-                  >按聚类层级</button>
-                  <button
-                    className={`px-2 py-1 border-l border-border ${groupMode === "none" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted/50"}`}
-                    onClick={() => setGroupMode("none")}
-                  >平铺列表</button>
-                </div>
-                <select
-                  value={sortBy}
-                  onChange={e => setSortBy(e.target.value as typeof sortBy)}
-                  className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
-                >
-                  <option value="date_asc">活动日期升序</option>
-                  <option value="heat_desc">综合热度降序</option>
-                  <option value="trend_desc">热度增幅降序</option>
-                  <option value="biz_desc">业务相关度降序</option>
-                </select>
-              </div>
-            </div>
-          </div>
 
-          {/* Event Cards */}
-          {filtered.length === 0 ? (
-            <div className="text-center py-16 text-muted-foreground text-sm bg-card rounded-lg border border-border">
-              <Layers className="w-8 h-8 mx-auto mb-3 opacity-30" />
-              <p>未找到匹配的热点</p>
-              <p className="text-xs mt-1">请调整筛选条件</p>
-            </div>
-          ) : groupMode === "none" ? (
-            <div className="space-y-3">
-              {filtered.map(event => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  expanded={expandedId === event.id}
-                  selected={selectedIds.includes(event.id)}
-                  onToggleExpand={() => setExpandedId(expandedId === event.id ? null : event.id)}
-                  onToggleSelect={() => toggleSelect(event.id)}
-                  onReport={() => goReport([event.id])}
-                  onDetail={() => goDetail(event)}
-                />
-              ))}
-            </div>
-          ) : (
-            <ClusteredEvents
-              events={filtered}
-              expandedId={expandedId}
-              setExpandedId={setExpandedId}
-              selectedIds={selectedIds}
-              toggleSelect={toggleSelect}
-              goReport={goReport}
-              goDetail={goDetail}
-            />
-          )}
-        </TabsContent>
+            {/* Grouped list */}
+            {filtered.length === 0 ? (
+              <div className="text-center py-16 text-muted-foreground text-sm bg-card rounded-lg border border-border">
+                <Layers className="w-8 h-8 mx-auto mb-3 opacity-30" />
+                <p>未找到匹配的热点</p>
+                <p className="text-xs mt-1">请调整筛选条件</p>
+              </div>
+            ) : (
+              <GroupedEvents
+                groupBy={view}
+                events={filtered}
+                expandedId={expandedId}
+                setExpandedId={setExpandedId}
+                selectedIds={selectedIds}
+                toggleSelect={toggleSelect}
+                goReport={goReport}
+                goDetail={goDetail}
+              />
+            )}
+          </TabsContent>
+        ))}
 
         {/* ========== ALL ARTICLES (CLUES) LIST VIEW ========== */}
         <TabsContent value="clues" className="mt-4">
