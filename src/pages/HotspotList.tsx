@@ -74,7 +74,7 @@ export default function HotspotList() {
   };
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [groupMode, setGroupMode] = useState<"none" | "cluster">("cluster");
+  
 
   // filters
   const [filterImportance, setFilterImportance] = useState<"all" | Importance>("all");
