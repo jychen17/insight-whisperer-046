@@ -370,12 +370,39 @@ export default function HotspotList() {
 }
 
 // ────────────────────────────────────────────────────────────
-// Clustered events view — groups events using merge hierarchy:
-// 类型 → 细分类型/艺人 → 省份 → 城市
+// Grouped events view — groups events by a single clustering key
+// (time / city / province / subtype / category). Each tab uses one level
+// from the merge pipeline: 类型 → 细分/艺人 → 省份 → 城市 → 168h 时间窗
 // ────────────────────────────────────────────────────────────
-function ClusteredEvents({
-  events, expandedId, setExpandedId, selectedIds, toggleSelect, goReport, goDetail,
+type GroupKey = "time" | "city" | "province" | "subtype" | "category";
+
+const GROUP_META: Record<GroupKey, { label: string; level: string; icon: typeof Clock }> = {
+  time:     { label: "按时间聚类（168h 时间窗）", level: "L5", icon: Clock },
+  city:     { label: "按城市聚类",                 level: "L4", icon: Building2 },
+  province: { label: "按省份聚类",                 level: "L3", icon: MapPin },
+  subtype:  { label: "按细分类型/艺人聚类",         level: "L2", icon: Tag },
+  category: { label: "按热点类型聚类",              level: "L1", icon: Flame },
+};
+
+// Build a 168h sliding-window bucket key from event date (ISO yyyy-mm-dd)
+function timeBucket(dateIso: string): string {
+  const d = new Date(dateIso);
+  if (isNaN(d.getTime())) return "未知时间";
+  // anchor: weekly window starting on Monday
+  const day = d.getDay(); // 0=Sun..6=Sat
+  const monOffset = (day + 6) % 7;
+  const start = new Date(d);
+  start.setDate(d.getDate() - monOffset);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const fmt = (x: Date) => `${x.getMonth() + 1}.${x.getDate()}`;
+  return `${start.getFullYear()}年 ${fmt(start)} - ${fmt(end)}（168h 时间窗）`;
+}
+
+function GroupedEvents({
+  groupBy, events, expandedId, setExpandedId, selectedIds, toggleSelect, goReport, goDetail,
 }: {
+  groupBy: GroupKey;
   events: HotspotEvent[];
   expandedId: string | null;
   setExpandedId: (v: string | null) => void;
@@ -384,113 +411,62 @@ function ClusteredEvents({
   goReport: (ids: string[]) => void;
   goDetail: (e: HotspotEvent) => void;
 }) {
-  // Group: category -> subKey (subType/artist) -> province -> city -> events[]
-  type CityNode = { city: string; events: HotspotEvent[] };
-  type ProvNode = { province: string; cities: CityNode[]; total: number };
-  type SubNode  = { subKey: string; provinces: ProvNode[]; total: number };
-  type CatNode  = { category: Category; subs: SubNode[]; total: number };
-
-  const tree: CatNode[] = useMemo(() => {
-    const catMap = new Map<Category, Map<string, Map<string, Map<string, HotspotEvent[]>>>>();
+  const groups = useMemo(() => {
+    const keyOf = (e: HotspotEvent): string => {
+      switch (groupBy) {
+        case "time":     return timeBucket(e.date);
+        case "city":     return e.city || "其他";
+        case "province": return e.province || e.city || "其他";
+        case "subtype":  return e.artistName || e.subType || "其他";
+        case "category": return e.category;
+      }
+    };
+    const map = new Map<string, HotspotEvent[]>();
     events.forEach(e => {
-      const subKey = e.artistName || e.subType || "其他";
-      const prov = e.province || e.city || "其他";
-      const city = e.city || "其他";
-      if (!catMap.has(e.category)) catMap.set(e.category, new Map());
-      const sm = catMap.get(e.category)!;
-      if (!sm.has(subKey)) sm.set(subKey, new Map());
-      const pm = sm.get(subKey)!;
-      if (!pm.has(prov)) pm.set(prov, new Map());
-      const cm = pm.get(prov)!;
-      if (!cm.has(city)) cm.set(city, []);
-      cm.get(city)!.push(e);
+      const k = keyOf(e);
+      if (!map.has(k)) map.set(k, []);
+      map.get(k)!.push(e);
     });
-    const result: CatNode[] = [];
-    catMap.forEach((sm, category) => {
-      const subs: SubNode[] = [];
-      sm.forEach((pm, subKey) => {
-        const provinces: ProvNode[] = [];
-        pm.forEach((cm, province) => {
-          const cities: CityNode[] = [];
-          cm.forEach((evs, city) => cities.push({ city, events: evs }));
-          provinces.push({ province, cities, total: cities.reduce((a, c) => a + c.events.length, 0) });
-        });
-        subs.push({ subKey, provinces, total: provinces.reduce((a, p) => a + p.total, 0) });
-      });
-      subs.sort((a, b) => b.total - a.total);
-      result.push({ category, subs, total: subs.reduce((a, s) => a + s.total, 0) });
-    });
-    return result.sort((a, b) => b.total - a.total);
-  }, [events]);
+    const arr = Array.from(map.entries()).map(([key, list]) => ({ key, list }));
+    if (groupBy === "time") {
+      arr.sort((a, b) => a.key.localeCompare(b.key));
+    } else {
+      arr.sort((a, b) => b.list.length - a.list.length);
+    }
+    return arr;
+  }, [groupBy, events]);
+
+  const Meta = GROUP_META[groupBy];
+  const HeaderIcon = Meta.icon;
 
   return (
     <div className="space-y-4">
-      {tree.map(catNode => {
-        const Cat = CATEGORY_META[catNode.category];
-        const CatIcon = Cat.icon;
+      {groups.map(({ key, list }) => {
+        // For category groups, use the category color theme
+        const catCls = groupBy === "category" ? CATEGORY_META[key as Category]?.cls : "";
         return (
-          <div key={catNode.category} className="bg-card rounded-lg border border-border overflow-hidden">
-            {/* L1: Category header */}
-            <div className={`flex items-center gap-2 px-4 py-2 border-b border-border ${Cat.cls.replace(/border-\S+/, "")}`}>
-              <CatIcon className="w-4 h-4" />
-              <span className="text-sm font-semibold">{catNode.category}</span>
-              <Badge variant="secondary" className="h-5 text-[10px]">{catNode.total} 个事件</Badge>
-              <span className="ml-auto text-[10px] text-muted-foreground">L1 · 按热点类型聚类</span>
+          <div key={key} className="bg-card rounded-lg border border-border overflow-hidden">
+            <div className={`flex items-center gap-2 px-4 py-2 border-b border-border ${catCls?.replace(/border-\S+/, "") ?? ""}`}>
+              <HeaderIcon className="w-4 h-4" />
+              <span className="text-sm font-semibold">{key}</span>
+              <Badge variant="secondary" className="h-5 text-[10px]">{list.length} 个事件</Badge>
+              <span className="ml-auto text-[10px] text-muted-foreground">{Meta.level} · {Meta.label}</span>
             </div>
-            <div className="p-3 space-y-3">
-              {catNode.subs.map(subNode => (
-                <div key={subNode.subKey} className="rounded-md border border-dashed border-border/70 bg-muted/10">
-                  {/* L2: SubType / Artist */}
-                  <div className="flex items-center gap-2 px-3 py-1.5 border-b border-dashed border-border/70">
-                    <Tag className="w-3 h-3 text-muted-foreground" />
-                    <span className="text-xs font-medium text-foreground">{subNode.subKey}</span>
-                    <Badge variant="outline" className="h-4 text-[10px] px-1.5">{subNode.total}</Badge>
-                    <span className="ml-auto text-[10px] text-muted-foreground">L2 · 按细分类型/艺人聚类</span>
-                  </div>
-                  <div className="p-2 space-y-2">
-                    {subNode.provinces.map(provNode => (
-                      <div key={provNode.province} className="rounded-md bg-background border border-border/50">
-                        {/* L3: Province */}
-                        <div className="flex items-center gap-2 px-3 py-1 border-b border-border/40">
-                          <MapPin className="w-3 h-3 text-primary" />
-                          <span className="text-[11px] font-medium text-foreground">{provNode.province}</span>
-                          <Badge variant="outline" className="h-4 text-[10px] px-1.5">{provNode.total}</Badge>
-                          <span className="ml-auto text-[10px] text-muted-foreground/80">L3 · 按省份聚类</span>
-                        </div>
-                        <div className="p-2 space-y-2">
-                          {provNode.cities.map(cityNode => (
-                            <div key={cityNode.city} className="rounded-sm">
-                              {/* L4: City */}
-                              <div className="flex items-center gap-1.5 px-2 pb-1.5 text-[10px] text-muted-foreground">
-                                <Building2 className="w-3 h-3" />
-                                <span>{cityNode.city}</span>
-                                <span>· {cityNode.events.length} 个</span>
-                                <span className="ml-auto">L4 · 按城市聚类 · L5 168h 内时间窗</span>
-                              </div>
-                              <div className="space-y-2">
-                                {cityNode.events
-                                  .sort((a, b) => a.date.localeCompare(b.date))
-                                  .map(event => (
-                                    <EventCard
-                                      key={event.id}
-                                      event={event}
-                                      expanded={expandedId === event.id}
-                                      selected={selectedIds.includes(event.id)}
-                                      onToggleExpand={() => setExpandedId(expandedId === event.id ? null : event.id)}
-                                      onToggleSelect={() => toggleSelect(event.id)}
-                                      onReport={() => goReport([event.id])}
-                                      onDetail={() => goDetail(event)}
-                                    />
-                                  ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="p-3 space-y-2">
+              {list
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map(event => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    expanded={expandedId === event.id}
+                    selected={selectedIds.includes(event.id)}
+                    onToggleExpand={() => setExpandedId(expandedId === event.id ? null : event.id)}
+                    onToggleSelect={() => toggleSelect(event.id)}
+                    onReport={() => goReport([event.id])}
+                    onDetail={() => goDetail(event)}
+                  />
+                ))}
             </div>
           </div>
         );
