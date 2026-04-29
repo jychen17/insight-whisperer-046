@@ -179,11 +179,27 @@ export default function HotspotList() {
       </div>
 
       {/* Tabs: events list / all articles list */}
-      <Tabs value={hotspotView} onValueChange={(v) => setHotspotView(v as "events" | "clues")}>
-        <TabsList>
-          <TabsTrigger value="events" className="gap-1.5">
+      <Tabs value={hotspotView} onValueChange={(v) => setHotspotView(v as HotspotView)}>
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="time" className="gap-1.5">
+            <Clock className="w-3.5 h-3.5" />
+            按时间聚类
+          </TabsTrigger>
+          <TabsTrigger value="city" className="gap-1.5">
+            <Building2 className="w-3.5 h-3.5" />
+            按城市聚类
+          </TabsTrigger>
+          <TabsTrigger value="province" className="gap-1.5">
+            <MapPin className="w-3.5 h-3.5" />
+            按省份聚类
+          </TabsTrigger>
+          <TabsTrigger value="subtype" className="gap-1.5">
+            <Tag className="w-3.5 h-3.5" />
+            细分类型聚类
+          </TabsTrigger>
+          <TabsTrigger value="category" className="gap-1.5">
             <Flame className="w-3.5 h-3.5" />
-            事件列表
+            热点类型聚类
             <span className="ml-1 text-[11px] opacity-70">({mockEvents.length})</span>
           </TabsTrigger>
           <TabsTrigger value="clues" className="gap-1.5">
