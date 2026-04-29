@@ -302,15 +302,25 @@ export default function HotspotList() {
                 )}
                 <span className="ml-2">共 {filtered.length} 个热点</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-center">
+                <div className="flex rounded-md border border-border overflow-hidden text-[11px]">
+                  <button
+                    className={`px-2 py-1 ${groupMode === "cluster" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted/50"}`}
+                    onClick={() => setGroupMode("cluster")}
+                  >按聚类层级</button>
+                  <button
+                    className={`px-2 py-1 border-l border-border ${groupMode === "none" ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground hover:bg-muted/50"}`}
+                    onClick={() => setGroupMode("none")}
+                  >平铺列表</button>
+                </div>
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as typeof sortBy)}
                   className="px-2 py-1 text-xs border border-border rounded-md bg-card text-foreground"
                 >
+                  <option value="date_asc">活动日期升序</option>
                   <option value="heat_desc">综合热度降序</option>
                   <option value="trend_desc">热度增幅降序</option>
-                  <option value="date_asc">活动日期升序</option>
                   <option value="biz_desc">业务相关度降序</option>
                 </select>
               </div>
