@@ -73,6 +73,7 @@ export default function HotspotList() {
   };
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [groupMode, setGroupMode] = useState<"none" | "cluster">("cluster");
 
   // filters
   const [filterImportance, setFilterImportance] = useState<"all" | Importance>("all");
@@ -83,7 +84,7 @@ export default function HotspotList() {
   const [filterDateStart, setFilterDateStart] = useState("");
   const [filterDateEnd, setFilterDateEnd] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"heat_desc" | "date_asc" | "trend_desc" | "biz_desc">("heat_desc");
+  const [sortBy, setSortBy] = useState<"heat_desc" | "date_asc" | "trend_desc" | "biz_desc">("date_asc");
 
   const filtered = useMemo(() => {
     let list = mockEvents;
