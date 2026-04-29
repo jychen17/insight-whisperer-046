@@ -13,6 +13,7 @@ import {
   Sparkles, ExternalLink, Bell, FileText, ArrowUpRight, Ticket, BookOpen, Hash,
   ChevronDown, ChevronUp, Download, Settings, CheckCircle2, Globe, Eye, Tag, Layers,
   ListChecks, GraduationCap, Trophy, CalendarDays, PartyPopper, Landmark,
+  Users, Clock, Printer, Building2, Gauge,
 } from "lucide-react";
 import StatCard from "@/components/StatCard";
 
