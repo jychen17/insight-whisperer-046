@@ -617,19 +617,6 @@ export default function TagSystem() {
                 {errors.source && <p className="text-xs text-destructive">请选择来源</p>}
               </div>
             </div>
-            {form.dataType === "字符串" && (
-              <div className="space-y-1.5">
-                <Label>枚举值配置</Label>
-                <EnumValuesEditor
-                  enabled={form.enableEnum}
-                  onEnabledChange={(b) => setForm({ ...form, enableEnum: b })}
-                  values={form.enumValues}
-                  onChange={(v) => setForm({ ...form, enumValues: v })}
-                  otherLabel={form.otherLabel}
-                  onOtherLabelChange={(v) => setForm({ ...form, otherLabel: v })}
-                />
-              </div>
-            )}
             {form.category === "calc" && (
               <div className="space-y-1.5">
                 <Label>计算公式</Label>
